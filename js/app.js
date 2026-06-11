@@ -488,15 +488,39 @@ function enforcePhysics() {
 }
 
 // --- 5. Persistence ---
-function saveState() { localStorage.setItem('ddd_model_state', JSON.stringify({ nodes: systemState.nodes, connections: systemState.connections, sketches: systemState.sketches, zoom: systemState.zoom, panX: systemState.panX, panY: systemState.panY, sketchToolbarVisible: systemState.sketchToolbarVisible, sketchSettings: systemState.sketchSettings })); }
+function saveState() {
+    try {
+        localStorage.setItem('ddd_model_state', JSON.stringify({ 
+            nodes: systemState.nodes, 
+            connections: systemState.connections, 
+            sketches: systemState.sketches, 
+            zoom: systemState.zoom, 
+            panX: systemState.panX, 
+            panY: systemState.panY, 
+            sketchToolbarVisible: systemState.sketchToolbarVisible, 
+            sketchSettings: systemState.sketchSettings 
+        }));
+    } catch(e) {
+        console.warn("localStorage is not available. State will not be persisted.", e);
+    }
+}
 function loadState() {
-    const saved = localStorage.getItem('ddd_model_state');
-    if (saved) {
-        try {
-            const s = JSON.parse(saved); systemState.nodes = s.nodes || []; systemState.connections = s.connections || []; systemState.sketches = s.sketches || []; systemState.zoom = s.zoom || 1.0; systemState.panX = s.panX || 0; systemState.panY = s.panY || 0; systemState.sketchToolbarVisible = s.sketchToolbarVisible || false; 
+    try {
+        const saved = localStorage.getItem('ddd_model_state');
+        if (saved) {
+            const s = JSON.parse(saved); 
+            systemState.nodes = s.nodes || []; 
+            systemState.connections = s.connections || []; 
+            systemState.sketches = s.sketches || []; 
+            systemState.zoom = s.zoom || 1.0; 
+            systemState.panX = s.panX || 0; 
+            systemState.panY = s.panY || 0; 
+            systemState.sketchToolbarVisible = s.sketchToolbarVisible || false; 
             if (s.sketchSettings) systemState.sketchSettings = s.sketchSettings;
             return true;
-        } catch(e) { console.error("Load state failed", e); }
+        }
+    } catch(e) { 
+        console.error("Load state failed", e); 
     }
     return false;
 }
