@@ -578,6 +578,25 @@
         </div>
     </div>
 
+    <div class="modal-shade" id="confirm-modal">
+        <div class="modal-surface" style="width: 400px;">
+            <div class="modal-header">
+                <h3>Reset Canvas</h3>
+                <button class="btn-icon-small" id="btn-close-confirm"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" style="text-align: center; padding: 24px 20px;">
+                <div style="font-size: 2.5rem; color: var(--accent-red); margin-bottom: 16px;">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <p style="margin-bottom: 24px; line-height: 1.5; color: var(--text-primary); font-size: 0.95rem;">Are you sure you want to reset the entire canvas? This action cannot be undone.</p>
+                <div style="display: flex; gap: 12px; justify-content: center;">
+                    <button class="btn" id="btn-cancel-clear" style="background-color: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 16px; font-weight: 500;">Cancel</button>
+                    <button class="btn" id="btn-confirm-clear" style="background-color: var(--accent-red); color: white; padding: 8px 16px; font-weight: 500;">Clear Everything</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="telemetry-bar">
         <div style="width:6px; height:6px; background-color:var(--accent-green); border-radius:50%;"></div>
         <span id="telemetry-zoom">Scale: 100%</span>
@@ -600,6 +619,6 @@
     <!-- Modular App Scripts -->
     <script src="js/data.js"></script>
     <script src="js/audio.js"></script>
-    <script src="js/app.js"></script>
+    <script src="js/app.js?v=1.0.1"></script>
 </body>
 </html>
