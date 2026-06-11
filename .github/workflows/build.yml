@@ -1,0 +1,35 @@
+name: Build and Validate
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Validate Files
+      run: |
+        echo "Checking codebase layout..."
+        test -f index.html
+        test -f js/app.js
+        test -f css/styles.css
+
+    - name: Package Studio Bundle
+      run: |
+        zip -r ddd-modeler-studio.zip index.html css/ js/ README.md
+
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ddd-modeler-studio-bundle
+        path: ddd-modeler-studio.zip
