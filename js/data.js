@@ -209,6 +209,84 @@ const INDUSTRY_TEMPLATES = {
             { id: "is3", from: "svc_enrich", fromPort: "right", to: "dec_route", toPort: "left", animated: true },
             { id: "is4", from: "dec_route", fromPort: "right", to: "n_out", toPort: "left", animated: true }
         ]
+    },
+    rule_routing: {
+        nodes: [
+            // Source Context
+            { id: "bc_source", type: "actor-home", label: "Source System", icon: "fa-right-to-bracket", x: 40, y: 100, color: "#3b82f6", isContainer: true, width: 260, height: 360 },
+            { id: "msg_req", type: "node", label: "Request Message", icon: "fa-envelope", x: 80, y: 200, color: "#3b82f6", parentContainerId: "bc_source", fields: [
+                { name: "accountId", type: "String", value: "ACC-9981" },
+                { name: "amount", type: "Double", value: "1500.00" },
+                { name: "currency", type: "String", value: "USD" }
+            ] },
+
+            // Processing Context
+            { id: "bc_processing", type: "actor-home", label: "Rule Processing Engine", icon: "fa-gears", x: 360, y: 50, color: "#8b5cf6", isContainer: true, width: 540, height: 460 },
+            { id: "cache_rules", type: "component", label: "In-Memory Rule Cache", icon: "fa-memory", x: 400, y: 90, color: "#a855f7", parentContainerId: "bc_processing", fields: [
+                { name: "Rule 1 (VIP)", type: "Rule", value: "Balance >= 10k" },
+                { name: "Rule 2 (Std)", type: "Rule", value: "500 to 10k" },
+                { name: "Rule 3 (Low)", type: "Rule", value: "< 500" },
+                { name: "Rule 4 (Fraud)", type: "Rule", value: "< 0" }
+            ] },
+            { id: "rule_router", type: "node", label: "Rule Router", icon: "fa-code-branch", x: 690, y: 240, color: "#8b5cf6", parentContainerId: "bc_processing" },
+            { id: "db_account", type: "component", label: "Account Database", icon: "fa-database", x: 400, y: 320, color: "#10b981", parentContainerId: "bc_processing", fields: [
+                { name: "ACC-9981", type: "Account", value: "12000.00 USD" },
+                { name: "ACC-1245", type: "Account", value: "320.00 USD" },
+                { name: "ACC-4321", type: "Account", value: "-50.00 USD" }
+            ] },
+
+            // Target Components
+            { id: "vip_target", type: "component", label: "VIP Processing", icon: "fa-crown", x: 980, y: 60, color: "#10b981" },
+            { id: "std_target", type: "component", label: "Standard Clearing", icon: "fa-money-bill-transfer", x: 980, y: 170, color: "#3b82f6" },
+            { id: "low_target", type: "component", label: "Low Balance Alert", icon: "fa-bell", x: 980, y: 280, color: "#f59e0b" },
+            { id: "fraud_target", type: "component", label: "Fraud Alert System", icon: "fa-shield-halved", x: 980, y: 390, color: "#ef4444" }
+        ],
+        connections: [
+            { id: "rr1", from: "msg_req", fromPort: "right", to: "rule_router", toPort: "left", label: "1. Transaction Request", animated: true, pattern: "dotted" },
+            { id: "rr2", from: "rule_router", fromPort: "bottom", to: "db_account", toPort: "top", label: "2. Fetch Balance" },
+            { id: "rr3", from: "rule_router", fromPort: "top", to: "cache_rules", toPort: "bottom", label: "3. Evaluate Rules" },
+            { id: "rr4", from: "rule_router", fromPort: "right", to: "vip_target", toPort: "left", label: "Route: Balance >= 10k", animated: true, pattern: "dotted" },
+            { id: "rr5", from: "rule_router", fromPort: "right", to: "std_target", toPort: "left", label: "Route: 500 <= Bal < 10k" },
+            { id: "rr6", from: "rule_router", fromPort: "right", to: "low_target", toPort: "left", label: "Route: Bal < 500" },
+            { id: "rr7", from: "rule_router", fromPort: "right", to: "fraud_target", toPort: "left", label: "Route: Bal < 0" }
+        ]
+    },
+    dynamic_camel: {
+        nodes: [
+            // Route Store Context
+            { id: "bc_database", type: "actor-home", label: "Centralized Route Store", icon: "fa-database", x: 40, y: 150, color: "#10b981", isContainer: true, width: 260, height: 350 },
+            { id: "db_routes", type: "component", label: "Route Config DB", icon: "fa-server", x: 80, y: 220, color: "#10b981", parentContainerId: "bc_database", fields: [
+                { name: "Active Route A", type: "Camel YAML", value: "Kafka -> Rule Router -> MongoDB" },
+                { name: "Active Route B", type: "Camel XML", value: "SFTP File -> Audit -> NDM Push" },
+                { name: "Active Route C", type: "Camel YAML", value: "REST Trigger -> DB Check -> Partner" }
+            ] },
+
+            // IDLE Engine Context
+            { id: "bc_engine", type: "actor-home", label: "Quarkus + Camel Router (IDLE Engine)", icon: "fa-microchip", x: 350, y: 50, color: "#8b5cf6", isContainer: true, width: 540, height: 550 },
+            { id: "engine_loader", type: "node", label: "Route Registry Loader", icon: "fa-rotate", x: 390, y: 120, color: "#8b5cf6", parentContainerId: "bc_engine" },
+            { id: "camel_ctx", type: "component", label: "Camel Execution Context", icon: "fa-diagram-project", x: 670, y: 180, color: "#a855f7", parentContainerId: "bc_engine" },
+            { id: "connectors", type: "component", label: "Pre-bound Client Pools", icon: "fa-network-wired", x: 390, y: 340, color: "#6366f1", parentContainerId: "bc_engine", fields: [
+                { name: "Pre-bound Pools", type: "Pools", value: "Oracle, MongoDB, Kafka" },
+                { name: "Protocols", type: "Clients", value: "SFTP, NDM, HTTP REST" }
+            ] },
+
+            // Target Systems & Partners
+            { id: "kafka_broker", type: "component", label: "Kafka Event Bus", icon: "fa-comments", x: 960, y: 60, color: "#ea580c" },
+            { id: "sftp_server", type: "component", label: "Partner SFTP Server", icon: "fa-cloud-arrow-up", x: 960, y: 160, color: "#a855f7" },
+            { id: "ndm_node", type: "component", label: "Enterprise NDM Node", icon: "fa-share-nodes", x: 960, y: 260, color: "#3b82f6" },
+            { id: "partner_rest", type: "component", label: "Partner REST API", icon: "fa-globe", x: 960, y: 360, color: "#10b981" },
+            { id: "oracle_audit", type: "component", label: "Oracle Audit DB", icon: "fa-database", x: 960, y: 460, color: "#6b7280" }
+        ],
+        connections: [
+            { id: "dc1", from: "engine_loader", fromPort: "left", to: "db_routes", toPort: "right", label: "1. Pull Configs", pattern: "dashed" },
+            { id: "dc2", from: "engine_loader", fromPort: "right", to: "camel_ctx", toPort: "top", label: "2. Register Routes dynamically", animated: true, pattern: "dotted" },
+            { id: "dc3", from: "camel_ctx", fromPort: "left", to: "connectors", toPort: "right", label: "3. Bind Pools" },
+            { id: "dc4", from: "camel_ctx", fromPort: "right", to: "kafka_broker", toPort: "left", label: "Route A: Consume", animated: true, pattern: "dotted" },
+            { id: "dc5", from: "camel_ctx", fromPort: "right", to: "sftp_server", toPort: "left", label: "Route B: Poll File" },
+            { id: "dc6", from: "camel_ctx", fromPort: "right", to: "ndm_node", toPort: "left", label: "Route B: Send NDM" },
+            { id: "dc7", from: "camel_ctx", fromPort: "right", to: "partner_rest", toPort: "left", label: "Route C: HTTP Invoke" },
+            { id: "dc8", from: "camel_ctx", fromPort: "right", to: "oracle_audit", toPort: "left", label: "Audit Logs" }
+        ]
     }
 };
 

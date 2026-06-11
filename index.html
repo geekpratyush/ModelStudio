@@ -33,12 +33,12 @@
             <button class="btn" id="btn-save-json" title="Save Blueprint (.jc)"><i class="fa-solid fa-download"></i> Save JC</button>
             <button class="btn" id="btn-save-svg" title="Export as SVG Image"><i class="fa-solid fa-image"></i> Export SVG</button>
             <div class="tool-sep" style="margin: 0 8px;"></div>
-            <button class="btn" id="btn-toggle-sketch" title="Toggle Drawing Tools"><i class="fa-solid fa-pencil"></i> Draw</button>
-            <div class="tool-sep" style="margin: 0 8px;"></div>
             <button class="btn" id="btn-open-templates" style="background: rgba(234,88,12,0.1); border-color: var(--accent-orange); color: #fb923c;"><i class="fa-solid fa-lightbulb"></i> Templates</button>
             <button class="btn" id="btn-open-code"><i class="fa-solid fa-code"></i> Code</button>
             <button class="btn" id="btn-open-help" style="background: rgba(37,99,235,0.1); border-color: var(--accent-blue); color: #60a5fa;"><i class="fa-solid fa-circle-question"></i> Help</button>
-            <button class="btn btn-primary" id="btn-clear-canvas"><i class="fa-solid fa-trash-can"></i> Reset</button>
+            <div class="tool-sep" style="margin: 0 8px;"></div>
+            <button class="btn" id="btn-tidy-canvas" title="Tidy Canvas (Auto-layout)"><i class="fa-solid fa-wand-sparkles"></i> Tidy</button>
+            <button class="btn btn-primary" id="btn-clear-canvas"><i class="fa-solid fa-trash-can"></i> Clear</button>
         </div>
     </header>
 
@@ -352,7 +352,7 @@
 
         <main class="canvas-viewport" id="canvas-container">
             <div id="canvas-surface">
-                <svg id="svg-sketch-layer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></svg>
+                <svg id="svg-sketch-layer"></svg>
                 <svg id="svg-edge-layer">
                     <defs>
                         <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orientation="auto">
@@ -360,6 +360,19 @@
                         </marker>
                     </defs>
                 </svg>
+            </div>
+            <div id="empty-state" class="canvas-empty-state">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <h3>Canvas is Clear</h3>
+                <p>
+                    Drag <strong>Domain Driven Objects</strong> or <strong>Enterprise Integration Pattern</strong> elements from the sidebar to start modeling.
+                </p>
+                <p>
+                    Or, explore the <strong>Templates</strong> menu to load professional architectural samples and patterns.
+                </p>
+                <p style="font-size: 0.75rem; opacity: 0.8;">
+                    <strong>Advanced:</strong> Load <strong>.jc</strong> files to convert images to models, or use the <strong>Code</strong> menu to paste and create diagrams from JSON.
+                </p>
             </div>
             
             <!-- Interaction Toolbar -->
@@ -369,63 +382,11 @@
                 <button class="tool-btn" id="tool-select" title="Marquee Select Mode (M)"><i class="fa-solid fa-object-group"></i></button>
                 <div class="tool-sep"></div>
                 <button class="tool-btn" id="tool-zoom-out" title="Zoom Out (-)"><i class="fa-solid fa-minus"></i></button>
+                <span id="toolbar-zoom-percent" style="font-size: 0.75rem; color: var(--text-secondary); width: 40px; text-align: center; font-weight: 600;">100%</span>
                 <button class="tool-btn" id="tool-zoom-in" title="Zoom In (+)"><i class="fa-solid fa-plus"></i></button>
                 <button class="tool-btn" id="tool-fit" title="Reset Zoom/Pan (0)"><i class="fa-solid fa-expand"></i></button>
             </div>
 
-            <!-- Sketch Toolbar (Floating Top) -->
-            <div id="sketch-toolbar-container" style="display: none; position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; flex-direction: column; align-items: center; gap: 10px;">
-                <div class="interaction-toolbar" style="position: relative; bottom: auto; left: auto; transform: none; display: flex; gap: 4px; padding: 6px; border-radius: 12px; background: rgba(17,17,21,0.9); border: 1px solid var(--border-color); box-shadow: 0 8px 32px rgba(0,0,0,0.5);">
-                    <button class="tool-btn" id="tool-s-move" title="Move Mode (V)"><i class="fa-solid fa-arrow-pointer"></i></button>
-                    <button class="tool-btn" id="tool-s-pan" title="Pan Mode (H)"><i class="fa-solid fa-hand"></i></button>
-                    <div class="tool-sep"></div>
-                    <button class="tool-btn" id="tool-pencil" title="Pencil (P)"><i class="fa-solid fa-pencil"></i></button>
-                    <button class="tool-btn" id="tool-rect" title="Rectangle (R)"><i class="fa-regular fa-square"></i></button>
-                    <button class="tool-btn" id="tool-circle" title="Circle (C)"><i class="fa-regular fa-circle"></i></button>
-                    <button class="tool-btn" id="tool-diamond" title="Diamond (D)"><i class="fa-regular fa-diamond"></i></button>
-                    <button class="tool-btn" id="tool-arrow" title="Arrow (A)"><i class="fa-solid fa-long-arrow-right"></i></button>
-                    <button class="tool-btn" id="tool-dline" title="Double Line (L)"><i class="fa-solid fa-grip-lines-vertical" style="transform: rotate(90deg);"></i></button>
-                    <button class="tool-btn" id="tool-text" title="Text (T)"><i class="fa-solid fa-font"></i></button>
-                    <div class="tool-sep"></div>
-                    <button class="tool-btn" id="tool-eraser" title="Eraser (E)"><i class="fa-solid fa-eraser"></i></button>
-                </div>
-                
-                <!-- Quick Settings Bar -->
-                <div class="interaction-toolbar sketch-settings-bar" style="position: relative; bottom: auto; left: auto; transform: none; display: flex; align-items: center; gap: 12px; padding: 6px 16px; border-radius: 30px; background: rgba(17,17,21,0.85); border: 1px solid var(--border-color); font-size: 0.75rem;">
-                    <div style="display:flex; align-items:center; gap:6px;">
-                        <label>Color</label>
-                        <input type="color" id="sketch-prop-color" value="#60a5fa" style="width:24px; height:24px; border:none; background:none; cursor:pointer; padding:0;">
-                    </div>
-                    <div class="tool-sep"></div>
-                    <div style="display:flex; align-items:center; gap:6px;">
-                        <label>Width</label>
-                        <input type="range" id="sketch-prop-width" min="1" max="10" value="2" style="width:60px;">
-                    </div>
-                    <div class="tool-sep"></div>
-                    <div style="display:flex; align-items:center; gap:6px;">
-                        <label>Aesthetic</label>
-                        <select id="sketch-prop-style" class="prop-select" style="font-size:0.7rem; padding: 2px 6px;">
-                            <option value="hand-drawn">Hand-Drawn</option>
-                            <option value="simple">Simple/Clean</option>
-                            <option value="double">Double-Stroke</option>
-                        </select>
-                    </div>
-                    <div class="tool-sep"></div>
-                    <div style="display:flex; align-items:center; gap:6px;">
-                        <label>Pattern</label>
-                        <select id="sketch-prop-pattern" class="prop-select" style="font-size:0.7rem; padding: 2px 6px;">
-                            <option value="solid">Solid</option>
-                            <option value="dashed">Dashed</option>
-                            <option value="dotted">Dotted</option>
-                        </select>
-                    </div>
-                    <div class="tool-sep"></div>
-                    <div style="display:flex; align-items:center; gap:6px;">
-                        <label>Flow</label>
-                        <input type="checkbox" id="sketch-prop-animated" style="width:14px; height:14px;">
-                    </div>
-                </div>
-            </div>
         </main>
 
         <div class="floating-prop-panel" id="floating-prop-panel">
@@ -440,6 +401,10 @@
                 <div id="prop-active-editor" style="display: none; flex-direction: column; gap: 16px;">
                     <div class="prop-group"><label>Type</label><input type="text" id="prop-type-display" class="prop-input" readonly style="opacity: 0.7;"></div>
                     <div class="prop-group"><label>Label</label><input type="text" id="prop-label" class="prop-input"></div>
+                    <div class="prop-group" id="prop-context-group" style="display: none;">
+                        <label>Bounded Context</label>
+                        <select id="prop-context-selector" class="prop-select"></select>
+                    </div>
                     <div class="prop-group">
                         <label>Icon (FA Class or URL)</label>
                         <div style="display:flex; gap:4px;">
@@ -523,6 +488,8 @@
                     <div class="template-card" data-template="eip_pm"><div class="template-tag">EIP</div><h4>Process Manager</h4><p>Long-running business process orchestration across multiple distributed services.</p></div>
                     <div class="template-card" data-template="commercial_lending"><div class="template-tag">FinTech</div><h4>Commercial Lending & Limits</h4><p>High-fidelity Credit Facility model with ISO 20022 translation, Sublimits, and Excess Exception handling.</p></div>
                     <div class="template-card" data-template="iso_translation"><div class="template-tag">FinTech</div><h4>ISO 20022 Translation Engine</h4><p>Complex SWIFT MT to ISO XML transformation pipeline with bank directory enrichment.</p></div>
+                    <div class="template-card" data-template="rule_routing"><div class="template-tag">FinTech</div><h4>Rule-Based Routing Story</h4><p>Transactional flow demonstrating dynamic rule-based message routing via database balance check and rule caches.</p></div>
+                    <div class="template-card" data-template="dynamic_camel"><div class="template-tag">EIP</div><h4>Dynamic Camel Engine (IDLE Router)</h4><p>Instruction-driven Camel runtime loading YAML/XML routes from DB, executing dynamic rules, calculations, and logging to Kafka, Oracle, SFTP, and NDM.</p></div>
                 </div>
             </div>
         </div>
@@ -622,6 +589,10 @@
         <div class="context-menu-item" id="cm-edit"><i class="fa-solid fa-sliders"></i> Edit Properties</div>
         <div class="context-menu-item" id="cm-convert" style="display:none;"><i class="fa-solid fa-cube"></i> Convert to Element</div>
         <div class="context-menu-item" id="cm-anim-toggle" style="display:none;"><i class="fa-solid fa-play"></i> Toggle Animation</div>
+        <div class="context-menu-item" id="cm-add-context" style="display:none; position: relative;">
+            <i class="fa-solid fa-folder-plus"></i> Add to Context
+            <div class="context-submenu" id="cm-add-context-list"></div>
+        </div>
         <div class="context-menu-item" id="cm-exit"><i class="fa-solid fa-arrow-up-right-from-square"></i> Exit Context</div>
         <div class="context-menu-item" id="cm-delete" style="color: var(--accent-red);"><i class="fa-solid fa-trash-can"></i> Delete</div>
     </div>
