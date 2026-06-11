@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DDD Modeler Studio - Strategic & Tactical Modeler</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-primary: #09090b;
+            --bg-secondary: #111115;
+            --bg-tertiary: #181822;
+            --border-color: #272732;
+            --text-primary: #f4f4f5;
+            --text-secondary: #a1a1aa;
+            --accent-blue: #2563eb;
+            --accent-green: #16a34a;
+            --accent-purple: #7c3aed;
+            --accent-orange: #ea580c;
+            --accent-red: #dc2626;
+            --sidebar-width: 320px;
+        }
+
+        body.theme-light {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f1f5f9;
+            --border-color: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+        }
+
+        body.theme-cyberpunk {
+            --bg-primary: #050505;
+            --bg-secondary: #0a0a0f;
+            --bg-tertiary: #12121a;
+            --border-color: #00f2ff33;
+            --text-primary: #00f2ff;
+            --text-secondary: #ff00ff;
+            --accent-blue: #00f2ff;
+            --accent-purple: #ff00ff;
+        }
+
+        body.theme-forest {
+            --bg-primary: #0a0f0a;
+            --bg-secondary: #0f150f;
+            --bg-tertiary: #1a221a;
+            --border-color: #2a352a;
+            --text-primary: #d1d5db;
+            --text-secondary: #a7f3d0;
+            --accent-blue: #10b981;
+            --accent-purple: #059669;
+        }
+
+        body.theme-vsc-dark {
+            --bg-primary: #1e1e1e;
+            --bg-secondary: #252526;
+            --bg-tertiary: #2d2d2d;
+            --border-color: #3e3e42;
+            --text-primary: #d4d4d4;
+            --text-secondary: #858585;
+            --accent-blue: #007acc;
+        }
+
+        body.theme-vsc-light {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f3f3f3;
+            --bg-tertiary: #eeeeee;
+            --border-color: #e1e1e1;
+            --text-primary: #333333;
+            --text-secondary: #616161;
+            --accent-blue: #007acc;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Platform Navigation Header */
+        header {
+            height: 60px;
+            background-color: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            z-index: 100;
+        }
+        .logo-section { display: flex; align-items: center; gap: 12px; }
+        .logo-section i { color: var(--accent-blue); font-size: 1.5rem; }
+        .logo-section h1 { font-size: 1.15rem; font-weight: 700; letter-spacing: -0.02em; }
+        .logo-section span { font-size: 0.7rem; background: rgba(37,99,235,0.15); color: #60a5fa; padding: 2px 8px; border-radius: 4px; font-weight: 600; border: 1px solid rgba(37,99,235,0.3); }
+        
+        .action-toolbar { display: flex; align-items: center; gap: 10px; }
+
+        .btn {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+        .btn:hover { background-color: #222230; border-color: #3f3f52; }
+        .btn-primary { background-color: var(--accent-blue); border-color: var(--accent-blue); }
+        .btn-primary:hover { background-color: #1d4ed8; }
+
+        .app-container { flex: 1; display: flex; position: relative; overflow: hidden; }
+
+        /* Left Side Drawer Control Board Workspace Panel */
+        .sidebar-left {
+            width: var(--sidebar-width);
+            background-color: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+        .tab-nav-strip { display: flex; background-color: var(--bg-primary); border-bottom: 1px solid var(--border-color); padding: 4px; gap: 4px; }
+        .tab-btn { flex: 1; background: none; border: none; color: var(--text-secondary); padding: 10px 0; font-size: 0.8rem; font-weight: 600; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .tab-btn.active { color: var(--text-primary); background-color: var(--bg-tertiary); box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        
+        .palette-viewport { flex: 1; overflow-y: auto; padding: 16px; display: none; }
+        .palette-viewport.active { display: block; }
+        .category-accordion { margin-bottom: 16px; }
+        .category-accordion-title { font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        .category-accordion-title::after { content: ""; flex: 1; height: 1px; background-color: var(--border-color); }
+        .palette-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+        
+        .palette-item {
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            cursor: grab;
+            text-align: center;
+            transition: all 0.15s ease;
+        }
+        .palette-item:hover { border-color: var(--accent-blue); background-color: rgba(37,99,235,0.04); }
+        .palette-item i { font-size: 1.25rem; }
+        .palette-item span { font-size: 0.75rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
+
+        /* Infinite Diagram Map Layout Viewport Canvas */
+        .canvas-viewport { 
+            flex: 1; 
+            position: relative; 
+            background-color: var(--bg-primary); 
+            background-image: 
+                radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 100px 100px, 20px 20px, 20px 20px;
+            overflow: hidden; 
+            cursor: grab; 
+        }
+        #canvas-surface { position: absolute; width: 5000px; height: 5000px; top: 0; left: 0; transform-origin: 0 0; }
+        #svg-edge-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1000 !important; }
+
+        /* Dynamic Visual Fluid Connector Flow Pipelines Styling Rules */
+        @keyframes dataFluidFlow { to { stroke-dashoffset: -20; } }
+        .animated-flow-line { stroke-dasharray: 6, 4; animation: dataFluidFlow 1.2s linear infinite; }
+        
+        /* Enhanced Wire Interaction Styles */
+        .wire-path-group { cursor: pointer; transition: all 0.2s ease; pointer-events: auto; }
+        .wire-path-group:hover .static-base-line { stroke: #60a5fa !important; stroke-width: 5 !important; }
+        .wire-path-group.selected .static-base-line { 
+            stroke: var(--accent-blue) !important; 
+            stroke-width: 6 !important;
+            filter: drop-shadow(0 0 8px rgba(37, 99, 235, 0.8));
+        }
+        .wire-hit-area { fill: none; stroke: transparent; stroke-width: 20; cursor: pointer; }
+
+        /* Component Node Containers Core Structure Layout */
+        .node { 
+            position: absolute; 
+            background-color: var(--bg-secondary); 
+            border: 2px solid var(--border-color); 
+            border-radius: 8px; 
+            min-width: 140px; 
+            width: auto;
+            max-width: 400px;
+            min-height: 65px;
+            height: auto;
+            padding: 15px; 
+            z-index: 20; 
+            cursor: move; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4); 
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
+        }
+        .node:hover { border-color: #3f3f52; background-color: var(--bg-tertiary); }
+        .node.selected { 
+            border-color: var(--accent-blue) !important; 
+            box-shadow: 0 0 0 2px rgba(37,99,235,0.4), 0 0 20px rgba(37,99,235,0.3); 
+            transform: scale(1.02) translateY(-2px);
+            z-index: 30;
+            background-color: var(--bg-tertiary);
+        }
+        .node.is-dragging {
+            transition: none !important;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            opacity: 0.9;
+            z-index: 2000;
+        }
+        
+        /* Specialized Enclosure Housing Actor Frame Subsystems Box Styles */
+        .node-actor-container { 
+            background-color: var(--bg-tertiary); 
+            border: 2px dashed var(--text-secondary); 
+            width: 480px; 
+            height: 320px; 
+            z-index: 10; 
+            padding: 20px; 
+            transition: border-color 0.2s ease, border-style 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+        }
+        .node-actor-container.selected { 
+            border-color: var(--accent-blue) !important; 
+            border-style: solid; 
+            box-shadow: 0 0 0 2px rgba(37,99,235,0.2), 0 20px 40px rgba(0,0,0,0.6);
+            transform: scale(1.01);
+            z-index: 15;
+            background-color: rgba(37,99,235,0.05);
+        }
+
+        .resize-handle {
+            position: absolute;
+            right: 4px;
+            bottom: 4px;
+            width: 12px;
+            height: 12px;
+            cursor: nwse-resize;
+            border-right: 2px solid var(--text-secondary);
+            border-bottom: 2px solid var(--text-secondary);
+            opacity: 0.3;
+            transition: opacity 0.2s ease;
+        }
+        .node:hover .resize-handle { opacity: 0.8; }
+        .resize-handle:hover { border-color: var(--accent-blue); opacity: 1 !important; }
+
+        .node-header-wrap { display: flex; align-items: center; gap: 8px; }
+        .node-header-wrap i { font-size: 1.3rem; }
+        .node-text-title { font-size: 0.85rem; font-weight: 600; color: var(--text-primary); white-space: nowrap; width: 100%; }
+        
+        /* Floating Action Context HUD Ribbon Controls Layout */
+        .node-context-hud { position: absolute; top: -36px; left: 12px; background-color: var(--bg-tertiary); border: 1px solid #3f3f52; border-radius: 4px; padding: 2px; display: flex; gap: 2px; opacity: 0; pointer-events: none; transition: opacity 0.15s ease; z-index: 50; }
+        .node-context-hud::after { content: ""; position: absolute; top: 100%; left: 0; width: 100%; height: 12px; }
+        .node:hover > .node-context-hud, .node.selected > .node-context-hud { opacity: 1; pointer-events: auto; }
+        .hud-btn { background: none; border: none; color: var(--text-secondary); width: 24px; height: 24px; border-radius: 3px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.75rem; }
+        .hud-btn:hover { color: var(--text-primary); background-color: var(--border-color); }
+        .hud-btn.hud-del:hover { background-color: var(--accent-red); }
+
+        /* Routing Anchor Port Interfaces Points Layout Elements */
+        .port { position: absolute; width: 10px; height: 10px; background-color: var(--bg-primary); border: 2px solid var(--text-secondary); border-radius: 50%; z-index: 100; cursor: crosshair; transition: transform 0.15s ease, background-color 0.15s ease; }
+        .port:hover, .port.magnetic-active { background-color: var(--accent-green); border-color: var(--accent-green); z-index: 500; }
+        .port-top { top: -5px; left: 50%; transform: translateX(-50%); }
+        .port-right { right: -5px; top: 50%; transform: translateY(-50%); }
+        .port-bottom { bottom: -5px; left: 50%; transform: translateX(-50%); }
+        .port-left { left: -5px; top: 50%; transform: translateY(-50%); }
+
+        /* Floating Context Properties Panel */
+        .floating-prop-panel { 
+            position: absolute; 
+            top: 20px;
+            right: 20px;
+            background-color: rgba(17, 17, 21, 0.98); 
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color); 
+            border-radius: 12px;
+            width: 360px; 
+            z-index: 5000; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+            display: flex; 
+            flex-direction: column; 
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            transform: scale(0.95);
+        }
+        .floating-prop-panel.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: scale(1);
+        }
+        .floating-prop-header { padding: 14px 18px; border-bottom: 1px solid var(--border-color); font-size: 0.85rem; font-weight: 700; color: #fff; display: flex; justify-content: space-between; align-items: center; cursor: move; background: rgba(255,255,255,0.03); border-radius: 12px 12px 0 0; }
+        .properties-scroll-zone { max-height: 480px; overflow-y: auto; padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+        
+        .prop-group { display: flex; flex-direction: column; gap: 6px; }
+        .prop-group label { font-size: 0.7rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.03em; }
+        .prop-input, .prop-select { background-color: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 10px; border-radius: 6px; font-family: inherit; font-size: 0.85rem; outline: none; width: 100%; }
+        .prop-input:focus, .prop-select:focus { border-color: var(--accent-blue); box-shadow: 0 0 0 2px rgba(37,99,235,0.2); }
+
+        .field-editor-row { display: grid; grid-template-columns: 1fr 1fr 1fr 32px; gap: 6px; align-items: center; width: 100%; }
+        .field-editor-row .prop-input { padding: 6px 8px; font-size: 0.75rem; }
+
+        /* Node Fields Rendering Styles */
+        .node-fields-container {
+            margin-top: 14px;
+            border-top: 1px solid rgba(255,255,255,0.15);
+            padding-top: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .node-field-row {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .node-field-type-icon { font-size: 0.65rem; color: var(--accent-blue); opacity: 0.7; width: 14px; text-align: center; }
+        .node-field-name { color: #fff; font-weight: 600; }
+        .node-field-value { color: var(--accent-orange); font-weight: 500; }
+        .btn-icon-small { background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px; border-radius: 4px; }
+        .btn-icon-small:hover { color: var(--accent-red); background: rgba(220,38,38,0.1); }
+
+        /* Modals & Overlays */
+        .modal-shade { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0,0,0,0.7); z-index: 10000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
+        .modal-shade.open { opacity: 1; pointer-events: auto; }
+        .modal-surface { background-color: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; width: 720px; max-width: 92vw; display: flex; flex-direction: column; box-shadow: 0 25px 60px rgba(0,0,0,0.8); }
+        .modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+        .code-textarea { width: 100%; height: 350px; background-color: var(--bg-primary); border: 1px solid var(--border-color); color: #34d399; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; padding: 14px; border-radius: 6px; resize: none; outline: none; line-height: 1.4; }
+
+        .template-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 10px; }
+        .template-card { background: var(--bg-tertiary); border: 1px solid var(--border-color); padding: 18px; border-radius: 10px; cursor: pointer; display: flex; flex-direction: column; gap: 10px; transition: all 0.2s ease; }
+        .template-card:hover { border-color: var(--accent-orange); background-color: rgba(234,88,12,0.05); transform: translateY(-2px); }
+        .template-card h4 { font-size: 0.9rem; color: #fff; }
+        .template-card p { font-size: 0.75rem; color: var(--text-secondary); line-height: 1.4; }
+        .template-tag { font-size: 0.65rem; background: rgba(234,88,12,0.15); color: #fb923c; padding: 2px 6px; border-radius: 4px; align-self: flex-start; }
+
+        .help-nav-item { padding: 10px 14px; font-size: 0.8rem; border-radius: 6px; cursor: pointer; transition: all 0.2s ease; color: var(--text-secondary); margin-bottom: 2px; }
+        .help-nav-item:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); }
+        .help-nav-item.active { background: var(--accent-blue); color: #fff; font-weight: 600; }
+
+        .telemetry-bar { position: absolute; bottom: 16px; left: calc(var(--sidebar-width) + 16px); background-color: rgba(17,17,21,0.9); border: 1px solid var(--border-color); padding: 6px 16px; border-radius: 30px; font-size: 0.75rem; color: var(--text-secondary); display: flex; align-items: center; gap: 14px; pointer-events: none; z-index: 5; }
+
+        .btn-create-item { width: 100%; margin-top: 12px; border-style: dashed; justify-content: center; }
+        .color-picker-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+        .color-option { height: 28px; border-radius: 4px; cursor: pointer; border: 2px solid transparent; }
+        .color-option.active { border-color: #fff; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-section">
+            <i class="fa-solid fa-vector-square"></i>
+            <h1>DDD Modeler Studio</h1>
+            <span>v2.1-Strategic</span>
+        </div>
+        <div class="action-toolbar">
+            <a href="https://github.com/geekpratyush/DDDModelStudio" target="_blank" class="btn" style="text-decoration: none; color: var(--text-primary); background: rgba(255,255,255,0.05);"><i class="fa-brands fa-github"></i> Star on GitHub</a>
+            <select id="theme-selector" class="prop-select" style="width: 140px;">
+                <option value="default">Pro Dark</option>
+                <option value="light">Paper Light</option>
+                <option value="cyberpunk">Cyberpunk</option>
+                <option value="forest">Forest Mode</option>
+                <option value="vsc-dark">VSCode Dark</option>
+                <option value="vsc-light">VSCode Light</option>
+            </select>
+            <button class="btn" id="btn-open-templates" style="background: rgba(234,88,12,0.1); border-color: var(--accent-orange); color: #fb923c;"><i class="fa-solid fa-lightbulb"></i> Industry Templates</button>
+            <button class="btn" id="btn-open-code"><i class="fa-solid fa-code"></i> Sync Topology Code</button>
+            <button class="btn" id="btn-save-svg"><i class="fa-solid fa-image"></i> Save SVG</button>
+            <button class="btn" id="btn-open-help" style="background: rgba(37,99,235,0.1); border-color: var(--accent-blue); color: var(--accent-blue);"><i class="fa-solid fa-circle-question"></i> Help Manual</button>
+            <button class="btn btn-primary" id="btn-clear-canvas"><i class="fa-solid fa-trash-can"></i> Reset Canvas</button>
+        </div>
+    </header>
+
+    <div class="app-container">
+        
+        <aside class="sidebar-left">
+            <nav class="tab-nav-strip">
+                <button class="tab-btn active" data-target="pane-actors"><i class="fa-solid fa-map"></i> Strategic</button>
+                <button class="tab-btn" data-target="pane-components"><i class="fa-solid fa-microchip"></i> Tactical</button>
+                <button class="tab-btn" data-target="pane-nodes"><i class="fa-solid fa-bolt"></i> Behavioral</button>
+            </nav>
+            <nav class="tab-nav-strip" style="border-top: none;">
+                <button class="tab-btn" data-target="pane-infrastructure"><i class="fa-solid fa-server"></i> Infrastructure</button>
+                <button class="tab-btn" data-target="pane-custom"><i class="fa-solid fa-wand-magic-sparkles"></i> Custom</button>
+            </nav>
+
+            <div class="palette-viewport active" id="pane-actors">
+                <div class="category-accordion">
+                    <div class="category-accordion-title">Context & Subdomains</div>
+                    <div class="palette-grid">
+                        <div class="palette-item" draggable="true" data-type="actor-home" data-icon="fa-vector-square" data-label="Bounded Context" data-color="#7c3aed">
+                            <i class="fa-solid fa-vector-square" style="color: #a78bfa;"></i>
+                            <span>Bounded Context</span>
+                        </div>
+                        <div class="palette-item" draggable="true" data-type="actor-home" data-icon="fa-star" data-label="Core Subdomain" data-color="#d97706">
+                            <i class="fa-solid fa-star" style="color: #fbbf24;"></i>
+                            <span>Core Subdomain</span>
+                        </div>
+                        <div class="palette-item" draggable="true" data-type="actor-home" data-icon="fa-puzzle-piece" data-label="Supporting Subdomain" data-color="#3b82f6">
+                            <i class="fa-solid fa-puzzle-piece" style="color: #60a5fa;"></i>
+                            <span>Supporting Sub</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="category-accordion">
+                    <div class="category-accordion-title">External & Legacy</div>
+                    <div class="palette-grid">
+                        <div class="palette-item" draggable="true" data-type="actor-home" data-icon="fa-cloud" data-label="External System" data-color="#0ea5e9">
+                            <i class="fa-solid fa-cloud" style="color: #38bdf8;"></i>
+                            <span>Ext System</span>
+                        </div>
+                        <div class="palette-item" draggable="true" data-type="actor-home" data-icon="fa-poo" data-label="Legacy / Mud" data-color="#78350f">
+                            <i class="fa-solid fa-poo" style="color: #92400e;"></i>
+                            <span>Legacy / Mud</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-create-item" data-type="actor-home" style="margin-top:16px;"><i class="fa-solid fa-plus"></i> Create Boundary</button>
+                </div>
+            </div>
+
+            <div class="palette-viewport" id="pane-components">
+                <div class="category-accordion">
+                    <div class="category-accordion-title">Core Tactical Patterns</div>
+                    <div class="palette-grid">
+                        <div class="palette-item" draggable="true" data-type="component" data-icon="fa-crown" data-label="Aggregate Root" data-color="#d97706">
+                            <i class="fa-solid fa-crown" style="color: #fbbf24;"></i>
+                            <span>Aggregate Root</span>
+                        </div>
+                        <div class="palette-item" draggable="true" data-type="component" data-icon="fa-id-card" data-label="Entity" data-color="#3b82f6">
+                            <i class="fa-solid fa-id-card" style="color: #60a5fa;"></i>
+                            <span>Entity</span>
+                        </div>
+                        <div class="palette-item" draggable="true" data-type="component" data-icon="fa-gem" data-label="Value Object" data-color="#10b981">
+                            <i class="fa-solid fa-gem" style="color: #34d399;"></i>
+                            <span>Value Object</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="category-accordion">
+                    <div class="category-accordion-title">Logic & Persistence</div>
+                    <div class="palette-grid">
+                        <div class="palette-item" draggable="true" data-type="component" data-icon="fa-cogs" data-label="Domain Service" data-color="#6366f1">
+                            <i class="fa-solid fa-cogs" style="color: #818cf8;"></i>
+                            <span>Domain Service</span>
+                        </div>
+                        <div class="palette-item" draggable="true" data-type="component" data-icon="fa-industry" data-label="Factory" data-color="#6366f1">
+                            <i class="fa-solid fa-industry" style="color: #818cf8;"></i>
+                            <span>Factory</span>
+                        </div>
+                        <div class="palette-item" draggable="true" data-type="component" data-icon="fa-archive" data-label="Repository" data-color="#6366f1">
+                            <i class="fa-solid fa-archive" style="color: #818cf8;"></i>
+                            <span>Repository</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-create-item" data-type="component" style="margin-top:16px;"><i class="fa-solid fa-plus"></i> Create Component</button>
+                </div>
+            </div>
+
+            <div class="palette-viewport" id="pane-nodes">
+                <div class="category-accordion">
+                    <div class="category-accordion-title">Messages & Decision</div>
+                    <div class="palette-grid">
+                        <div class="palette-item" draggable="true" data-type="node" data-icon="fa-hand-pointer" data-label="Command" data-color="#3b82f6">
+                            <i class="fa-solid fa-hand-pointer" style="color: #60a5fa;"></i>
+                            <span>Command</span>
+                        </div>
+                        <div class="palette-item" draggable="true" data-type="node" data-icon="fa-bolt" data-label="Domain Event" data-color="#f59e0b">
+                            <i class="fa-solid fa-bolt" style="color: #fbbf24;"></i>
+                            <span>Domain Event</span>
+                        </div>
+                        <div class="palette-item" draggable="true" data-type="component" data-icon="fa-code-branch" data-label="Decision Box" data-color="#ea580c">
+                            <i class="fa-solid fa-code-branch" style="color: #fb923c;"></i>
+                            <span>Decision Box</span>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-create-item" data-type="node" style="margin-top:16px;"><i class="fa-solid fa-plus"></i> Create Behavioral</button>
+            </div>
+
+            <div class="palette-viewport" id="pane-infrastructure">
+                <div class="category-accordion">
+                    <div class="category-accordion-title">Storage</div>
+                    <div class="palette-grid">
+                        <div class="palette-item" draggable="true" data-type="component" data-icon="fa-database" data-label="PostgreSQL" data-color="#336791">
+                            <i class="fa-solid fa-database" style="color: #336791;"></i>
+                            <span>PostgreSQL</span>
+                        </div>
+                        <div class="palette-item" draggable="true" data-type="component" data-icon="fa-leaf" data-label="MongoDB" data-color="#47a248">
+                            <i class="fa-solid fa-leaf" style="color: #47a248;"></i>
+                            <span>MongoDB</span>
+                        </div>
+                        <div class="palette-item" draggable="true" data-type="component" data-icon="fa-bolt" data-label="Redis" data-color="#dc2626">
+                            <i class="fa-solid fa-bolt" style="color: #dc2626;"></i>
+                            <span>Redis</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="palette-viewport" id="pane-custom">
+                <div class="category-accordion">
+                    <div class="category-accordion-title">Your Custom Components</div>
+                    <div class="palette-grid" id="grid-custom-items"></div>
+                    <button class="btn btn-create-item" data-type="component" style="margin-top:16px;"><i class="fa-solid fa-plus"></i> Create Custom Element</button>
+                </div>
+            </div>
+        </aside>
+
+        <main class="canvas-viewport" id="canvas-container">
+            <div id="canvas-surface">
+                <svg id="svg-edge-layer">
+                    <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orientation="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#60a5fa" />
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+        </main>
+
+        <div class="floating-prop-panel" id="floating-prop-panel">
+            <div class="floating-prop-header" id="floating-prop-handle">
+                <span><i class="fa-solid fa-sliders"></i> Element Inspector</span>
+                <button class="btn-icon-small" id="btn-close-props"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="properties-scroll-zone">
+                <div id="prop-empty-state" style="text-align: center; padding: 40px 20px; color: var(--text-secondary);">
+                    <i class="fa-solid fa-mouse-pointer" style="font-size: 2rem; margin-bottom: 16px; opacity: 0.2;"></i>
+                    <p style="font-size: 0.8rem;">Select an element on the canvas to edit its properties.</p>
+                </div>
+
+                <div id="prop-active-editor" style="display: none; flex-direction: column; gap: 16px;">
+                    <div class="prop-group">
+                        <label>Unique Identifier</label>
+                        <input type="text" id="prop-id" class="prop-input" readonly style="opacity: 0.5;">
+                    </div>
+                    <div class="prop-group">
+                        <label>Display Label</label>
+                        <input type="text" id="prop-label" class="prop-input">
+                    </div>
+                    <div class="prop-group">
+                        <label>Icon Class</label>
+                        <input type="text" id="prop-icon" class="prop-input">
+                    </div>
+
+                    <div id="dimension-controls" style="display: flex; gap: 8px;">
+                        <div class="prop-group" style="flex: 1;">
+                            <label>Width</label>
+                            <input type="number" id="prop-width" class="prop-input">
+                        </div>
+                        <div class="prop-group" style="flex: 1;">
+                            <label>Height</label>
+                            <input type="number" id="prop-height" class="prop-input">
+                        </div>
+                    </div>
+
+                    <button class="btn" id="btn-unbind-parent" style="background: rgba(220,38,38,0.1); border-color: var(--accent-red); color: #f87171; display: none;">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i> Eject from Context
+                    </button>
+
+                    <div id="connection-properties-block" style="display: none; border-top:1px solid var(--border-color); padding-top:14px; flex-direction:column; gap:12px;">
+                        <label style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:var(--accent-orange);">Connection Settings</label>
+                        <div class="prop-group">
+                            <label>Relationship Type</label>
+                            <select id="prop-flow-dir" class="prop-select">
+                                <option value="left-to-right">Direct Flow (U -> D)</option>
+                                <option value="acl">Anti-Corruption Layer (ACL)</option>
+                                <option value="ohs">Open Host Service (OHS)</option>
+                                <option value="pl">Published Language (PL)</option>
+                                <option value="sk">Shared Kernel</option>
+                                <option value="partnership">Partnership</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="fields-editor-block" style="display: none; border-top:1px solid var(--border-color); padding-top:14px; flex-direction:column; gap:12px;">
+                        <label style="font-size: 0.7rem; font-weight: 700; color: var(--accent-blue);">DATA FIELDS</label>
+                        <div id="fields-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                        <div class="field-editor-row">
+                            <input type="text" id="new-field-name" class="prop-input" placeholder="Name">
+                            <input type="text" id="new-field-type" class="prop-input" placeholder="Type">
+                            <input type="text" id="new-field-value" class="prop-input" placeholder="Value">
+                            <button class="btn btn-primary" id="btn-add-field" style="padding: 6px;"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                    </div>
+
+                    <div id="node-styling-color-block" class="prop-group">
+                        <label>Accent Color</label>
+                        <div class="color-picker-row">
+                            <div class="palette-item" style="background: #2563eb; width: 24px; height: 24px; cursor: pointer;" data-color="#2563eb"></div>
+                            <div class="palette-item" style="background: #16a34a; width: 24px; height: 24px; cursor: pointer;" data-color="#16a34a"></div>
+                            <div class="palette-item" style="background: #ea580c; width: 24px; height: 24px; cursor: pointer;" data-color="#ea580c"></div>
+                            <div class="palette-item" style="background: #dc2626; width: 24px; height: 24px; cursor: pointer;" data-color="#dc2626"></div>
+                            <div class="palette-item" style="background: #7c3aed; width: 24px; height: 24px; cursor: pointer;" data-color="#7c3aed"></div>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary" id="btn-delete-selection" style="background: var(--accent-red); border-color: var(--accent-red); margin-top: 10px; justify-content: center;">
+                        <i class="fa-solid fa-trash"></i> Delete Selected Object
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal-shade" id="code-modal">
+        <div class="modal-surface">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-code"></i> Topology Blueprint (JSON)</h3>
+                <button class="btn-icon-small" id="btn-close-code"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 0.8rem; color: var(--text-secondary);">Copy this code for Gen AI to generate diagrams, or paste code here to load a drawing.</p>
+                <textarea id="topology-code-area" class="code-textarea"></textarea>
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button class="btn" id="btn-copy-code"><i class="fa-solid fa-copy"></i> Copy to Clipboard</button>
+                    <button class="btn btn-primary" id="btn-apply-code"><i class="fa-solid fa-play"></i> Apply Blueprint</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-shade" id="templates-modal">
+        <div class="modal-surface" style="width: 800px;">
+            <div class="modal-header">
+                <h3 style="font-size:1rem; font-weight:600;"><i class="fa-solid fa-lightbulb"></i> Load Industry DDD Patterns</h3>
+                <button class="btn-icon-small" id="btn-close-templates"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="template-grid">
+                    <div class="template-card" data-template="ecommerce">
+                        <div class="template-tag">Logistics</div>
+                        <h4>E-Commerce & Shipping</h4>
+                        <p>Checkout flow with payment authorization and warehouse stock reservation.</p>
+                    </div>
+                    <div class="template-card" data-template="insurance">
+                        <div class="template-tag">Fintech</div>
+                        <h4>Insurance Claims Processing</h4>
+                        <p>Complex decision tree for claim validation, approval, and payout logic.</p>
+                    </div>
+                    <div class="template-card" data-template="banking">
+                        <div class="template-tag">Security</div>
+                        <h4>Fraud Detection System</h4>
+                        <p>Real-time transaction monitoring with automated account blocking on fraud detection.</p>
+                    </div>
+                    <div class="template-card" data-template="order_lifecycle">
+                        <div class="template-tag">State Machine</div>
+                        <h4>Order Lifecycle Stages</h4>
+                        <p>Watch an Order transition from CREATED to SHIPPED across multiple Bounded Contexts.</p>
+                    </div>
+                    <div class="template-card" data-template="saga_pattern">
+                        <div class="template-tag">Microservices</div>
+                        <h4>Saga Pattern (Travel Booking)</h4>
+                        <p>Distributed transaction with compensating actions across Flight and Hotel services.</p>
+                    </div>
+                    <div class="template-card" data-template="cqrs_es">
+                        <div class="template-tag">Architecture</div>
+                        <h4>CQRS & Event Sourcing</h4>
+                        <p>Separating write (Commands/Aggregates) from read (Projectors/Views) using an Event Store.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-shade" id="help-modal">
+        <div class="modal-surface" style="width: 900px; height: 80vh;">
+            <div class="modal-header">
+                <h3 style="font-size:1rem; font-weight:600;"><i class="fa-solid fa-circle-question"></i> Help Center & Manual</h3>
+                <button class="btn-icon-small" id="btn-close-help"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" style="flex-direction: row; padding: 0; overflow: hidden;">
+                <div style="width: 240px; border-right: 1px solid var(--border-color); background: rgba(255,255,255,0.02); display: flex; flex-direction: column;">
+                    <div style="padding: 16px; border-bottom: 1px solid var(--border-color);">
+                        <input type="text" id="help-search" class="prop-input" placeholder="Search topics...">
+                    </div>
+                    <div id="help-index" style="flex: 1; overflow-y: auto; padding: 8px;">
+                        <div class="help-nav-item active" data-section="intro">Overview</div>
+                        <div class="help-nav-item" data-section="topology">AI Topology Code</div>
+                        <div class="help-nav-item" data-section="components">Component Reference</div>
+                        <div class="help-nav-item" data-section="patterns">DDD Patterns</div>
+                        <div class="help-nav-item" data-section="controls">Controls & Shortcuts</div>
+                        <div class="help-nav-item" data-section="links">Resources & Web</div>
+                    </div>
+                </div>
+                <div id="help-content-view" style="flex: 1; padding: 30px; overflow-y: auto; line-height: 1.6; font-size: 0.9rem; color: var(--text-secondary);">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-shade" id="create-item-modal">
+        <div class="modal-surface" style="width: 400px;">
+            <div class="modal-header">
+                <h3 style="font-size:1rem; font-weight:600;"><i class="fa-solid fa-plus-circle"></i> Create Custom DDD Element</h3>
+                <button class="btn-icon-small" id="btn-close-create-modal"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="prop-group">
+                    <label>Display Label Name</label>
+                    <input type="text" id="create-item-label" class="prop-input" placeholder="e.g. Domain Event">
+                </div>
+                <div class="prop-group">
+                    <label>FontAwesome Icon Class</label>
+                    <input type="text" id="create-item-icon" class="prop-input" value="fa-microchip">
+                </div>
+                <div class="prop-group">
+                    <label>Theme Color Highlight</label>
+                    <div class="color-picker-row" id="create-item-color-row">
+                        <div class="color-option" style="background-color: #2563eb;" data-color="#2563eb"></div>
+                        <div class="color-option" style="background-color: #16a34a;" data-color="#16a34a"></div>
+                        <div class="color-option" style="background-color: #7c3aed;" data-color="#7c3aed"></div>
+                        <div class="color-option" style="background-color: #ea580c;" data-color="#ea580c"></div>
+                        <div class="color-option" style="background-color: #dc2626;" data-color="#dc2626"></div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="btn-save-new-item" style="margin-top: 10px; justify-content: center;">
+                    <i class="fa-solid fa-check"></i> Add To Palette
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="telemetry-bar">
+        <div style="width:6px; height:6px; background-color:var(--accent-green); border-radius:50%;"></div>
+        <span id="telemetry-zoom">Scale: 100%</span>
+        <span>|</span>
+        <span>DDD Engine Active</span>
+    </div>
+
+    <script>
+        const systemState = {
+            nodes: [],
+            connections: [],
+            zoom: 1.0,
+            panX: 0,
+            panY: 0,
+            selectedId: null,
+            selectedType: null,
+            activeTheme: 'default',
+            draggedItemData: null,
+            activeCreateType: null,
+            activeCreateColor: '#2563eb'
+        };
+
+        const INDUSTRY_TEMPLATES = {
+            ecommerce: {
+                nodes: [
+                    { id: "bc_checkout", type: "actor-home", label: "Checkout Bounded Context", icon: "fa-vector-square", x: 40, y: 100, color: "#7c3aed", isContainer: true },
+                    { id: "agg_cart", type: "component", label: "Shopping Cart", icon: "fa-crown", x: 80, y: 180, color: "#d97706", parentContainerId: "bc_checkout", fields: [{name:"items", type:"List"}, {name:"total", type:"Money"}] },
+                    { id: "evt_pay", type: "node", label: "Payment Success", icon: "fa-bolt", x: 400, y: 120, color: "#f97316" },
+                    { id: "bc_warehouse", type: "actor-home", label: "Warehouse Context", icon: "fa-truck", x: 600, y: 50, color: "#2563eb", isContainer: true },
+                    { id: "agg_stock", type: "component", label: "Stock Item", icon: "fa-crown", x: 650, y: 150, color: "#d97706", parentContainerId: "bc_warehouse" }
+                ],
+                connections: [
+                    { id: "e1", from: "agg_cart", fromPort: "right", to: "evt_pay", toPort: "left", direction: "left-to-right" },
+                    { id: "e2", from: "evt_pay", fromPort: "right", to: "agg_stock", toPort: "left", direction: "ohs" }
+                ]
+            },
+            insurance: {
+                nodes: [
+                    { id: "bc_claims", type: "actor-home", label: "Claims Context", icon: "fa-shield", x: 50, y: 100, color: "#2563eb", isContainer: true },
+                    { id: "agg_claim", type: "component", label: "Claim Aggregate", icon: "fa-crown", x: 90, y: 180, color: "#d97706", parentContainerId: "bc_claims" },
+                    { id: "dec_validate", type: "component", label: "Validate?", icon: "fa-code-branch", x: 380, y: 190, color: "#ea580c" },
+                    { id: "evt_approved", type: "node", label: "Claim Approved", icon: "fa-check", x: 580, y: 120, color: "#16a34a" },
+                    { id: "evt_rejected", type: "node", label: "Claim Rejected", icon: "fa-xmark", x: 580, y: 260, color: "#dc2626" }
+                ],
+                connections: [
+                    { id: "i1", from: "agg_claim", fromPort: "right", to: "dec_validate", toPort: "left", direction: "left-to-right" },
+                    { id: "i2", from: "dec_validate", fromPort: "top", to: "evt_approved", toPort: "left", direction: "left-to-right" },
+                    { id: "i3", from: "dec_validate", fromPort: "bottom", to: "evt_rejected", toPort: "left", direction: "left-to-right" }
+                ]
+            },
+            banking: {
+                nodes: [
+                    { id: "bc_bank", type: "actor-home", label: "Banking Core", icon: "fa-building", x: 50, y: 50, color: "#2563eb", isContainer: true },
+                    { id: "agg_acc", type: "component", label: "Account", icon: "fa-crown", x: 100, y: 150, color: "#d97706", parentContainerId: "bc_bank" },
+                    { id: "svc_fraud", type: "component", label: "Fraud Check", icon: "fa-shield-halved", x: 450, y: 150, color: "#dc2626" },
+                    { id: "dec_fraud", type: "component", label: "Safe?", icon: "fa-code-branch", x: 680, y: 160, color: "#ea580c" },
+                    { id: "evt_ok", type: "node", label: "Cleared", icon: "fa-thumbs-up", x: 880, y: 220, color: "#16a34a" }
+                ],
+                connections: [
+                    { id: "b1", from: "agg_acc", fromPort: "right", to: "svc_fraud", toPort: "left", direction: "acl" },
+                    { id: "b2", from: "svc_fraud", fromPort: "right", to: "dec_fraud", toPort: "left", direction: "left-to-right" },
+                    { id: "b3", from: "dec_fraud", fromPort: "bottom", to: "evt_ok", toPort: "left", direction: "left-to-right" }
+                ]
+            },
+            order_lifecycle: {
+                nodes: [
+                    { id: "bc_sales", type: "actor-home", label: "Sales Context", icon: "fa-shopping-cart", x: 30, y: 50, color: "#2563eb", isContainer: true },
+                    { id: "obj_order_1", type: "component", label: "Order #101", icon: "fa-file-invoice", x: 80, y: 150, color: "#d97706", parentContainerId: "bc_sales", fields: [{name:"status", value:"CREATED"}, {name:"total", value:"$120"}] },
+                    { id: "dec_stock", type: "component", label: "In Stock?", icon: "fa-code-branch", x: 340, y: 160, color: "#ea580c" },
+                    { id: "bc_fulfillment", type: "actor-home", label: "Fulfillment Context", icon: "fa-box-open", x: 550, y: 50, color: "#7c3aed", isContainer: true },
+                    { id: "obj_order_2", type: "component", label: "Order #101", icon: "fa-file-invoice", x: 600, y: 150, color: "#d97706", parentContainerId: "bc_fulfillment", fields: [{name:"status", value:"VALIDATED"}, {name:"carrier", value:"TBD"}] },
+                    { id: "bc_shipping", type: "actor-home", label: "Shipping Context", icon: "fa-truck", x: 1000, y: 50, color: "#16a34a", isContainer: true },
+                    { id: "obj_order_3", type: "component", label: "Order #101", icon: "fa-file-invoice", x: 1050, y: 150, color: "#d97706", parentContainerId: "bc_shipping", fields: [{name:"status", value:"SHIPPED"}, {name:"tracking", value:"TRK8822"}] },
+                    { id: "evt_fail", type: "node", label: "Order Cancelled", icon: "fa-ban", x: 340, y: 350, color: "#dc2626", fields: [{name:"reason", value:"Out of Stock"}] }
+                ],
+                connections: [
+                    { id: "ol1", from: "obj_order_1", fromPort: "right", to: "dec_stock", toPort: "left", direction: "left-to-right" },
+                    { id: "ol2", from: "dec_stock", fromPort: "top", to: "obj_order_2", toPort: "left", direction: "left-to-right" },
+                    { id: "ol3", from: "dec_stock", fromPort: "bottom", to: "evt_fail", toPort: "top", direction: "left-to-right" },
+                    { id: "ol4", from: "obj_order_2", fromPort: "right", to: "obj_order_3", toPort: "left", direction: "ohs" }
+                ]
+            },
+            saga_pattern: {
+                nodes: [
+                    { id: "bc_travel", type: "actor-home", label: "Travel Booking Saga", icon: "fa-plane", x: 50, y: 50, color: "#2563eb", isContainer: true, width: 900, height: 400 },
+                    { id: "cmd_book", type: "node", label: "Book Trip", icon: "fa-hand-pointer", x: 80, y: 150, color: "#3b82f6", parentContainerId: "bc_travel" },
+                    { id: "saga_manager", type: "node", label: "Trip Saga Manager", icon: "fa-diagram-next", x: 280, y: 150, color: "#059669", parentContainerId: "bc_travel" },
+                    { id: "svc_flight", type: "component", label: "Flight Service", icon: "fa-plane", x: 550, y: 80, color: "#7c3aed", parentContainerId: "bc_travel" },
+                    { id: "svc_hotel", type: "component", label: "Hotel Service", icon: "fa-bed", x: 550, y: 220, color: "#ea580c", parentContainerId: "bc_travel" },
+                    { id: "evt_flight_ok", type: "node", label: "Flight Booked", icon: "fa-bolt", x: 750, y: 80, color: "#16a34a", parentContainerId: "bc_travel" },
+                    { id: "evt_hotel_fail", type: "node", label: "Hotel Full (Fail)", icon: "fa-bolt", x: 750, y: 220, color: "#dc2626", parentContainerId: "bc_travel" },
+                    { id: "cmd_cancel_flight", type: "node", label: "Compensate: Cancel Flight", icon: "fa-rotate-left", x: 450, y: 320, color: "#dc2626", parentContainerId: "bc_travel" }
+                ],
+                connections: [
+                    { id: "s1", from: "cmd_book", fromPort: "right", to: "saga_manager", toPort: "left", direction: "left-to-right" },
+                    { id: "s2", from: "saga_manager", fromPort: "right", to: "svc_flight", toPort: "left", direction: "left-to-right" },
+                    { id: "s3", from: "saga_manager", fromPort: "right", to: "svc_hotel", toPort: "left", direction: "left-to-right" },
+                    { id: "s4", from: "svc_flight", fromPort: "right", to: "evt_flight_ok", toPort: "left", direction: "left-to-right" },
+                    { id: "s5", from: "svc_hotel", fromPort: "right", to: "evt_hotel_fail", toPort: "left", direction: "left-to-right" },
+                    { id: "s6", from: "evt_hotel_fail", fromPort: "bottom", to: "cmd_cancel_flight", toPort: "right", direction: "right-to-left" },
+                    { id: "s7", from: "cmd_cancel_flight", fromPort: "left", to: "svc_flight", toPort: "bottom", direction: "left-to-right" }
+                ]
+            },
+            cqrs_es: {
+                nodes: [
+                    { id: "bc_write", type: "actor-home", label: "Write Model (Command)", icon: "fa-pen-to-square", x: 40, y: 100, color: "#ea580c", isContainer: true },
+                    { id: "cmd_create", type: "node", label: "Update Profile", icon: "fa-hand-pointer", x: 80, y: 180, color: "#3b82f6", parentContainerId: "bc_write" },
+                    { id: "agg_profile", type: "component", label: "Profile Aggregate", icon: "fa-crown", x: 280, y: 180, color: "#d97706", parentContainerId: "bc_write" },
+                    { id: "db_eventstore", type: "component", label: "Event Store (Kafka)", icon: "fa-code-fork", x: 500, y: 190, color: "#f43f5e" },
+                    { id: "bc_read", type: "actor-home", label: "Read Model (Query)", icon: "fa-eye", x: 720, y: 100, color: "#10b981", isContainer: true },
+                    { id: "svc_projector", type: "component", label: "Event Projector", icon: "fa-cogs", x: 760, y: 180, color: "#6366f1", parentContainerId: "bc_read" },
+                    { id: "db_redis", type: "component", label: "Redis View", icon: "fa-bolt", x: 960, y: 180, color: "#dc2626", parentContainerId: "bc_read", fields: [{name:"views", value:"Fast Read"}] }
+                ],
+                connections: [
+                    { id: "c1", from: "cmd_create", fromPort: "right", to: "agg_profile", toPort: "left", direction: "left-to-right" },
+                    { id: "c2", from: "agg_profile", fromPort: "right", to: "db_eventstore", toPort: "left", direction: "left-to-right" },
+                    { id: "c3", from: "db_eventstore", fromPort: "right", to: "svc_projector", toPort: "left", direction: "left-to-right" },
+                    { id: "c4", from: "svc_projector", fromPort: "right", to: "db_redis", toPort: "left", direction: "left-to-right" }
+                ]
+            }
+        };
+
+        const HELP_DATA = {
+            intro: `
+                <h2 style="color:#fff; margin-bottom:15px;">Welcome to DDD ModelStudio</h2>
+                <p>This studio is a specialized environment for high-fidelity Domain Driven Design modeling.</p>
+                <div style="background:rgba(37,99,235,0.1); border:1px solid var(--accent-blue); padding:15px; border-radius:8px; margin:20px 0;">
+                    <strong>Core Philosophy:</strong> Strategic boundaries (Bounded Contexts) and Tactical details (Aggregates, Entities) should coexist in a single, fluid canvas.
+                </div>
+                <h4 style="color:#fff; margin-top:20px;">Key Workflows</h4>
+                <ul>
+                    <li style="margin-bottom:8px;"><strong>Strategic:</strong> Use "Bounded Context" containers to define linguistic and functional boundaries.</li>
+                    <li style="margin-bottom:8px;"><strong>Tactical:</strong> Place Aggregates and Entities within Contexts to map the domain internals.</li>
+                    <li style="margin-bottom:8px;"><strong>Dynamic Flows:</strong> Connect elements to show events, commands, and context mappings (ACL, OHS).</li>
+                </ul>
+            `,
+            topology: `
+                <h2 style="color:#fff; margin-bottom:15px;">AI-Assisted Modeling (Topology Code)</h2>
+                <p>The "Sync Topology Code" feature is your gateway to Generative AI assistance (ChatGPT, Claude, Gemini).</p>
+                <h4 style="color:#fff; margin-top:20px;">How to use with Gen AI:</h4>
+                <ol>
+                    <li style="margin-bottom:8px;">Click <strong>"Sync Topology Code"</strong> to see the JSON structure of your current drawing.</li>
+                    <li style="margin-bottom:8px;">Copy this JSON and send it to your AI with a prompt like:<br>
+                        <em>"Here is my DDD topology. Add a new Bounded Context for 'Identity' with an 'User' aggregate and connect it to the 'Checkout' context using an ACL."</em>
+                    </li>
+                    <li style="margin-bottom:8px;">Paste the AI's response back into the studio and click <strong>"Apply Blueprint"</strong>.</li>
+                </ol>
+                <div style="background:rgba(234,88,12,0.1); border:1px solid var(--accent-orange); padding:15px; border-radius:8px; margin:20px 0;">
+                    <strong>Pro Tip:</strong> The JSON is state-complete. It includes coordinates, fields, colors, and connection types.
+                </div>
+            `,
+            components: `
+                <h2 style="color:#fff; margin-bottom:15px;">Component Reference</h2>
+                <h4 style="color:var(--accent-orange);"><i class="fa-solid fa-crown"></i> Aggregate Root</h4>
+                <p style="margin-bottom:12px;">An Entity that acts as the gateway for an Aggregate. All external communication with the Aggregate must go through the Root to maintain consistency boundaries.</p>
+                <h4 style="color:var(--accent-blue); margin-top:15px;"><i class="fa-solid fa-id-card"></i> Entity</h4>
+                <p style="margin-bottom:12px;">A domain object defined by its unique identity (e.g., an ID) rather than its attributes. It has a lifecycle and its state can change over time.</p>
+                <h4 style="color:var(--accent-green); margin-top:15px;"><i class="fa-solid fa-gem"></i> Value Object</h4>
+                <p style="margin-bottom:12px;">An immutable object that describes a characteristic or attribute (e.g., Money, Color, Address). It has no identity; two Value Objects are equal if all their attributes are the same.</p>
+                <h4 style="color:var(--accent-orange); margin-top:15px;"><i class="fa-solid fa-code-branch"></i> Decision Box</h4>
+                <p style="margin-bottom:12px;">A specialized flow component used to represent branching logic. Use this to visualize conditional domain rules (e.g., "If Credit Score > 700, Approve else Reject").</p>
+                <h4 style="color:var(--accent-purple); margin-top:15px;"><i class="fa-solid fa-vector-square"></i> Bounded Context</h4>
+                <p style="margin-bottom:12px;">A central strategic pattern. It defines a linguistic and physical boundary where a specific model is valid. Drag Tactical components into this container to group them.</p>
+                <h4 style="color:#6366f1; margin-top:15px;"><i class="fa-solid fa-cogs"></i> Domain Service</h4>
+                <p style="margin-bottom:12px;">Handles business logic that doesn't naturally fit into an Entity or Value Object. Typically stateless and orchestrates multiple domain elements.</p>
+                <h4 style="color:#f59e0b; margin-top:15px;"><i class="fa-solid fa-bolt"></i> Domain Event</h4>
+                <p style="margin-bottom:12px;">Captures the memory of something significant that happened in the domain. Often used to trigger side effects in other Bounded Contexts.</p>
+                <h4 style="color:#336791; margin-top:15px;"><i class="fa-solid fa-database"></i> Infrastructure (PostgreSQL/Redis)</h4>
+                <p style="margin-bottom:12px;">Represents the technical persistence and caching layers. In DDD, these usually implement the Repository interfaces defined in the Domain layer.</p>
+            `,
+            patterns: `
+                <h2 style="color:#fff; margin-bottom:15px;">DDD Pattern Guide</h2>
+                <h4 style="color:#fff;">Strategic Patterns</h4>
+                <p style="margin-bottom:10px;"><strong>Bounded Context:</strong> A boundary within which a particular domain model is defined and applicable.</p>
+                <p style="margin-bottom:10px;"><strong>Context Map:</strong> The visualization of the relationships between different Bounded Contexts.</p>
+                <p style="margin-bottom:10px;"><strong>Anti-Corruption Layer (ACL):</strong> An isolation layer between two contexts that translates models to prevent the upstream model from polluting the downstream one.</p>
+                <p style="margin-bottom:10px;"><strong>Open Host Service (OHS):</strong> Defining a protocol/API that gives access to your context as a set of services.</p>
+                
+                <h4 style="color:#fff; margin-top:20px;">Tactical Patterns</h4>
+                <p style="margin-bottom:10px;"><strong>Saga / Process Manager:</strong> An orchestrator that manages a long-running business process across multiple Bounded Contexts using Domain Events.</p>
+                <p style="margin-bottom:10px;"><strong>CQRS:</strong> Command Query Responsibility Segregation. Splitting your application into a write side (Commands) and a read side (Queries/Read Models).</p>
+            `,
+            controls: `
+                <h2 style="color:#fff; margin-bottom:15px;">Canvas Controls & Shortcuts</h2>
+                <ul style="line-height:1.8;">
+                    <li><strong>Pan Workspace:</strong> Click and drag the canvas background.</li>
+                    <li><strong>Zoom:</strong> Mouse wheel while hovering over the canvas.</li>
+                    <li><strong>Select Element:</strong> Click any element or connection wire.</li>
+                    <li><strong>Edit Properties:</strong> Click the Slider icon on a component HUD to open the inspector.</li>
+                    <li><strong>Move Inspector:</strong> Click and drag the "Element Inspector" header to move the panel.</li>
+                    <li><strong>Delete Element:</strong> Click the Trash icon on the component HUD, or use the "Delete" button in the inspector.</li>
+                    <li><strong>Resize Containers:</strong> Bounded Contexts can be resized using the handle in the bottom-right corner.</li>
+                    <li><strong>Auto-Size (Tactical):</strong> Tactical components automatically grow to fit added fields and labels.</li>
+                    <li><strong>Connect:</strong> Click and drag from any port (circle) on the edge of an element to another element.</li>
+                </ul>
+            `,
+            links: `
+                <h2 style="color:#fff; margin-bottom:15px;">External DDD Resources</h2>
+                <ul style="list-style:none; padding:0; line-height:2.0;">
+                    <li><i class="fa-solid fa-link" style="color:var(--accent-blue); width:20px;"></i> <a href="https://dddcommunity.org/" target="_blank" style="color:var(--accent-blue); text-decoration:none;">DDD Community</a> - The official hub for Domain Driven Design.</li>
+                    <li><i class="fa-solid fa-link" style="color:var(--accent-blue); width:20px;"></i> <a href="https://vaughnvernon.co/" target="_blank" style="color:var(--accent-blue); text-decoration:none;">Vaughn Vernon</a> - Author of 'Implementing DDD'.</li>
+                    <li><i class="fa-solid fa-link" style="color:var(--accent-blue); width:20px;"></i> <a href="https://www.domainlanguage.com/" target="_blank" style="color:var(--accent-blue); text-decoration:none;">Eric Evans' Site</a> - The founder of DDD.</li>
+                    <li><i class="fa-solid fa-brands fa-github" style="color:var(--accent-blue); width:20px;"></i> <a href="https://github.com/ddd-crew" target="_blank" style="color:var(--accent-blue); text-decoration:none;">DDD Crew GitHub</a> - Amazing visual templates and tools.</li>
+                </ul>
+            `
+        };
+
+        function initApp() {
+            initLeftDrawerTabStripSelectors();
+            initCanvasEvents();
+            initPaletteEvents();
+            initThemeEngine();
+            initModals();
+            initPropertiesEditor();
+            makeDraggable(document.getElementById('floating-prop-panel'), document.getElementById('floating-prop-handle'));
+            renderSubsystemsTopologyCanvas();
+        }
+
+        function makeDraggable(el, handle) {
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            handle.onmousedown = (e) => {
+                pos3 = e.clientX; pos4 = e.clientY;
+                document.onmouseup = () => { document.onmouseup = null; document.onmousemove = null; };
+                document.onmousemove = (me) => {
+                    pos1 = pos3 - me.clientX; pos2 = pos4 - me.clientY;
+                    pos3 = me.clientX; pos4 = me.clientY;
+                    el.style.top = (el.offsetTop - pos2) + "px";
+                    el.style.left = (el.offsetLeft - pos1) + "px";
+                };
+            };
+        }
+
+        function initLeftDrawerTabStripSelectors() {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.palette-viewport').forEach(p => p.classList.remove('active'));
+                    btn.classList.add('active');
+                    document.getElementById(btn.dataset.target).classList.add('active');
+                });
+            });
+        }
+
+        function initCanvasEvents() {
+            const container = document.getElementById('canvas-container');
+            container.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? 0.9 : 1.1;
+                systemState.zoom = Math.min(Math.max(0.1, systemState.zoom * delta), 3.0);
+                applyCanvasMatrixTransformations();
+            });
+
+            container.addEventListener('mousedown', (e) => {
+                if (e.target === container || e.target.id === 'canvas-surface' || e.target.tagName === 'svg') {
+                    const sx = e.clientX - systemState.panX, sy = e.clientY - systemState.panY;
+                    const onMove = (me) => { systemState.panX = me.clientX - sx; systemState.panY = me.clientY - sy; applyCanvasMatrixTransformations(); };
+                    const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+                    window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
+                }
+            });
+
+            container.addEventListener('dragover', (e) => e.preventDefault());
+            container.addEventListener('drop', (e) => {
+                e.preventDefault();
+                if (!systemState.draggedItemData) return;
+                const rect = container.getBoundingClientRect();
+                const x = (e.clientX - rect.left - systemState.panX) / systemState.zoom;
+                const y = (e.clientY - rect.top - systemState.panY) / systemState.zoom;
+                const newNode = { id: 'node_' + Date.now().toString().slice(-6), ...systemState.draggedItemData, x: Math.round(x / 10) * 10, y: Math.round(y / 10) * 10, fields: [] };
+                const parent = systemState.nodes.find(n => n.isContainer && x > n.x && x < n.x + (n.width || 480) && y > n.y && y < n.y + (n.height || 320));
+                if (parent) newNode.parentContainerId = parent.id;
+                systemState.nodes.push(newNode);
+                focusElement(newNode.id, 'node');
+            });
+        }
+
+        function applyCanvasMatrixTransformations() {
+            const surface = document.getElementById('canvas-surface');
+            surface.style.transform = `translate(${systemState.panX}px, ${systemState.panY}px) scale(${systemState.zoom})`;
+            document.getElementById('telemetry-zoom').textContent = `Scale: ${Math.round(systemState.zoom * 100)}%`;
+        }
+
+        function initPaletteEvents() {
+            document.querySelectorAll('.palette-item').forEach(item => {
+                item.addEventListener('dragstart', () => {
+                    systemState.draggedItemData = { type: item.dataset.type, icon: item.dataset.icon, label: item.dataset.label, color: item.dataset.color, isContainer: item.dataset.type === 'actor-home' };
+                });
+            });
+
+            const createModal = document.getElementById('create-item-modal');
+            document.querySelectorAll('.btn-create-item').forEach(btn => {
+                btn.onclick = () => { systemState.activeCreateType = btn.dataset.type; createModal.classList.add('open'); };
+            });
+            document.getElementById('btn-close-create-modal').onclick = () => createModal.classList.remove('open');
+            document.querySelectorAll('.color-option').forEach(opt => {
+                opt.onclick = () => { document.querySelectorAll('.color-option').forEach(o => o.classList.remove('active')); opt.classList.add('active'); systemState.activeCreateColor = opt.dataset.color; };
+            });
+            document.getElementById('btn-save-new-item').onclick = () => {
+                const label = document.getElementById('create-item-label').value;
+                if (!label) return;
+                const newItem = document.createElement('div');
+                newItem.className = 'palette-item'; newItem.draggable = true;
+                newItem.dataset.type = systemState.activeCreateType; newItem.dataset.icon = document.getElementById('create-item-icon').value;
+                newItem.dataset.label = label; newItem.dataset.color = systemState.activeCreateColor;
+                newItem.innerHTML = `<i class="fa-solid ${newItem.dataset.icon}" style="color:${newItem.dataset.color}"></i><span>${label}</span>`;
+                document.getElementById('grid-custom-items').appendChild(newItem);
+                newItem.addEventListener('dragstart', () => { systemState.draggedItemData = { ...newItem.dataset, isContainer: newItem.dataset.type === 'actor-home' }; });
+                createModal.classList.remove('open');
+            };
+        }
+
+        window.deleteSelectedObject = function(id, type) {
+            if (type === 'node') {
+                systemState.nodes = systemState.nodes.filter(n => n.id !== id);
+                systemState.connections = systemState.connections.filter(c => c.from !== id && c.to !== id);
+            } else if (type === 'wire') {
+                systemState.connections = systemState.connections.filter(c => c.id !== id);
+            }
+            if (systemState.selectedId === id) { systemState.selectedId = null; systemState.selectedType = null; }
+            renderSubsystemsTopologyCanvas();
+        };
+
+        function renderSubsystemsTopologyCanvas(skipPanelUpdate = false) {
+            const surface = document.getElementById('canvas-surface');
+            surface.querySelectorAll('.node').forEach(n => n.remove());
+            
+            // Pre-calculate container bounds to enforce containment
+            systemState.nodes.filter(n => n.isContainer).forEach(container => {
+                const children = systemState.nodes.filter(n => n.parentContainerId === container.id);
+                if (children.length > 0) {
+                    let requiredWidth = container.width || 480;
+                    let requiredHeight = container.height || 320;
+                    children.forEach(c => {
+                        const childRight = (c.x - container.x) + (c.width || 140) + 20;
+                        const childBottom = (c.y - container.y) + (c.height || 65) + 20;
+                        if (childRight > requiredWidth) requiredWidth = childRight;
+                        if (childBottom > requiredHeight) requiredHeight = childBottom;
+                    });
+                    container.width = requiredWidth;
+                    container.height = requiredHeight;
+                }
+            });
+
+            systemState.nodes.forEach(nodeData => {
+                const nodeEl = document.createElement('div');
+                nodeEl.id = nodeData.id; nodeEl.className = `node ${nodeData.isContainer ? 'node-actor-container' : ''}`;
+                if (systemState.selectedId === nodeData.id) nodeEl.classList.add('selected');
+                nodeEl.style.left = `${nodeData.x}px`; nodeEl.style.top = `${nodeData.y}px`; nodeEl.style.borderLeftColor = nodeData.color;
+                if (nodeData.isContainer) { nodeEl.style.width = `${nodeData.width || 480}px`; nodeEl.style.height = `${nodeData.height || 320}px`; }
+                else { nodeEl.style.minWidth = `${nodeData.width || 140}px`; nodeEl.style.minHeight = `${nodeData.height || 65}px`; nodeEl.style.width = 'auto'; nodeEl.style.height = 'auto'; }
+
+                nodeEl.innerHTML = `<div class="node-context-hud">
+                        <button class="hud-btn" onclick="focusElement('${nodeData.id}', 'node')" title="Properties"><i class="fa-solid fa-sliders"></i></button>
+                        <button class="hud-btn hud-del" onclick="deleteSelectedObject('${nodeData.id}', 'node')" title="Delete"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                    <div class="node-header-wrap"><i class="fa-solid ${nodeData.icon}" style="color: ${nodeData.color};"></i><div class="node-text-title">${nodeData.label}</div></div>`;
+
+                if (nodeData.fields && nodeData.fields.length > 0) {
+                    const fc = document.createElement('div'); fieldsContainer = fc; fc.className = 'node-fields-container';
+                    nodeData.fields.forEach(f => {
+                        const row = document.createElement('div'); row.className = 'node-field-row';
+                        const displayValue = f.value !== undefined ? f.value : (f.type ? `[${f.type}]` : '...');
+                        row.innerHTML = `<i class="fa-solid fa-circle-info node-field-type-icon"></i><span class="node-field-name">${f.name}</span>: <span class="node-field-value">${displayValue}</span>`;
+                        fc.appendChild(row);
+                    });
+                    nodeEl.appendChild(fc);
+                }
+
+                ['top', 'right', 'bottom', 'left'].forEach(dir => {
+                    const port = document.createElement('div'); port.className = `port port-${dir}`;
+                    port.onmousedown = (e) => { e.stopPropagation(); startConnection(nodeData.id, dir); };
+                    nodeEl.appendChild(port);
+                });
+
+                if (nodeData.isContainer) {
+                    const h = document.createElement('div'); h.className = 'resize-handle';
+                    h.onmousedown = (e) => { e.stopPropagation(); initResize(e, nodeData); };
+                    nodeEl.appendChild(h);
+                }
+
+                nodeEl.onmousedown = (e) => {
+                    if (e.target.classList.contains('port') || e.target.classList.contains('resize-handle')) return;
+                    e.stopPropagation(); focusElement(nodeData.id, 'node'); startNodeDrag(e, nodeData);
+                };
+                surface.appendChild(nodeEl);
+            });
+            renderConnections();
+            if (!skipPanelUpdate) updatePropertiesPanel();
+        }
+
+        function renderConnections() {
+            const svg = document.getElementById('svg-edge-layer');
+            svg.querySelectorAll('.wire-group').forEach(w => w.remove());
+            systemState.connections.forEach(wire => {
+                const src = systemState.nodes.find(n => n.id === wire.from);
+                const dest = systemState.nodes.find(n => n.id === wire.to);
+                if (!src || !dest) return;
+                const start = getPortCoords(src, wire.fromPort);
+                const end = getPortCoords(dest, wire.toPort);
+                const g = document.createElementNS("http://www.w3.org/2000/svg", "g"); g.setAttribute('class', 'wire-group');
+                const d = `M ${start.x} ${start.y} C ${start.x + (wire.fromPort==='right'?50:(wire.fromPort==='left'?-50:0))} ${start.y + (wire.fromPort==='bottom'?50:(wire.fromPort==='top'?-50:0))} ${end.x + (wire.toPort==='right'?50:(wire.toPort==='left'?-50:0))} ${end.y + (wire.toPort==='bottom'?50:(wire.toPort==='top'?-50:0))} ${end.x} ${end.y}`;
+                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                path.setAttribute('d', d); path.setAttribute('class', `wire ${systemState.selectedId === wire.id ? 'selected' : ''}`);
+                path.setAttribute('marker-end', 'url(#arrowhead)');
+                const hit = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                hit.setAttribute('d', d); hit.setAttribute('class', 'wire-hit-area'); hit.onclick = () => focusElement(wire.id, 'wire');
+                const anim = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                anim.setAttribute('d', d); anim.setAttribute('class', 'animated-flow-line'); anim.setAttribute('stroke', '#60a5fa'); anim.setAttribute('fill', 'none'); anim.setAttribute('stroke-width', '2');
+                g.appendChild(path); g.appendChild(anim); g.appendChild(hit); svg.appendChild(g);
+            });
+        }
+
+        function getPortCoords(node, dir) {
+            const el = document.getElementById(node.id);
+            const w = el ? el.offsetWidth : (node.width || 140), h = el ? el.offsetHeight : (node.height || 65);
+            let x = node.x, y = node.y;
+            if (dir === 'right') { x += w; y += h/2; } else if (dir === 'left') { y += h/2; } else if (dir === 'top') { x += w/2; } else if (dir === 'bottom') { x += w/2; y += h; }
+            return { x, y };
+        }
+
+        function focusElement(id, type) { systemState.selectedId = id; systemState.selectedType = type; renderSubsystemsTopologyCanvas(); }
+
+        function startNodeDrag(e, node) {
+            let sx = e.clientX, sy = e.clientY, ox = node.x, oy = node.y;
+            const children = systemState.nodes.filter(n => n.parentContainerId === node.id).map(c => ({id:c.id, dx:c.x-ox, dy:c.y-oy}));
+            const onMove = (me) => {
+                let newX = ox + (me.clientX - sx) / systemState.zoom;
+                let newY = oy + (me.clientY - sy) / systemState.zoom;
+                
+                // Snap to 10px grid
+                newX = Math.round(newX / 10) * 10;
+                newY = Math.round(newY / 10) * 10;
+
+                // Restrict child dragging to parent boundaries
+                if (node.parentContainerId) {
+                    const parent = systemState.nodes.find(n => n.id === node.parentContainerId);
+                    if (parent) {
+                        const pX = parent.x, pY = parent.y;
+                        const pW = parent.width || 480, pH = parent.height || 320;
+                        const el = document.getElementById(node.id);
+                        const cW = el ? el.offsetWidth : (node.width || 140);
+                        const cH = el ? el.offsetHeight : (node.height || 65);
+                        
+                        newX = Math.max(pX + 10, Math.min(newX, pX + pW - cW - 10));
+                        newY = Math.max(pY + 10, Math.min(newY, pY + pH - cH - 10));
+                    }
+                }
+
+                node.x = newX;
+                node.y = newY;
+
+                children.forEach(c => { const cn = systemState.nodes.find(n => n.id === c.id); cn.x = node.x + c.dx; cn.y = node.y + c.dy; });
+                renderSubsystemsTopologyCanvas(true); // skip panel update to prevent focus loss
+            };
+            const onUp = () => { 
+                window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); 
+
+                // Auto-Add to Context if dropped inside one
+                if (!node.isContainer && !node.parentContainerId) {
+                    const targetContainer = systemState.nodes.find(n => n.isContainer && n.id !== node.id &&
+                        node.x >= n.x && node.x <= (n.x + (n.width || 480)) &&
+                        node.y >= n.y && node.y <= (n.y + (n.height || 320))
+                    );
+                    if (targetContainer) {
+                        node.parentContainerId = targetContainer.id;
+                    }
+                }
+
+                renderSubsystemsTopologyCanvas(); // final render with panel update
+            };
+            window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
+        }
+
+        function startConnection(nodeId, dir) {
+            const onUp = (ue) => {
+                const tp = ue.target.closest('.port');
+                if (tp && tp.parentElement.id !== nodeId) {
+                    systemState.connections.push({ id: 'wire_' + Date.now().toString().slice(-6), from: nodeId, fromPort: dir, to: tp.parentElement.id, toPort: tp.classList[1].split('-')[1], direction: 'left-to-right' });
+                    renderSubsystemsTopologyCanvas();
+                }
+                window.removeEventListener('mouseup', onUp);
+            };
+            window.addEventListener('mouseup', onUp);
+        }
+
+        function initResize(e, node) {
+            let sx = e.clientX, sy = e.clientY, sw = node.width || 480, sh = node.height || 320;
+            const onMove = (me) => { node.width = Math.max(200, sw + (me.clientX - sx) / systemState.zoom); node.height = Math.max(150, sh + (me.clientY - sy) / systemState.zoom); renderSubsystemsTopologyCanvas(); };
+            const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+            window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
+        }
+
+        function initThemeEngine() {
+            const sel = document.getElementById('theme-selector');
+            sel.onchange = () => { document.body.className = sel.value === 'default' ? '' : `theme-${sel.value}`; };
+        }
+
+        function initModals() {
+            const modals = { code: document.getElementById('code-modal'), templates: document.getElementById('templates-modal'), help: document.getElementById('help-modal') };
+            document.getElementById('btn-open-code').onclick = () => { modals.code.classList.add('open'); document.getElementById('topology-code-area').value = JSON.stringify({nodes: systemState.nodes, connections: systemState.connections}, null, 4); };
+            document.getElementById('btn-open-templates').onclick = () => modals.templates.classList.add('open');
+            document.getElementById('btn-open-help').onclick = () => { modals.help.classList.add('open'); loadHelpSection('intro'); };
+            document.querySelectorAll('.btn-icon-small').forEach(btn => { btn.onclick = () => Object.values(modals).forEach(m => m.classList.remove('open')); });
+            document.getElementById('btn-apply-code').onclick = () => {
+                try { const data = JSON.parse(document.getElementById('topology-code-area').value); systemState.nodes = data.nodes || []; systemState.connections = data.connections || []; renderSubsystemsTopologyCanvas(); modals.code.classList.remove('open'); }
+                catch(e) { alert("Invalid JSON Blueprint"); }
+            };
+            document.querySelectorAll('.template-card').forEach(card => {
+                card.onclick = () => {
+                    const t = INDUSTRY_TEMPLATES[card.dataset.template];
+                    if (t) { systemState.nodes = JSON.parse(JSON.stringify(t.nodes)); systemState.connections = JSON.parse(JSON.stringify(t.connections)); renderSubsystemsTopologyCanvas(); modals.templates.classList.remove('open'); }
+                };
+            });
+            document.querySelectorAll('.help-nav-item').forEach(item => { item.onclick = () => loadHelpSection(item.dataset.section); });
+            document.getElementById('help-search').oninput = (e) => {
+                const term = e.target.value.toLowerCase();
+                document.querySelectorAll('.help-nav-item').forEach(item => { item.style.display = item.textContent.toLowerCase().includes(term) ? 'block' : 'none'; });
+            };
+        }
+
+        function loadHelpSection(sec) {
+            document.querySelectorAll('.help-nav-item').forEach(i => i.classList.toggle('active', i.dataset.section === sec));
+            document.getElementById('help-content-view').innerHTML = HELP_DATA[sec] || 'Section not found.';
+        }
+
+        function initPropertiesEditor() {
+            document.getElementById('btn-close-props').onclick = () => { systemState.selectedId = null; systemState.selectedType = null; renderSubsystemsTopologyCanvas(); };
+            document.getElementById('btn-add-field').onclick = () => {
+                const node = systemState.nodes.find(n => n.id === systemState.selectedId);
+                const nameInput = document.getElementById('new-field-name');
+                const valInput = document.getElementById('new-field-value');
+                const typeInput = document.getElementById('new-field-type');
+                if (node && nameInput.value) { 
+                    node.fields.push({name: nameInput.value, value: valInput.value, type: typeInput.value}); 
+                    nameInput.value = ''; valInput.value = ''; typeInput.value = '';
+                    renderSubsystemsTopologyCanvas(); 
+                }
+            };
+            document.getElementById('btn-delete-selection').onclick = () => {
+                deleteSelectedObject(systemState.selectedId, systemState.selectedType);
+            };
+            document.getElementById('btn-unbind-parent').onclick = () => {
+                const node = systemState.nodes.find(n => n.id === systemState.selectedId);
+                if (node) { node.parentContainerId = null; renderSubsystemsTopologyCanvas(); }
+            };
+            ['prop-label', 'prop-icon', 'prop-width', 'prop-height'].forEach(id => {
+                document.getElementById(id).oninput = (e) => {
+                    const node = systemState.nodes.find(n => n.id === systemState.selectedId);
+                    if (node) { node[id.split('-')[1]] = e.target.value; renderSubsystemsTopologyCanvas(true); }
+                };
+            });
+            document.getElementById('prop-flow-dir').onchange = (e) => {
+                const wire = systemState.connections.find(c => c.id === systemState.selectedId);
+                if (wire) { wire.direction = e.target.value; renderSubsystemsTopologyCanvas(); }
+            };
+        }
+
+        function updatePropertiesPanel() {
+            const active = systemState.selectedId != null;
+            const propPanel = document.getElementById('floating-prop-panel');
+            propPanel.classList.toggle('active', active);
+            if (active) {
+                document.getElementById('prop-empty-state').style.display = 'none';
+                document.getElementById('prop-active-editor').style.display = 'flex';
+                const node = systemState.nodes.find(n => n.id === systemState.selectedId), wire = systemState.connections.find(c => c.id === systemState.selectedId);
+                if (node) {
+                    document.getElementById('prop-id').value = node.id; document.getElementById('prop-label').value = node.label; document.getElementById('prop-icon').value = node.icon;
+                    document.getElementById('prop-width').value = node.width || (node.isContainer?480:140); document.getElementById('prop-height').value = node.height || (node.isContainer?320:65);
+                    document.getElementById('fields-editor-block').style.display = 'block'; document.getElementById('connection-properties-block').style.display = 'none';
+                    document.getElementById('btn-unbind-parent').style.display = node.parentContainerId ? 'block' : 'none';
+                    const fl = document.getElementById('fields-list'); fl.innerHTML = '';
+                    if (node.fields) node.fields.forEach((f, idx) => {
+                        const row = document.createElement('div'); row.className = 'field-editor-row';
+                        row.innerHTML = `<input type="text" class="prop-input" value="${f.name}" onchange="updateNodeField('${node.id}', ${idx}, 'name', this.value)">
+                            <input type="text" class="prop-input" value="${f.type||''}" onchange="updateNodeField('${node.id}', ${idx}, 'type', this.value)">
+                            <input type="text" class="prop-input" value="${f.value}" onchange="updateNodeField('${node.id}', ${idx}, 'value', this.value)">
+                            <button class="btn-icon-small" onclick="deleteNodeField('${node.id}', ${idx})"><i class="fa-solid fa-trash"></i></button>`;
+                        fl.appendChild(row);
+                    });
+                }
+                if (wire) {
+                    document.getElementById('prop-id').value = wire.id; document.getElementById('connection-properties-block').style.display = 'block';
+                    document.getElementById('fields-editor-block').style.display = 'none'; document.getElementById('prop-flow-dir').value = wire.direction;
+                }
+            }
+        }
+        function updateNodeField(nid, idx, k, v) { const n = systemState.nodes.find(n => n.id === nid); if (n && n.fields[idx]) { n.fields[idx][k] = v; renderSubsystemsTopologyCanvas(); } }
+        function deleteNodeField(nid, idx) { const n = systemState.nodes.find(n => n.id === nid); if (n) { n.fields.splice(idx, 1); renderSubsystemsTopologyCanvas(); } }
+        window.onload = initApp;
+    </script>
+</body>
+</html>
