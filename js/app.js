@@ -1207,7 +1207,7 @@ function initThemeEngine() {
 }
 
 function initModals() {
-    const modals = { templates: document.getElementById('templates-modal'), code: document.getElementById('code-modal'), help: document.getElementById('help-modal'), icon: document.getElementById('icon-picker-modal') };
+    const modals = { templates: document.getElementById('templates-modal'), code: document.getElementById('code-modal'), help: document.getElementById('help-modal'), icon: document.getElementById('icon-picker-modal'), confirm: document.getElementById('confirm-modal') };
     document.getElementById('btn-open-templates').onclick = () => modals.templates.classList.add('open');
     document.getElementById('btn-open-code').onclick = () => { modals.code.classList.add('open'); document.getElementById('topology-code-area').value = JSON.stringify({nodes: systemState.nodes, connections: systemState.connections, sketches: systemState.sketches}, null, 4); };
     document.getElementById('btn-open-help').onclick = () => modals.help.classList.add('open');
@@ -1263,7 +1263,20 @@ function initModals() {
         };
     });
 
-    document.getElementById('btn-clear-canvas').onclick = () => { if (confirm("Reset the entire canvas? This cannot be undone.")) clearCanvas(); };
+    document.getElementById('btn-clear-canvas').onclick = () => modals.confirm.classList.add('open');
+    const btnConfirmClear = document.getElementById('btn-confirm-clear');
+    if (btnConfirmClear) {
+        btnConfirmClear.onclick = () => {
+            clearCanvas();
+            modals.confirm.classList.remove('open');
+        };
+    }
+    const btnCancelClear = document.getElementById('btn-cancel-clear');
+    if (btnCancelClear) {
+        btnCancelClear.onclick = () => {
+            modals.confirm.classList.remove('open');
+        };
+    }
     document.getElementById('btn-save-json').onclick = () => { const data = JSON.stringify({nodes: systemState.nodes, connections: systemState.connections, sketches: systemState.sketches}, null, 4); const blob = new Blob([data], {type: "application/json"}), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = `blueprint_${Date.now()}.jc`; a.click(); };
     document.getElementById('btn-save-svg').onclick = () => {
         const svg = document.getElementById('svg-edge-layer').cloneNode(true), sketchLayer = document.getElementById('svg-sketch-layer').cloneNode(true), fullSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
