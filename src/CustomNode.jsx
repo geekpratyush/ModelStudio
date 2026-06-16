@@ -137,7 +137,7 @@ export default function CustomNode({ id, data, selected }) {
     return (
       <>
         {toolbar}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: 90, height: 90, padding: '10px', position: 'relative' }}>
           <Handle type="target" position={Position.Top} />
           <Handle type="target" position={Position.Left} id="left" />
           <LucideIcons.User size={40} color={color} strokeWidth={1.5} />
@@ -154,7 +154,14 @@ export default function CustomNode({ id, data, selected }) {
       {toolbar}
       <div 
         className={`custom-node ${data.shape ? 'shape-' + data.shape : ''}`}
-        style={{ borderColor: data.hideBorder ? 'transparent' : color, '--accent-color': color, background: data.hideBorder ? 'transparent' : undefined, boxShadow: data.hideBorder ? 'none' : undefined }}
+        style={{ 
+          width: data.shape === 'diamond' ? 100 : 160, 
+          height: data.shape === 'diamond' ? 100 : 72, 
+          borderColor: data.hideBorder ? 'transparent' : color, 
+          '--accent-color': color, 
+          background: data.hideBorder ? 'transparent' : undefined, 
+          boxShadow: data.hideBorder ? 'none' : undefined 
+        }}
       >
         <Handle type="target" position={Position.Top} id="top" />
         <Handle type="target" position={Position.Left} id="left" />

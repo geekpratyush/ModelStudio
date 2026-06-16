@@ -17,7 +17,7 @@ import '@xyflow/react/dist/style.css';
 import { toPng, toSvg } from 'html-to-image';
 import { v4 as uuidv4 } from 'uuid';
 import yaml from 'js-yaml';
-import { Download, Upload, FolderOpen, FileJson, Image, PlayCircle, Box, Diamond, Server, Trash2, Save, Database, Cloud, MousePointer2, Hand, Grid3X3, Code, ChevronLeft, ChevronRight, ChevronsDown, ChevronsUp, Filter, ListOrdered, FileText, ShieldCheck, MessageSquare, Send, Skull, Mail, Clock, GitMerge, GitBranch, Workflow, Network, ArrowRightLeft, Route, FilePlus, RefreshCw, Radio, Share2, ListChecks, Scale, Settings2, ArrowDownUp, TerminalSquare, CheckCircle2, PackageOpen, Package, FileArchive, MessageCircle, RadioTower, Webhook, Hexagon, Building2, CloudLightning, BoxSelect, Plug, Zap, Cpu, User, File, Type, Table, Building, Layers, Search, X, Target } from 'lucide-react';
+import { Download, Upload, FileJson, Image, PlayCircle, Box, Diamond, Server, Trash2, Database, Cloud, MousePointer2, Hand, Grid3X3, Code, ChevronLeft, ChevronRight, ChevronsDown, ChevronsUp, Filter, ListOrdered, FileText, ShieldCheck, MessageSquare, Send, Skull, Mail, Clock, GitMerge, GitBranch, Workflow, Network, ArrowRightLeft, Route, FilePlus, RefreshCw, Radio, Share2, ListChecks, Scale, Settings2, ArrowDownUp, TerminalSquare, CheckCircle2, PackageOpen, Package, FileArchive, MessageCircle, RadioTower, Webhook, Hexagon, Building2, CloudLightning, BoxSelect, Plug, Zap, Cpu, User, File, Type, Table, Building, Layers, Search, X, Target } from 'lucide-react';
 import * as AllIcons from 'lucide-react';
 
 const allIconNames = Object.keys(AllIcons).filter(k => k[0] === k[0].toUpperCase() && k !== 'LucideIcon' && k !== 'Icon');
@@ -44,9 +44,9 @@ const templates = {
       name: "1. Basic Aggregate (Simple)",
       description: "A minimal strategic design defining a single Bounded Context containing one Entity and one Value Object. Ideal for beginners.",
       nodes: [
-        { id: "ctx-simple", type: 'custom', position: { x: 50, y: 50 }, style: { width: 350, height: 240, zIndex: -1 }, data: { label: "Order context", isContainer: true, color: "#3b82f6" } },
-        { id: "ent-order", type: 'custom', parentId: "ctx-simple", extent: "parent", position: { x: 30, y: 55 }, data: { label: "Order Entity", icon: "Box", color: "#3b82f6", shape: "box" } },
-        { id: "vo-addr", type: 'custom', parentId: "ctx-simple", extent: "parent", position: { x: 30, y: 125 }, data: { label: "Address VO", icon: "Layers", color: "#3b82f6", shape: "box" } }
+        { id: "ctx-simple", type: 'custom', position: { x: 50, y: 50 }, style: { width: 450, height: 350, zIndex: -1 }, data: { label: "Order context", isContainer: true, color: "#3b82f6" } },
+        { id: "ent-order", type: 'custom', parentId: "ctx-simple", extent: "parent", position: { x: 40, y: 70 }, data: { label: "Order Entity", icon: "Box", color: "#3b82f6", shape: "box" } },
+        { id: "vo-addr", type: 'custom', parentId: "ctx-simple", extent: "parent", position: { x: 40, y: 195 }, data: { label: "Address VO", icon: "Layers", color: "#3b82f6", shape: "box" } }
       ],
       edges: []
     },
@@ -54,15 +54,15 @@ const templates = {
       name: "2. E-Commerce System Map (Medium)",
       description: "A strategic Domain-Driven Design layout defining Order Processing, Payment Gateway, and Customer contexts, including entities, repos, and external APIs.",
       nodes: [
-        { id: "ctx-order", type: 'custom', position: { x: 50, y: 50 }, style: { width: 350, height: 320, zIndex: -1 }, data: { label: "Order Context", isContainer: true, color: "#3b82f6" } },
-        { id: "entity-order", type: 'custom', parentId: "ctx-order", extent: "parent", position: { x: 30, y: 55 }, data: { label: "Order Entity", icon: "Box", color: "#3b82f6", shape: "box" } },
-        { id: "vo-orderitem", type: 'custom', parentId: "ctx-order", extent: "parent", position: { x: 30, y: 125 }, data: { label: "OrderItem ValueObject", icon: "Layers", color: "#3b82f6", shape: "box" } },
-        { id: "repo-order", type: 'custom', parentId: "ctx-order", extent: "parent", position: { x: 30, y: 205 }, data: { label: "Order Repository", icon: "Database", color: "#3b82f6", shape: "box" } },
+        { id: "ctx-order", type: 'custom', position: { x: 50, y: 50 }, style: { width: 450, height: 500, zIndex: -1 }, data: { label: "Order Context", isContainer: true, color: "#3b82f6" } },
+        { id: "entity-order", type: 'custom', parentId: "ctx-order", extent: "parent", position: { x: 40, y: 70 }, data: { label: "Order Entity", icon: "Box", color: "#3b82f6", shape: "box" } },
+        { id: "vo-orderitem", type: 'custom', parentId: "ctx-order", extent: "parent", position: { x: 40, y: 195 }, data: { label: "OrderItem ValueObject", icon: "Layers", color: "#3b82f6", shape: "box" } },
+        { id: "repo-order", type: 'custom', parentId: "ctx-order", extent: "parent", position: { x: 40, y: 320 }, data: { label: "Order Repository", icon: "Database", color: "#3b82f6", shape: "box" } },
         
-        { id: "ctx-payment", type: 'custom', position: { x: 550, y: 50 }, style: { width: 350, height: 170, zIndex: -1 }, data: { label: "Payment Context", isContainer: true, color: "#10b981" } },
-        { id: "service-gateway", type: 'custom', parentId: "ctx-payment", extent: "parent", position: { x: 30, y: 55 }, data: { label: "Payment Processor", icon: "Cpu", color: "#10b981", shape: "box" } },
+        { id: "ctx-payment", type: 'custom', position: { x: 650, y: 50 }, style: { width: 450, height: 250, zIndex: -1 }, data: { label: "Payment Context", isContainer: true, color: "#10b981" } },
+        { id: "service-gateway", type: 'custom', parentId: "ctx-payment", extent: "parent", position: { x: 40, y: 70 }, data: { label: "Payment Processor", icon: "Cpu", color: "#10b981", shape: "box" } },
 
-        { id: "ext-bank", type: 'custom', position: { x: 1000, y: 90 }, data: { label: "External Bank API", icon: "Building", color: "#ef4444", shape: "oval" } }
+        { id: "ext-bank", type: 'custom', position: { x: 1200, y: 90 }, data: { label: "External Bank API", icon: "Building", color: "#ef4444", shape: "oval" } }
       ],
       edges: [
         { id: "e-order-payment", source: "repo-order", target: "service-gateway", animated: true, type: "custom", label: "Invokes", style: { strokeWidth: 3, stroke: '#3b82f6' } },
@@ -73,17 +73,17 @@ const templates = {
       name: "3. CQRS Pattern Blueprint (Complex)",
       description: "Advanced architecture pattern cleanly splitting command (Write) and query (Read) responsibilities via an Event Store.",
       nodes: [
-        { id: "ctx-write", type: 'custom', position: { x: 50, y: 50 }, style: { width: 350, height: 320, zIndex: -1 }, data: { label: "Command Side", isContainer: true, color: "#3b82f6" } },
-        { id: "w-controller", type: 'custom', parentId: "ctx-write", extent: "parent", position: { x: 30, y: 55 }, data: { label: "Write Controller", icon: "Network", color: "#3b82f6", shape: "box" } },
-        { id: "w-handler", type: 'custom', parentId: "ctx-write", extent: "parent", position: { x: 30, y: 125 }, data: { label: "Command Handler", icon: "Cpu", color: "#3b82f6", shape: "box" } },
-        { id: "w-repo", type: 'custom', parentId: "ctx-write", extent: "parent", position: { x: 30, y: 205 }, data: { label: "Write Repository", icon: "Database", color: "#3b82f6", shape: "box" } },
+        { id: "ctx-write", type: 'custom', position: { x: 50, y: 50 }, style: { width: 450, height: 500, zIndex: -1 }, data: { label: "Command Side", isContainer: true, color: "#3b82f6" } },
+        { id: "w-controller", type: 'custom', parentId: "ctx-write", extent: "parent", position: { x: 40, y: 70 }, data: { label: "Write Controller", icon: "Network", color: "#3b82f6", shape: "box" } },
+        { id: "w-handler", type: 'custom', parentId: "ctx-write", extent: "parent", position: { x: 40, y: 195 }, data: { label: "Command Handler", icon: "Cpu", color: "#3b82f6", shape: "box" } },
+        { id: "w-repo", type: 'custom', parentId: "ctx-write", extent: "parent", position: { x: 40, y: 320 }, data: { label: "Write Repository", icon: "Database", color: "#3b82f6", shape: "box" } },
         
-        { id: "evt-store", type: 'custom', position: { x: 550, y: 140 }, data: { label: "Event Store", icon: "Database", color: "#f59e0b", shape: "cylinder" } },
+        { id: "evt-store", type: 'custom', position: { x: 650, y: 140 }, data: { label: "Event Store", icon: "Database", color: "#f59e0b", shape: "cylinder" } },
         
-        { id: "ctx-read", type: 'custom', position: { x: 800, y: 50 }, style: { width: 350, height: 320, zIndex: -1 }, data: { label: "Query Side", isContainer: true, color: "#10b981" } },
-        { id: "r-controller", type: 'custom', parentId: "ctx-read", extent: "parent", position: { x: 30, y: 55 }, data: { label: "Read Controller", icon: "Network", color: "#10b981", shape: "box" } },
-        { id: "r-handler", type: 'custom', parentId: "ctx-read", extent: "parent", position: { x: 30, y: 125 }, data: { label: "Query Handler", icon: "Cpu", color: "#10b981", shape: "box" } },
-        { id: "r-repo", type: 'custom', parentId: "ctx-read", extent: "parent", position: { x: 30, y: 205 }, data: { label: "Read Repository", icon: "Database", color: "#10b981", shape: "box" } }
+        { id: "ctx-read", type: 'custom', position: { x: 950, y: 50 }, style: { width: 450, height: 500, zIndex: -1 }, data: { label: "Query Side", isContainer: true, color: "#10b981" } },
+        { id: "r-controller", type: 'custom', parentId: "ctx-read", extent: "parent", position: { x: 40, y: 70 }, data: { label: "Read Controller", icon: "Network", color: "#10b981", shape: "box" } },
+        { id: "r-handler", type: 'custom', parentId: "ctx-read", extent: "parent", position: { x: 40, y: 195 }, data: { label: "Query Handler", icon: "Cpu", color: "#10b981", shape: "box" } },
+        { id: "r-repo", type: 'custom', parentId: "ctx-read", extent: "parent", position: { x: 40, y: 320 }, data: { label: "Read Repository", icon: "Database", color: "#10b981", shape: "box" } }
       ],
       edges: [
         { id: "e-w-c-h", source: "w-controller", target: "w-handler", animated: true, type: "custom" },
@@ -464,8 +464,55 @@ function FlowCanvas() {
       
       setEdges(eds => eds.filter(edge => !idsSet.has(edge.source) && !idsSet.has(edge.target)));
     }
+    
     onNodesChange(changes);
-  }, [nodes, onNodesChange, setEdges]);
+
+    const positionChanges = changes.filter(c => c.type === 'position' && c.position);
+    if (positionChanges.length > 0) {
+      setNodes(nds => {
+        const parentIdsToUpdate = new Set();
+        positionChanges.forEach(change => {
+          const node = nds.find(n => n.id === change.id);
+          if (node && node.parentId) {
+            parentIdsToUpdate.add(node.parentId);
+          }
+        });
+
+        if (parentIdsToUpdate.size === 0) return nds;
+
+        return nds.map(n => {
+          if (parentIdsToUpdate.has(n.id) && n.data?.isContainer) {
+            const children = nds.filter(c => c.parentId === n.id);
+            const childWidth = 160;
+            
+            let maxX = 0;
+            let maxY = 0;
+            children.forEach(c => {
+              let nodeHeight = 80;
+              if (c.data?.shape === 'class') nodeHeight = 120;
+              else if (c.data?.shape === 'actor') nodeHeight = 90;
+              
+              const rightSide = c.position.x + childWidth;
+              const bottomSide = c.position.y + nodeHeight;
+              if (rightSide > maxX) maxX = rightSide;
+              if (bottomSide > maxY) maxY = bottomSide;
+            });
+            
+            return {
+              ...n,
+              style: {
+                ...n.style,
+                width: Math.max(400, maxX + 50),
+                height: Math.max(300, maxY + 50),
+                zIndex: -1
+              }
+            };
+          }
+          return n;
+        });
+      });
+    }
+  }, [nodes, onNodesChange, setEdges, setNodes]);
   
   const { zoom } = useViewport();
 
@@ -533,6 +580,7 @@ function FlowCanvas() {
         if (key === 'animated') return { ...edge, animated: value };
         if (key === 'label') return { ...edge, label: value };
         if (key === 'type') return { ...edge, type: value };
+        if (key === 'showLabel') return { ...edge, showLabel: value };
         if (key === 'strokeWidth' || key === 'stroke') {
            const newStyle = { ...edge.style, [key]: value };
            const updatedEdge = { ...edge, style: newStyle };
@@ -602,51 +650,167 @@ function FlowCanvas() {
     setContextMenu(null);
   };
   const autoLayout = (direction = 'LR', nodesList = nodes, edgesList = edges) => {
+    // 1. Separate top-level nodes and nested child nodes
+    const topLevelNodes = nodesList.filter(n => !n.parentId);
+    const childNodes = nodesList.filter(n => n.parentId);
+
+    // 2. Position children inside their respective parent containers first
+    // and calculate the required size for each container.
+    const updatedNodes = nodesList.map(n => ({ ...n }));
+
+    const containers = topLevelNodes.filter(n => n.data?.isContainer);
+    
+    containers.forEach(container => {
+      const children = childNodes.filter(c => c.parentId === container.id);
+      if (children.length === 0) return;
+
+      // Position children in a clean grid inside the container
+      const cols = 2; 
+      const childWidth = 160;
+      const gapX = 50;
+      const gapY = 50;
+
+      children.forEach((child, index) => {
+        const colIndex = index % cols;
+        const rowIndex = Math.floor(index / cols);
+        
+        let posY = 60;
+        for (let r = 0; r < rowIndex; r++) {
+          const rowChildren = children.slice(r * cols, (r + 1) * cols);
+          const rowMaxHeight = Math.max(80, ...rowChildren.map(c => {
+            if (c.data?.shape === 'class') return 120;
+            if (c.data?.shape === 'actor') return 90;
+            return 80;
+          }));
+          posY += rowMaxHeight + gapY;
+        }
+
+        const childInUpdated = updatedNodes.find(un => un.id === child.id);
+        if (childInUpdated) {
+          childInUpdated.position = {
+            x: 30 + colIndex * (childWidth + gapX),
+            y: posY
+          };
+        }
+      });
+
+      // Calculate container size to fit these children
+      let maxX = 0;
+      let maxY = 0;
+      children.forEach(child => {
+        const childInUpdated = updatedNodes.find(un => un.id === child.id);
+        const posX = childInUpdated ? childInUpdated.position.x : 30;
+        const posY = childInUpdated ? childInUpdated.position.y : 60;
+        
+        let nodeHeight = 80;
+        if (child.data?.shape === 'class') nodeHeight = 120;
+        else if (child.data?.shape === 'actor') nodeHeight = 90;
+
+        const rightSide = posX + childWidth;
+        const bottomSide = posY + nodeHeight;
+        
+        if (rightSide > maxX) maxX = rightSide;
+        if (bottomSide > maxY) maxY = bottomSide;
+      });
+
+      const containerInUpdated = updatedNodes.find(un => un.id === container.id);
+      if (containerInUpdated) {
+        containerInUpdated.style = {
+          ...containerInUpdated.style,
+          width: Math.max(400, maxX + 50),
+          height: Math.max(300, maxY + 50),
+          zIndex: -1
+        };
+      }
+    });
+
+    // 3. Perform layout on top-level nodes (and their container representatives)
+    const topLevelEdges = edgesList.map(edge => {
+      const sourceNode = nodesList.find(n => n.id === edge.source);
+      const targetNode = nodesList.find(n => n.id === edge.target);
+      
+      const sourceParentId = sourceNode?.parentId || edge.source;
+      const targetParentId = targetNode?.parentId || edge.target;
+      
+      return {
+        ...edge,
+        source: sourceParentId,
+        target: targetParentId
+      };
+    }).filter(edge => edge.source !== edge.target);
+
     const inDegree = {};
-    nodesList.forEach(n => inDegree[n.id] = 0);
-    edgesList.forEach(e => {
+    topLevelNodes.forEach(n => inDegree[n.id] = 0);
+    topLevelEdges.forEach(e => {
       if (inDegree[e.target] !== undefined) inDegree[e.target]++;
     });
 
     const depths = {};
-    let currentLevel = nodesList.filter(n => inDegree[n.id] === 0).map(n => n.id);
+    let currentLevel = topLevelNodes.filter(n => inDegree[n.id] === 0).map(n => n.id);
     let d = 0;
     while (currentLevel.length > 0) {
       let nextLevel = [];
       currentLevel.forEach(id => {
         depths[id] = Math.max(depths[id] || 0, d);
-        edgesList.filter(e => e.source === id).forEach(e => {
+        topLevelEdges.filter(e => e.source === id).forEach(e => {
           if (!nextLevel.includes(e.target)) nextLevel.push(e.target);
         });
       });
       d++;
       currentLevel = nextLevel;
-      if (d > 100) break; // cycle protection
+      if (d > 100) break;
     }
 
-    nodesList.forEach(n => { if (depths[n.id] === undefined) depths[n.id] = 0; });
+    topLevelNodes.forEach(n => { if (depths[n.id] === undefined) depths[n.id] = 0; });
 
     const levelCounts = {};
-    const newNodes = nodesList.map(n => {
+    const levelMaxDim = {};
+    
+    topLevelNodes.forEach(n => {
+      const depth = depths[n.id];
+      const updatedNode = updatedNodes.find(un => un.id === n.id);
+      const w = parseInt(updatedNode?.style?.width || 180, 10);
+      const h = parseInt(updatedNode?.style?.height || 100, 10);
+      
+      if (!levelMaxDim[depth]) {
+        levelMaxDim[depth] = { width: 0, height: 0 };
+      }
+      if (w > levelMaxDim[depth].width) levelMaxDim[depth].width = w;
+      if (h > levelMaxDim[depth].height) levelMaxDim[depth].height = h;
+    });
+
+    const depthOffset = {};
+    let currentOffset = 50;
+    const maxDepth = Math.max(-1, ...topLevelNodes.map(n => depths[n.id]));
+    
+    for (let i = 0; i <= maxDepth; i++) {
+      depthOffset[i] = currentOffset;
+      const maxDim = levelMaxDim[i] || { width: 180, height: 100 };
+      currentOffset += (direction === 'LR' ? maxDim.width : maxDim.height) + (direction === 'LR' ? 120 : 100);
+    }
+
+    topLevelNodes.forEach(n => {
       const depth = depths[n.id];
       levelCounts[depth] = (levelCounts[depth] || 0) + 1;
       const index = levelCounts[depth] - 1;
-
-      const dx = direction === 'LR' ? 300 : 250;
-      const dy = direction === 'LR' ? 150 : 250;
-
-      let x, y;
-      if (direction === 'LR') {
-        x = depth * dx + 50;
-        y = index * dy + 50;
-      } else {
-        x = index * dx + 50;
-        y = depth * dy + 50;
+      
+      const updatedNode = updatedNodes.find(un => un.id === n.id);
+      if (updatedNode) {
+        if (direction === 'LR') {
+          updatedNode.position = {
+            x: depthOffset[depth],
+            y: 50 + index * (levelMaxDim[depth].height + 80)
+          };
+        } else {
+          updatedNode.position = {
+            x: 50 + index * (levelMaxDim[depth].width + 100),
+            y: depthOffset[depth]
+          };
+        }
       }
-      return { ...n, position: { x, y } };
     });
 
-    setNodes(newNodes);
+    setNodes(updatedNodes);
     
     setTimeout(() => {
       if (reactFlowInstance) reactFlowInstance.fitView({ padding: 0.2, duration: 800 });
@@ -740,29 +904,69 @@ function FlowCanvas() {
   const exitContext = () => {
     if (!contextMenu) return;
     const targetNodeId = contextMenu.id;
-    setNodes(nds => nds.map(node => {
-      if (node.id === targetNodeId) {
-        const parent = nds.find(n => n.id === node.parentId);
-        const rest = { ...node };
-        delete rest.parentId;
-        delete rest.extent;
-        
-        let targetX = node.position.x;
-        let targetY = node.position.y;
-        
-        if (parent) {
-          const pWidth = parseInt(parent.style?.width || 300, 10);
-          targetX = parent.position.x + pWidth + 50; // Place it 50px to the right of the container
-          targetY = parent.position.y + node.position.y;
-        }
+    setNodes(nds => {
+      const exitingNode = nds.find(n => n.id === targetNodeId);
+      const parentId = exitingNode?.parentId;
+      
+      const updatedNodes = nds.map(node => {
+        if (node.id === targetNodeId) {
+          const parent = nds.find(n => n.id === node.parentId);
+          const rest = { ...node };
+          delete rest.parentId;
+          delete rest.extent;
+          
+          let targetX = node.position.x;
+          let targetY = node.position.y;
+          
+          if (parent) {
+            const pWidth = parseInt(parent.style?.width || 300, 10);
+            targetX = parent.position.x + pWidth + 50; 
+            targetY = parent.position.y + node.position.y;
+          }
 
-        return { 
-          ...rest, 
-          position: { x: targetX, y: targetY } 
-        };
+          return { 
+            ...rest, 
+            position: { x: targetX, y: targetY } 
+          };
+        }
+        return node;
+      });
+
+      if (parentId) {
+        const remainingChildren = updatedNodes.filter(c => c.parentId === parentId && c.id !== targetNodeId);
+        const childWidth = 160;
+        
+        let maxX = 0;
+        let maxY = 0;
+        remainingChildren.forEach(c => {
+          let nodeHeight = 80;
+          if (c.data?.shape === 'class') nodeHeight = 120;
+          else if (c.data?.shape === 'actor') nodeHeight = 90;
+          
+          const rightSide = c.position.x + childWidth;
+          const bottomSide = c.position.y + nodeHeight;
+          if (rightSide > maxX) maxX = rightSide;
+          if (bottomSide > maxY) maxY = bottomSide;
+        });
+
+        return updatedNodes.map(n => {
+          if (n.id === parentId) {
+            return {
+              ...n,
+              style: {
+                ...n.style,
+                width: Math.max(400, maxX + 50),
+                height: Math.max(300, maxY + 50),
+                zIndex: -1
+              }
+            };
+          }
+          return n;
+        });
       }
-      return node;
-    }));
+
+      return updatedNodes;
+    });
     setContextMenu(null);
   };
 
@@ -779,7 +983,6 @@ function FlowCanvas() {
 
       const data = JSON.parse(dataStr);
       
-      // Prevent cross-workspace dropping
       if (workspace === 'eip' && !data.isEip) return;
       if ((workspace === 'diagram' || workspace === 'ddd') && data.isEip) return;
 
@@ -805,6 +1008,39 @@ function FlowCanvas() {
             };
             break;
           }
+        }
+      }
+
+      if (parentId) {
+        const siblings = reactFlowInstance.getNodes().filter(n => n.parentId === parentId);
+        let foundOverlap = true;
+        let attempts = 0;
+        const childWidth = 160;
+        const gapX = 50;
+        const gapY = 50;
+        
+        while (foundOverlap && attempts < 100) {
+          foundOverlap = false;
+          for (const sib of siblings) {
+            let sibHeight = 80;
+            if (sib.data?.shape === 'class') sibHeight = 120;
+            else if (sib.data?.shape === 'actor') sibHeight = 90;
+
+            let newNodeHeight = 80;
+            if (data.shape === 'class') newNodeHeight = 120;
+            else if (data.shape === 'actor') newNodeHeight = 90;
+
+            const minSpacingX = childWidth + gapX;
+            const minSpacingY = Math.max(sibHeight, newNodeHeight) + gapY;
+
+            if (Math.abs(position.x - sib.position.x) < minSpacingX - 5 &&
+                Math.abs(position.y - sib.position.y) < minSpacingY - 5) {
+              position.y += minSpacingY;
+              foundOverlap = true;
+              break;
+            }
+          }
+          attempts++;
         }
       }
 
@@ -835,11 +1071,84 @@ function FlowCanvas() {
           { id: uuidv4(), source: newNode.id, target: otherwiseNode.id, ...defaultEdgeOptions }
         ));
       } else {
-        setNodes((nds) => nds.concat(newNode));
+        setNodes((nds) => {
+          let updatedNodes = nds.concat(newNode);
+          if (parentId) {
+            const children = updatedNodes.filter(n => n.parentId === parentId);
+            const childWidth = 160;
+            
+            let maxX = 0;
+            let maxY = 0;
+            children.forEach(c => {
+              let nodeHeight = 80;
+              if (c.data?.shape === 'class') nodeHeight = 120;
+              else if (c.data?.shape === 'actor') nodeHeight = 90;
+              
+              const rightSide = c.position.x + childWidth;
+              const bottomSide = c.position.y + nodeHeight;
+              if (rightSide > maxX) maxX = rightSide;
+              if (bottomSide > maxY) maxY = bottomSide;
+            });
+            
+            updatedNodes = updatedNodes.map(n => {
+              if (n.id === parentId) {
+                return {
+                  ...n,
+                  style: {
+                    ...n.style,
+                    width: Math.max(400, maxX + 50),
+                    height: Math.max(300, maxY + 50),
+                    zIndex: -1
+                  }
+                };
+              }
+              return n;
+            });
+          }
+          return updatedNodes;
+        });
       }
     },
     [reactFlowInstance, setNodes, setEdges, workspace]
   );
+
+  const onNodeDragStop = useCallback((event, node) => {
+    if (node.parentId) {
+      const parentId = node.parentId;
+      setNodes(nds => {
+        const children = nds.filter(c => c.parentId === parentId);
+        const childWidth = 160;
+        
+        let maxX = 0;
+        let maxY = 0;
+        children.forEach(c => {
+          let nodeHeight = 80;
+          if (c.data?.shape === 'class') nodeHeight = 120;
+          else if (c.data?.shape === 'actor') nodeHeight = 90;
+          
+          const rightSide = c.position.x + childWidth;
+          const bottomSide = c.position.y + nodeHeight;
+          if (rightSide > maxX) maxX = rightSide;
+          if (bottomSide > maxY) maxY = bottomSide;
+        });
+        
+        return nds.map(n => {
+          if (n.id === parentId) {
+            return {
+              ...n,
+              style: {
+                ...n.style,
+                width: Math.max(400, maxX + 50),
+                height: Math.max(300, maxY + 50),
+                zIndex: -1
+              }
+            };
+          }
+          return n;
+        });
+      });
+    }
+  }, [setNodes]);
 
   const generateYaml = () => {
     const roots = nodes.filter(n => !edges.some(e => e.target === n.id));
@@ -1167,26 +1476,77 @@ function FlowCanvas() {
 
   const moveNodeToContext = (nodeId, containerId) => {
     setNodes(nds => {
+      const container = nds.find(c => c.id === containerId);
+      if (!container) return nds;
+
+      const children = nds.filter(c => c.parentId === containerId && c.id !== nodeId);
+
+      const childWidth = 160;
+      const gapX = 50;
+      const gapY = 50;
+      const cols = 2;
+
+      const index = children.length;
+      const colIndex = index % cols;
+      const rowIndex = Math.floor(index / cols);
+
+      let offsetY = 70;
+      for (let r = 0; r < rowIndex; r++) {
+        const rowChildren = children.slice(r * cols, (r + 1) * cols);
+        const rowMaxHeight = Math.max(80, ...rowChildren.map(c => {
+          if (c.data?.shape === 'class') return 120;
+          if (c.data?.shape === 'actor') return 90;
+          return 80;
+        }));
+        offsetY += rowMaxHeight + gapY;
+      }
+
+      const offsetX = 30 + colIndex * (childWidth + gapX);
+
+      const movingNode = nds.find(n => n.id === nodeId);
+      const movingData = movingNode?.data || {};
+
+      let nodeHeight = 80;
+      if (movingData.shape === 'class') nodeHeight = 120;
+      else if (movingData.shape === 'actor') nodeHeight = 90;
+
+      let maxX = offsetX + childWidth;
+      let maxY = offsetY + nodeHeight;
+
+      children.forEach(c => {
+        let ch = 80;
+        if (c.data?.shape === 'class') ch = 120;
+        else if (c.data?.shape === 'actor') ch = 90;
+
+        const rightSide = c.position.x + childWidth;
+        const bottomSide = c.position.y + ch;
+        if (rightSide > maxX) maxX = rightSide;
+        if (bottomSide > maxY) maxY = bottomSide;
+      });
+
       const updatedNodes = nds.map(n => {
         if (n.id === nodeId) {
-          const container = nds.find(c => c.id === containerId);
-          if (!container) return n;
-          
-          // Find how many children this container already has to stack them neatly
-          const existingChildren = nds.filter(child => child.parentId === containerId).length;
-          const offsetX = 20 + (existingChildren % 3) * 150;
-          const offsetY = 50 + Math.floor(existingChildren / 3) * 100;
-          
-          return { 
-            ...n, 
-            parentId: containerId, 
+          return {
+            ...n,
+            parentId: containerId,
             extent: 'parent',
-            position: { x: offsetX, y: offsetY } 
+            position: { x: offsetX, y: offsetY }
+          };
+        }
+        if (n.id === containerId) {
+          return {
+            ...n,
+            style: {
+              ...n.style,
+              width: Math.max(400, maxX + 50),
+              height: Math.max(300, maxY + 50),
+              zIndex: -1
+            }
           };
         }
         return n;
       });
-      
+
       const nodeToMove = updatedNodes.find(n => n.id === nodeId);
       const otherNodes = updatedNodes.filter(n => n.id !== nodeId);
       return [...otherNodes, nodeToMove];
@@ -1387,6 +1747,7 @@ function FlowCanvas() {
           onNodeContextMenu={onNodeContextMenu}
           onPaneClick={onPaneClick}
           onMoveEnd={onMoveEnd}
+          onNodeDragStop={onNodeDragStop}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           panOnDrag={interactionMode === 'pan'}
@@ -1621,7 +1982,17 @@ function FlowCanvas() {
                     </select>
                   </div>
                   <div style={{ padding: '8px', background: 'rgba(0,0,0,0.1)', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                    <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '12px', fontWeight: 'bold' }}>Label Styling</div>
+                    <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '12px', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>Label Styling</span>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', fontWeight: 'normal', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                        <input 
+                          type="checkbox" 
+                          checked={activeEdge.showLabel !== false} 
+                          onChange={(e) => updateEdgeData('showLabel', e.target.checked)} 
+                        />
+                        Show
+                      </label>
+                    </div>
                     
                     <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                       <div style={{ flex: 1 }}>
@@ -1828,8 +2199,65 @@ function FlowCanvas() {
                         const childExtent = childParentId ? 'parent' : undefined;
                         
                         let childPosition;
-                        if (isParentContainer) {
-                          childPosition = { x: 50, y: 80 };
+                        let updatedNodes = [...nodes];
+                        let updatedEdges = [...edges];
+
+                        if (childParentId) {
+                          const containerId = childParentId;
+                          const children = nodes.filter(c => c.parentId === containerId);
+
+                          const childWidth = 160;
+                          const gapX = 50;
+                          const gapY = 50;
+                          const cols = 2;
+
+                          const index = children.length;
+                          const colIndex = index % cols;
+                          const rowIndex = Math.floor(index / cols);
+
+                          let offsetY = 70;
+                          for (let r = 0; r < rowIndex; r++) {
+                            const rowChildren = children.slice(r * cols, (r + 1) * cols);
+                            const rowMaxHeight = Math.max(80, ...rowChildren.map(c => {
+                              if (c.data?.shape === 'class') return 120;
+                              if (c.data?.shape === 'actor') return 90;
+                              return 80;
+                            }));
+                            offsetY += rowMaxHeight + gapY;
+                          }
+
+                          const offsetX = 30 + colIndex * (childWidth + gapX);
+                          childPosition = { x: offsetX, y: offsetY };
+
+                          const nodeHeight = 80; // 'Add Child' always creates a 'box' which is 80px high
+                          let maxX = offsetX + childWidth;
+                          let maxY = offsetY + nodeHeight;
+
+                          children.forEach(c => {
+                            let ch = 80;
+                            if (c.data?.shape === 'class') ch = 120;
+                            else if (c.data?.shape === 'actor') ch = 90;
+
+                            const rightSide = c.position.x + childWidth;
+                            const bottomSide = c.position.y + ch;
+                            if (rightSide > maxX) maxX = rightSide;
+                            if (bottomSide > maxY) maxY = bottomSide;
+                          });
+                          
+                          updatedNodes = updatedNodes.map(n => {
+                            if (n.id === containerId) {
+                              return {
+                                ...n,
+                                style: {
+                                  ...n.style,
+                                  width: Math.max(400, maxX + 50),
+                                  height: Math.max(300, maxY + 50),
+                                  zIndex: -1
+                                }
+                              };
+                            }
+                            return n;
+                          });
                         } else {
                           childPosition = { x: activeNode.position.x + 200, y: activeNode.position.y };
                         }
@@ -1859,13 +2287,15 @@ function FlowCanvas() {
                           ...defaultEdgeOptions
                         };
 
-                        const updatedNodes = nodes.concat(newChildNode);
-                        const updatedEdges = edges.concat(newEdge);
+                        updatedNodes = updatedNodes.concat(newChildNode);
+                        updatedEdges = updatedEdges.concat(newEdge);
 
                         setNodes(updatedNodes);
                         setEdges(updatedEdges);
                         
-                        setTimeout(() => autoLayout('LR', updatedNodes, updatedEdges), 50);
+                        setTimeout(() => {
+                          if (reactFlowInstance) reactFlowInstance.fitView({ padding: 0.2, duration: 800 });
+                        }, 50);
                     }} style={{ marginTop: '8px', border: '1px solid #10b981', color: '#10b981', display: 'flex', justifyContent: 'center', background: 'rgba(16, 185, 129, 0.1)' }}>
                       <FilePlus size={16} /> Add Child Node
                     </button>
