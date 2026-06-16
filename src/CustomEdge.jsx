@@ -194,7 +194,18 @@ export default function CustomEdge({
 
   return (
     <>
-      <BaseEdge path={edgePath} markerEnd={markerEnd} markerStart={markerStart} style={style} />
+      <BaseEdge 
+        path={edgePath} 
+        markerEnd={markerEnd} 
+        markerStart={markerStart} 
+        style={{
+          ...style,
+          strokeWidth: selected ? 4 : (style.strokeWidth || 3),
+          stroke: selected ? '#3b82f6' : (style.stroke || '#94a3b8'),
+          filter: data.isRough ? 'url(#rough-filter)' : undefined,
+          transition: 'stroke-width 0.2s, stroke 0.2s'
+        }} 
+      />
       <EdgeLabelRenderer>
         {selected && (
           <div
@@ -257,6 +268,7 @@ export default function CustomEdge({
               border: `1px solid ${labelTextColor}33`,
               textAlign: 'center',
               fontWeight: '500',
+              fontFamily: data.isRough ? 'Virgil, cursive' : 'inherit',
               boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
               pointerEvents: 'none',
               userSelect: 'none',

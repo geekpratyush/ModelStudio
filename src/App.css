@@ -2,38 +2,24 @@
   box-sizing: border-box;
 }
 
-:root {
-  --bg-primary: #0f111a;
-  --bg-secondary: #1e1e2f;
-  --bg-glass: rgba(30, 30, 47, 0.7);
-  --border-color: rgba(255, 255, 255, 0.1);
-  --text-primary: #e2e8f0;
-  --text-secondary: #94a3b8;
-  --accent-blue: #3b82f6;
-  --accent-purple: #8b5cf6;
-  --accent-green: #10b981;
-  --accent-orange: #f59e0b;
-}
-
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Inter', -apple-system, sans-serif;
+  font-family: var(--sans);
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  overflow: hidden;
 }
 
 #root {
-  width: 100vw;
-  height: 100vh;
-  display: flex;
+  width: 100%;
 }
 
 .app-container {
   display: flex;
   height: 100vh;
   width: 100vw;
+  background-color: var(--bg-primary);
+  overflow: hidden;
 }
 
 /* Sidebar Styling */
@@ -44,7 +30,7 @@ body {
   display: flex;
   flex-direction: column;
   z-index: 10;
-  box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+  box-shadow: var(--shadow);
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
 }
@@ -87,17 +73,18 @@ body {
   transition: all 0.2s;
 }
 .sidebar-toggle-btn:hover {
-  background: rgba(255,255,255,0.05);
+  background: var(--bg-tertiary);
 }
 
 .sidebar-header {
   padding: 20px;
   border-bottom: 1px solid var(--border-color);
   font-weight: 700;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   display: flex;
   align-items: center;
   gap: 12px;
+  color: var(--text-primary);
 }
 
 .sidebar-content {
@@ -107,12 +94,13 @@ body {
 }
 
 .sidebar-section-title {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--text-secondary);
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
   margin-bottom: 12px;
-  margin-top: 16px;
+  margin-top: 20px;
+  font-weight: 700;
 }
 
 .sidebar-section-title:first-child {
@@ -120,7 +108,7 @@ body {
 }
 
 .palette-item {
-  background: rgba(255,255,255,0.03);
+  background: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 12px;
@@ -130,12 +118,14 @@ body {
   gap: 12px;
   cursor: grab;
   transition: all 0.2s ease;
+  color: var(--text-primary);
 }
 
 .palette-item:hover {
-  background: rgba(255,255,255,0.08);
-  border-color: rgba(255,255,255,0.2);
+  background: var(--bg-tertiary);
+  border-color: var(--border-strong);
   transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
 }
 
 .palette-item:active {
@@ -149,14 +139,24 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255,255,255,0.1);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
 }
 
 /* Main Canvas Area */
 .canvas-area {
   flex: 1;
   position: relative;
+}
+
+.canvas-area.theme-dark {
   background: radial-gradient(circle at center, #1a1c29 0%, #0f111a 100%);
+}
+
+.canvas-area.theme-light {
+  background-color: var(--bg-primary);
+  background-image: radial-gradient(var(--border-color) 1px, transparent 1px);
+  background-size: 20px 20px;
 }
 
 .toolbar {
@@ -171,13 +171,13 @@ body {
   display: flex;
   gap: 8px;
   z-index: 10;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  box-shadow: var(--shadow-lg);
 }
 
 .btn {
   background: transparent;
   color: var(--text-primary);
-  border: 1px solid transparent;
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: 8px 16px;
   font-size: 0.85rem;
@@ -190,18 +190,20 @@ body {
 }
 
 .btn:hover {
-  background: rgba(255,255,255,0.05);
-  border-color: rgba(255,255,255,0.1);
+  background: var(--bg-tertiary);
+  border-color: var(--border-strong);
 }
 
 .btn-primary {
   background: var(--accent-blue);
-  color: white;
+  color: var(--text-on-accent);
+  border-color: var(--accent-blue);
 }
 
 .btn-primary:hover {
-  background: #2563eb;
-  border-color: transparent;
+  background: var(--accent-blue-hover);
+  border-color: var(--accent-blue-hover);
+  color: var(--text-on-accent);
 }
 
 .btn-icon-only {
@@ -222,7 +224,7 @@ body {
   max-height: 400px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  box-shadow: var(--shadow-lg);
   backdrop-filter: blur(10px);
 }
 
@@ -241,10 +243,47 @@ body {
   margin: 0;
   overflow-y: auto;
   font-size: 0.75rem;
-  color: #a78bfa;
-  background: #0f111a;
+  color: var(--accent-purple);
+  background: var(--code-bg);
   padding: 12px;
   border-radius: 6px;
+}
+
+/* Draggable Code Editor Window */
+.code-editor-window {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(20px);
+  overflow: hidden;
+}
+
+.code-editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--accent-blue);
+  background: var(--bg-tertiary);
+  flex-shrink: 0;
+}
+
+.code-editor-window pre {
+  margin: 0;
+  overflow: auto;
+  font-size: 0.75rem;
+  color: var(--accent-purple);
+  background: var(--code-bg);
+  padding: 16px;
+  flex: 1;
+  font-family: var(--mono);
+  line-height: 1.5;
+  border: none;
 }
 
 /* Node Toolbar */
@@ -254,7 +293,7 @@ body {
   border: 1px solid var(--border-color);
   border-radius: 20px;
   padding: 4px 12px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  box-shadow: var(--shadow);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -276,7 +315,7 @@ body {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid var(--border-color);
   cursor: pointer;
   transition: transform 0.2s;
   padding: 0;
@@ -306,28 +345,35 @@ body {
 }
 
 .toolbar-btn:hover {
-  background: rgba(255,255,255,0.05);
+  background: var(--bg-tertiary);
   color: var(--text-primary);
 }
 
 .delete-btn:hover {
-  color: #ef4444;
+  color: var(--accent-red);
   background: rgba(239, 68, 68, 0.1);
 }
 
 .custom-node {
   padding: 16px;
   border-radius: 8px;
-  min-width: 150px;
-  min-height: 50px;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
-  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  box-shadow: var(--shadow);
   display: flex;
   align-items: center;
   gap: 12px;
   position: relative;
   transition: all 0.2s;
+  color: var(--text-primary);
+  overflow: visible;
+}
+
+/* Default sizes for non-draw nodes */
+.shape-rectangle:not(.rough-font),
+.shape-box:not(.rough-font) {
+  min-width: 150px;
+  min-height: 50px;
 }
 
 .react-flow__node.selected .custom-node {
@@ -342,21 +388,50 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255,255,255,0.05);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
 }
 
 .node-label {
   font-size: 0.9rem;
   font-weight: 600;
-  flex: 1;
+  transition: font-family 0.2s;
+}
+
+.custom-node.rough-font .node-label,
+.custom-node.rough-font textarea,
+.custom-node.rough-font input {
+  font-family: 'Virgil', cursive !important;
+  font-weight: normal !important;
+}
+
+.custom-node.shape-rectangle,
+.custom-node.shape-circle,
+.custom-node.shape-oval,
+.custom-node.shape-diamond,
+.custom-node.shape-cylinder {
+  gap: 0 !important;
 }
 
 /* Geometric Nodes (Flowchart/Visio style) */
+.custom-node.shape-rectangle {
+  border-radius: 4px;
+}
+
+.custom-node.shape-circle,
+.custom-node.shape-oval {
+  border-radius: 50% !important;
+}
+
+.custom-node.shape-cylinder {
+  border-radius: 12px / 24px;
+}
+
 .custom-node.shape-diamond {
   width: 100px;
   height: 100px;
-  min-width: 100px;
-  min-height: 100px;
+  min-width: 40px;
+  min-height: 40px;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
@@ -374,52 +449,128 @@ body {
   height: 100%;
   transform: rotate(45deg) scale(0.7071);
   background: var(--bg-secondary);
-  border: 1px solid var(--accent-color);
-  border-radius: 4px;
+  border: 1px solid var(--accent-color, var(--border-color));
+  border-radius: 2px;
   z-index: -1;
 }
 
-.shape-diamond .react-flow__handle {
-  width: 12px;
-  height: 12px;
-  background: var(--accent-color);
+.cylinder-top {
+  position: absolute;
+  top: -6%;
+  left: -1px;
+  right: -1px;
+  height: 12%;
+  border-radius: 50%;
+  border: 1px solid var(--accent-color, var(--border-color));
+  z-index: 2;
 }
 
-.custom-node.shape-diamond .is-geometric-content {
+.cylinder-bottom {
+  position: absolute;
+  bottom: -6%;
+  left: -1px;
+  right: -1px;
+  height: 12%;
+  border-radius: 50%;
+  border: 1px solid var(--accent-color, var(--border-color));
+  z-index: 0;
+}
+
+.custom-node.shape-diamond .is-geometric-content,
+.custom-node.shape-circle .is-geometric-content,
+.custom-node.shape-oval .is-geometric-content,
+.custom-node.shape-rectangle .is-geometric-content,
+.custom-node.shape-cylinder .is-geometric-content {
+  display: flex;
+  flex-direction: column;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+}
+
+.draw-sidebar {
+  width: 60px;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  z-index: 1;
+  padding: 12px 0;
+  gap: 12px;
+  z-index: 100;
 }
 
-.custom-node.shape-oval {
-  border-radius: 40px;
+.draw-tool-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
   justify-content: center;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
 }
 
-/* React Flow overrrides */
-.react-flow__handle {
+.draw-tool-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+.draw-tool-btn.active {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.draw-tool-btn[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #000;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 1000;
+}
+
+.draw-tool-btn[data-tooltip]:hover::after {
+  opacity: 1;
+}
   width: 10px;
   height: 10px;
   background: var(--accent-blue);
   border: 2px solid var(--bg-primary);
 }
+
 .react-flow__controls {
   background: var(--bg-glass);
   border: 1px solid var(--border-color);
   backdrop-filter: blur(10px);
   border-radius: 8px;
   overflow: hidden;
+  box-shadow: var(--shadow);
 }
+
 .react-flow__controls-button {
   background: transparent;
   border-bottom: 1px solid var(--border-color);
   color: var(--text-primary);
   fill: var(--text-primary);
 }
+
 .react-flow__controls-button:hover {
-  background: rgba(255,255,255,0.05);
+  background: var(--bg-tertiary);
 }
 
 /* Animated Title Styles */
@@ -427,15 +578,15 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: rgba(15, 23, 42, 0.65);
+  background: var(--bg-glass);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-color);
   padding: 6px 14px;
   border-radius: 9999px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: var(--shadow-lg);
   animation: slideDown 0.5s cubic-bezier(0.16, 1, 0.3, 1);
   max-width: 450px;
-  pointer-events: auto; /* enable interactions inside React Flow panel */
+  pointer-events: auto;
 }
 
 @keyframes slideDown {
@@ -453,15 +604,15 @@ body {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background-color: #10b981;
-  box-shadow: 0 0 10px #10b981;
+  background-color: var(--accent-green);
+  box-shadow: 0 0 10px var(--accent-green);
   animation: pulseGlow 2s infinite;
 }
 
 @keyframes pulseGlow {
   0% {
     transform: scale(0.95);
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
   }
   70% {
     transform: scale(1);
@@ -476,7 +627,7 @@ body {
 .animated-title-input {
   background: transparent;
   border: none;
-  color: #fff;
+  color: var(--text-primary);
   font-size: 0.85rem;
   font-weight: 600;
   outline: none;
@@ -487,17 +638,148 @@ body {
 
 .animated-title-input:focus {
   width: 280px;
-  color: #3b82f6;
-  text-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+  color: var(--accent-blue);
 }
 
 .animated-title-badge {
   font-size: 0.65rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  background: rgba(59, 130, 246, 0.15);
-  color: #60a5fa;
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--accent-blue);
   padding: 2px 8px;
   border-radius: 9999px;
   font-weight: 700;
+}
+
+/* Text/Title and Sticky Note Widget Styles */
+.custom-node.text-node {
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  box-shadow: none !important;
+}
+
+.react-flow__node.selected .custom-node.text-node {
+  border: 1px dashed var(--accent-blue) !important;
+  background: rgba(59, 130, 246, 0.05) !important;
+  box-shadow: none !important;
+}
+
+.custom-node.note-node {
+  border-radius: 4px !important;
+  color: #1e293b !important;
+  background: linear-gradient(315deg, transparent 12px, var(--note-color, #fef08a) 0) !important;
+  border: none !important;
+  position: relative;
+}
+
+.custom-node.note-node::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 12px;
+  height: 12px;
+  background: rgba(0, 0, 0, 0.15);
+  border-top-left-radius: 4px;
+  border-bottom-right-radius: 4px;
+  pointer-events: none;
+}
+
+.react-flow__node.selected .custom-node.note-node {
+  box-shadow: 0 0 0 2px var(--accent-blue), var(--shadow) !important;
+}
+
+.custom-node.callout-node {
+  background: var(--bg-secondary) !important;
+  border-radius: 4px !important;
+}
+
+.react-flow__node.selected .custom-node.callout-node {
+  border-color: var(--accent-blue) !important;
+  box-shadow: 0 0 0 1px var(--accent-blue), var(--shadow) !important;
+}
+
+/* ====== Excalidraw-style Draw Toolbar ====== */
+.draw-excali-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+  padding: 0;
+}
+
+.draw-excali-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.draw-excali-btn.active {
+  background: rgba(59, 130, 246, 0.18);
+  color: #6ea8fe;
+  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.25);
+}
+
+.draw-excali-separator {
+  width: 1px;
+  height: 22px;
+  background: var(--border-color);
+  margin: 7px 3px;
+  flex-shrink: 0;
+}
+
+.draw-excali-separator-v {
+  width: 1px;
+  height: 20px;
+  background: var(--border-color);
+  flex-shrink: 0;
+}
+
+.draw-excali-btn-sm {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.draw-excali-btn-sm:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.draw-excali-btn-sm.active {
+  background: rgba(59, 130, 246, 0.15);
+  color: #6ea8fe;
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.draw-style-panel {
+  animation: fadeInPanel 0.2s ease;
+}
+
+@keyframes fadeInPanel {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
