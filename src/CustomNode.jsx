@@ -13,6 +13,7 @@ export default function CustomNode({ id, data, selected, ...props }) {
   const height = Math.max(1, data.height ?? props.height ?? (props.style?.height !== undefined ? parseInt(props.style.height, 10) : 80));
 
   const isRoughActive = data.isRough && window.rough;
+  const isDrawShape = data.isDrawShape || data.fontFamily === 'virgil';
 
   useEffect(() => {
     if (isRoughActive && canvasRef.current) {
@@ -248,9 +249,9 @@ export default function CustomNode({ id, data, selected, ...props }) {
           style={{ 
             width: '100%', 
             height: '100%', 
-            borderColor: (data.hideBorder || isRoughActive || data.isDrawShape || data.shape === 'diamond' || data.shape === 'triangle' || data.shape === 'cloud') ? 'transparent' : color,
-            background: (data.hideBorder || isRoughActive || data.isDrawShape || data.shape === 'diamond' || data.shape === 'triangle' || data.shape === 'cloud') ? 'transparent' : (data.fillType === 'gradient' && !data.hideFill ? `linear-gradient(${data.gradientAngle || 90}deg, ${data.gradientColor1 || '#ffffff'}, ${data.gradientColor2 || color})` : undefined),
-            boxShadow: (data.hideBorder || isRoughActive || data.isDrawShape || data.shape === 'diamond' || data.shape === 'triangle' || data.shape === 'cloud') ? 'none' : undefined,
+            borderColor: (data.hideBorder || isRoughActive || isDrawShape || data.shape === 'diamond' || data.shape === 'triangle' || data.shape === 'cloud') ? 'transparent' : color,
+            background: (data.hideBorder || isRoughActive || isDrawShape || data.shape === 'diamond' || data.shape === 'triangle' || data.shape === 'cloud') ? 'transparent' : (data.fillType === 'gradient' && !data.hideFill ? `linear-gradient(${data.gradientAngle || 90}deg, ${data.gradientColor1 || '#ffffff'}, ${data.gradientColor2 || color})` : undefined),
+            boxShadow: (data.hideBorder || isRoughActive || isDrawShape || data.shape === 'diamond' || data.shape === 'triangle' || data.shape === 'cloud') ? 'none' : undefined,
             '--accent-color': color,
             display: 'flex',
             flexDirection: 'column',
@@ -274,7 +275,7 @@ export default function CustomNode({ id, data, selected, ...props }) {
           ) : (
             <>
               {(data.shape === 'rectangle' || !data.shape || data.shape === 'box' || data.shape === 'note') && (
-                data.isDrawShape ? (
+                isDrawShape ? (
                   <svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0, zIndex: 0, overflow: 'visible' }}>
                     {renderGradientDef()}
                     <rect

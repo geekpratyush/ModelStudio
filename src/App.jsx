@@ -548,7 +548,9 @@ function FlowCanvas() {
   const [dddEdges, setDddEdges, onDddEdgesChange] = useEdgesState(loadState('dddEdges', initialEdges));
   const [diagramNodes, setDiagramNodes, onDiagramNodesChange] = useNodesState(loadState('diagramNodes', []));
   const [diagramEdges, setDiagramEdges, onDiagramEdgesChange] = useEdgesState(loadState('diagramEdges', []));
-  const [drawNodes, setDrawNodes, onDrawNodesChange] = useNodesState(loadState('drawNodes', []));
+  const [drawNodes, setDrawNodes, onDrawNodesChange] = useNodesState(
+    loadState('drawNodes', []).map(n => ({ ...n, data: { ...n.data, isDrawShape: true } }))
+  );
   const [drawEdges, setDrawEdges, onDrawEdgesChange] = useEdgesState(loadState('drawEdges', []));
   const drawNodesRef = useRef(drawNodes);
   const drawEdgesRef = useRef(drawEdges);
