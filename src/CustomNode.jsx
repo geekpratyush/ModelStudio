@@ -248,9 +248,9 @@ export default function CustomNode({ id, data, selected, ...props }) {
           style={{ 
             width: '100%', 
             height: '100%', 
-            borderColor: (data.hideBorder || isRoughActive || data.shape === 'diamond' || data.shape === 'triangle' || data.shape === 'cloud') ? 'transparent' : color, 
-            background: (data.hideBorder || isRoughActive || data.shape === 'diamond' || data.shape === 'triangle' || data.shape === 'cloud') ? 'transparent' : (data.fillType === 'gradient' && !data.hideFill ? `linear-gradient(${data.gradientAngle || 90}deg, ${data.gradientColor1 || '#ffffff'}, ${data.gradientColor2 || color})` : undefined),
-            boxShadow: (data.hideBorder || isRoughActive || data.shape === 'diamond' || data.shape === 'triangle' || data.shape === 'cloud') ? 'none' : undefined,
+            borderColor: (data.hideBorder || isRoughActive || data.isDrawShape || data.shape === 'diamond' || data.shape === 'triangle' || data.shape === 'cloud') ? 'transparent' : color,
+            background: (data.hideBorder || isRoughActive || data.isDrawShape || data.shape === 'diamond' || data.shape === 'triangle' || data.shape === 'cloud') ? 'transparent' : (data.fillType === 'gradient' && !data.hideFill ? `linear-gradient(${data.gradientAngle || 90}deg, ${data.gradientColor1 || '#ffffff'}, ${data.gradientColor2 || color})` : undefined),
+            boxShadow: (data.hideBorder || isRoughActive || data.isDrawShape || data.shape === 'diamond' || data.shape === 'triangle' || data.shape === 'cloud') ? 'none' : undefined,
             '--accent-color': color,
             display: 'flex',
             flexDirection: 'column',
@@ -274,7 +274,24 @@ export default function CustomNode({ id, data, selected, ...props }) {
           ) : (
             <>
               {(data.shape === 'rectangle' || !data.shape || data.shape === 'box' || data.shape === 'note') && (
-                 <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, border: `2px solid ${color}`, background: data.hideFill ? 'transparent' : (data.fillType === 'gradient' ? `linear-gradient(${data.gradientAngle || 90}deg, ${data.gradientColor1 || '#ffffff'}, ${data.gradientColor2 || color})` : (data.fillColor || `${color}11`)), borderRadius: data.shape === 'note' ? 0 : 4, zIndex: 0 }} />
+                data.isDrawShape ? (
+                  <svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0, zIndex: 0, overflow: 'visible' }}>
+                    {renderGradientDef()}
+                    <rect
+                      x={1} y={1}
+                      width={Math.max(1, width - 2)}
+                      height={Math.max(1, height - 2)}
+                      fill={getSvgFill()}
+                      stroke={data.hideBorder ? 'none' : color}
+                      strokeWidth={data.strokeWidth || 2}
+                      strokeDasharray={data.strokeStyle === 'dashed' ? '8,4' : (data.strokeStyle === 'dotted' ? '2,3' : 'none')}
+                      rx={data.shape === 'note' ? 0 : 4}
+                      style={{ opacity: data.opacity ? data.opacity / 100 : 1 }}
+                    />
+                  </svg>
+                ) : (
+                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, border: `2px solid ${color}`, background: data.hideFill ? 'transparent' : (data.fillType === 'gradient' ? `linear-gradient(${data.gradientAngle || 90}deg, ${data.gradientColor1 || '#ffffff'}, ${data.gradientColor2 || color})` : (data.fillColor || `${color}11`)), borderRadius: data.shape === 'note' ? 0 : 4, zIndex: 0 }} />
+                )
               )}
               {data.shape === 'diamond' && (
                 <svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0, zIndex: 0, overflow: 'visible' }}>
