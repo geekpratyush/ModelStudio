@@ -2429,21 +2429,32 @@ function FlowCanvas() {
   });
 
   /* Inject a <rect> background into an SVG data-URI string and return new data-URI. */
-  /* Decode an SVG data-URI (base64 or URL-encoded), inject a background rect,
-     and return a Blob URL ready for download. */
+  /* Decode an SVG data-URI into raw SVG text.
+     html-to-image may emit any of:
+       data:image/svg+xml;base64,<b64>
+       data:image/svg+xml,<urlencoded>
+       data:image/svg+xml;charset=utf-8,<urlencoded>   ← common form */
   const svgDataUriToText = (dataUri) => {
-    if (dataUri.startsWith('data:image/svg+xml;base64,')) {
-      return atob(dataUri.slice('data:image/svg+xml;base64,'.length));
+    const commaIdx = dataUri.indexOf(',');
+    if (commaIdx === -1) return dataUri;
+    const meta = dataUri.slice(0, commaIdx);
+    const payload = dataUri.slice(commaIdx + 1);
+    if (meta.includes('base64')) {
+      // base64 → binary string → handle possible UTF-8 multi-byte
+      try {
+        const bin = atob(payload);
+        const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+        return new TextDecoder('utf-8').decode(bytes);
+      } catch { return atob(payload); }
     }
-    // URL-encoded form
-    return decodeURIComponent(dataUri.replace(/^data:image\/svg\+xml,/, ''));
+    return decodeURIComponent(payload);
   };
 
   const injectSvgBackground = (svgDataUri, w, h, bg) => {
     const svgText = svgDataUriToText(svgDataUri);
     const bgRect = `<rect width="${w}" height="${h}" fill="${bg}"/>`;
-    const patched = svgText.replace(/(<svg[^>]*>)/, `$1${bgRect}`);
-    // Return a Blob URL so the browser treats it as a real SVG file
+    // Insert background rect immediately after the opening <svg ...> tag
+    const patched = svgText.replace(/(<svg[^>]*>)/s, `$1${bgRect}`);
     return URL.createObjectURL(new Blob([patched], { type: 'image/svg+xml;charset=utf-8' }));
   };
 
@@ -2529,7 +2540,7 @@ function FlowCanvas() {
       style: { width: `${width}px`, height: `${height}px`, transform: `translate(${-nodesBounds.x + padding}px, ${-nodesBounds.y + padding}px) scale(1)` },
     })
       .then(dataUri => injectSvgBackground(dataUri, width, height, exportBgColor))
-      .then(blobUrl => { const link = document.createElement('a'); link.download = filename; link.href = blobUrl; link.click(); URL.revokeObjectURL(blobUrl); })
+      .then(blobUrl => { const link = document.createElement('a'); link.download = filename; link.href = blobUrl; link.click(); setTimeout(() => URL.revokeObjectURL(blobUrl), 10000); })
       .catch(err => console.error('SVG export error:', err));
   };
 
