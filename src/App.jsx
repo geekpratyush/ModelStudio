@@ -2410,10 +2410,30 @@ function FlowCanvas() {
     }, 200);
   };
 
-  const getResolvedCssVars = () => {
-    const cs = getComputedStyle(document.documentElement);
-    const names = ['--bg-primary','--bg-secondary','--bg-tertiary','--bg-glass','--text-primary','--text-secondary','--text-muted','--text-on-accent','--border-color','--border-strong','--accent-blue','--accent-blue-hover','--accent-purple','--accent-purple-hover','--accent-green','--accent-orange','--accent-red','--code-bg','--shadow','--shadow-lg'];
-    return Object.fromEntries(names.map(n => [n, cs.getPropertyValue(n).trim()]));
+  const exportBgColor = theme === 'dark' ? '#0f111a' : '#ffffff';
+
+  /* Stamp a solid background colour onto any dataURL (PNG or SVG data URI).
+     Returns a Promise<string> with the final PNG dataURL. */
+  const stampBackground = (dataUrl, w, h, bg) => new Promise((resolve) => {
+    const canvas = document.createElement('canvas');
+    const scale = 2;
+    canvas.width = Math.round(w * scale);
+    canvas.height = Math.round(h * scale);
+    const ctx = canvas.getContext('2d');
+    ctx.scale(scale, scale);
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, w, h);
+    const img = new window.Image();
+    img.onload = () => { ctx.drawImage(img, 0, 0, w, h); resolve(canvas.toDataURL('image/png')); };
+    img.src = dataUrl;
+  });
+
+  /* Inject a <rect> background into an SVG data-URI string and return new data-URI. */
+  const injectSvgBackground = (svgDataUri, w, h, bg) => {
+    const svgText = decodeURIComponent(svgDataUri.replace(/^data:image\/svg\+xml,/, ''));
+    const bgRect = `<rect width="${w}" height="${h}" fill="${bg}"/>`;
+    const patched = svgText.replace(/(<svg[^>]*>)/, `$1${bgRect}`);
+    return 'data:image/svg+xml,' + encodeURIComponent(patched);
   };
 
   const exportAsPng = () => {
@@ -2423,8 +2443,7 @@ function FlowCanvas() {
       const svgEl = document.querySelector('.mmd-scroll svg');
       if (!svgEl) return;
       const svgData = new XMLSerializer().serializeToString(svgEl);
-      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-      const url = URL.createObjectURL(svgBlob);
+      const url = URL.createObjectURL(new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' }));
       const img = new window.Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
@@ -2433,7 +2452,7 @@ function FlowCanvas() {
         canvas.height = img.height * scale;
         const ctx = canvas.getContext('2d');
         ctx.scale(scale, scale);
-        ctx.fillStyle = theme === 'dark' ? '#0f111a' : '#ffffff';
+        ctx.fillStyle = exportBgColor;
         ctx.fillRect(0, 0, img.width, img.height);
         ctx.drawImage(img, 0, 0);
         URL.revokeObjectURL(url);
@@ -2453,17 +2472,16 @@ function FlowCanvas() {
     const padding = 50;
     const width = nodesBounds.width + padding * 2;
     const height = nodesBounds.height + padding * 2;
-    const transform = { x: -nodesBounds.x + padding, y: -nodesBounds.y + padding, zoom: 1 };
     const viewportEl = document.querySelector('.react-flow__viewport');
     if (!viewportEl) return;
 
     toPng(viewportEl, {
-      backgroundColor: theme === 'dark' ? '#0f111a' : '#ffffff',
       width, height,
-      style: { width: `${width}px`, height: `${height}px`, transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.zoom})`, ...getResolvedCssVars() },
+      style: { width: `${width}px`, height: `${height}px`, transform: `translate(${-nodesBounds.x + padding}px, ${-nodesBounds.y + padding}px) scale(1)` },
     })
-      .then((dataUrl) => { const link = document.createElement('a'); link.download = filename; link.href = dataUrl; link.click(); })
-      .catch((error) => { console.error('Error exporting PNG:', error); });
+      .then(dataUrl => stampBackground(dataUrl, width, height, exportBgColor))
+      .then(dataUrl => { const link = document.createElement('a'); link.download = filename; link.href = dataUrl; link.click(); })
+      .catch(err => console.error('PNG export error:', err));
   };
 
   const exportAsSvg = () => {
@@ -2472,12 +2490,18 @@ function FlowCanvas() {
     if (workspace === 'dac') {
       const svgEl = document.querySelector('.mmd-scroll svg');
       if (!svgEl) return;
-      const svgData = new XMLSerializer().serializeToString(svgEl);
-      const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+      // Clone and inject background rect so the SVG file carries the theme colour
+      const clone = svgEl.cloneNode(true);
+      const vb = svgEl.viewBox?.baseVal;
+      const w = vb?.width || parseFloat(svgEl.getAttribute('width')) || 800;
+      const h = vb?.height || parseFloat(svgEl.getAttribute('height')) || 600;
+      const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      bgRect.setAttribute('width', w); bgRect.setAttribute('height', h);
+      bgRect.setAttribute('fill', exportBgColor);
+      clone.insertBefore(bgRect, clone.firstChild);
+      const blob = new Blob([new XMLSerializer().serializeToString(clone)], { type: 'image/svg+xml;charset=utf-8' });
       const link = document.createElement('a');
-      link.download = filename;
-      link.href = URL.createObjectURL(blob);
-      link.click();
+      link.download = filename; link.href = URL.createObjectURL(blob); link.click();
       return;
     }
 
@@ -2486,17 +2510,16 @@ function FlowCanvas() {
     const padding = 50;
     const width = nodesBounds.width + padding * 2;
     const height = nodesBounds.height + padding * 2;
-    const transform = { x: -nodesBounds.x + padding, y: -nodesBounds.y + padding, zoom: 1 };
     const viewportEl = document.querySelector('.react-flow__viewport');
     if (!viewportEl) return;
 
     toSvg(viewportEl, {
-      backgroundColor: theme === 'dark' ? '#0f111a' : '#ffffff',
       width, height,
-      style: { width: `${width}px`, height: `${height}px`, transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.zoom})`, ...getResolvedCssVars() },
+      style: { width: `${width}px`, height: `${height}px`, transform: `translate(${-nodesBounds.x + padding}px, ${-nodesBounds.y + padding}px) scale(1)` },
     })
-      .then((dataUrl) => { const link = document.createElement('a'); link.download = filename; link.href = dataUrl; link.click(); })
-      .catch((error) => { console.error('Error exporting SVG:', error); });
+      .then(dataUri => injectSvgBackground(dataUri, width, height, exportBgColor))
+      .then(dataUri => { const link = document.createElement('a'); link.download = filename; link.href = dataUri; link.click(); })
+      .catch(err => console.error('SVG export error:', err));
   };
 
   const ctxNode = contextMenu ? nodes.find(n => n.id === contextMenu.id) : null;
