@@ -22,7 +22,7 @@ import '@xyflow/react/dist/style.css';
 import { toPng, toSvg } from 'html-to-image';
 import { v4 as uuidv4 } from 'uuid';
 import yaml from 'js-yaml';
-import { Download, Upload, FileJson, Image, PlayCircle, Box, Diamond, Server, Trash2, Database, Cloud, MousePointer2, Hand, Grid3X3, Code, ChevronLeft, ChevronRight, ChevronsDown, ChevronsUp, Filter, ListOrdered, FileText, ShieldCheck, MessageSquare, Send, Skull, Mail, Clock, GitMerge, GitBranch, Workflow, Network, ArrowRightLeft, Route, FilePlus, RefreshCw, Radio, Share2, ListChecks, Scale, Settings2, ArrowDownUp, TerminalSquare, CheckCircle2, PackageOpen, Package, FileArchive, MessageCircle, RadioTower, Webhook, Hexagon, Building2, CloudLightning, BoxSelect, Plug, Zap, Cpu, User, File, Type, Table, Building, Layers, Search, X, Target, Eraser, StickyNote, Info, Pencil, Paintbrush, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Triangle, ArrowUpRight, Minus, Circle as CircleIcon, Square, LayoutGrid, Copy, Plus, Palette, Shapes, Globe, Lock, Wifi, Monitor, Smartphone, Terminal, HardDrive, Users } from 'lucide-react';
+import { Download, Upload, FileJson, Image, PlayCircle, Box, Diamond, Server, Trash2, Database, Cloud, MousePointer2, Hand, Grid3X3, Code, ChevronLeft, ChevronRight, ChevronsDown, ChevronsUp, Filter, ListOrdered, FileText, Shield, ShieldCheck, MessageSquare, Send, Skull, Mail, Clock, GitMerge, GitBranch, Workflow, Network, ArrowRightLeft, Route, FilePlus, RefreshCw, Radio, Share2, ListChecks, Scale, Settings2, ArrowDownUp, TerminalSquare, CheckCircle2, PackageOpen, Package, FileArchive, MessageCircle, RadioTower, Webhook, Hexagon, Building2, CloudLightning, BoxSelect, Plug, Zap, Cpu, User, File, Type, Table, Building, Layers, Search, X, Target, Eraser, StickyNote, Info, Pencil, Paintbrush, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Triangle, ArrowUpRight, Minus, Circle as CircleIcon, Square, LayoutGrid, Copy, Plus, Palette, Shapes, Globe, Lock, Wifi, Monitor, Smartphone, Terminal, HardDrive, Users } from 'lucide-react';
 import ThemeToggle from './components/ThemeToggle';
 import MSLogo from './components/MSLogo';
 import { useTheme } from './contexts/ThemeContext';
@@ -615,6 +615,14 @@ function FlowCanvas() {
         return;
       }
 
+      // Ctrl+Arrow: create child node in direction (works in dac and diagram workspaces)
+      if (e.ctrlKey && ['arrowright', 'arrowleft', 'arrowup', 'arrowdown'].includes(key)) {
+        e.preventDefault();
+        const dir = key === 'arrowright' ? 'right' : key === 'arrowleft' ? 'left' : key === 'arrowup' ? 'up' : 'down';
+        dacAddDirectionalRef.current?.(dir);
+        return;
+      }
+
       if (workspace !== 'draw') return;
 
       switch (key) {
@@ -650,6 +658,10 @@ function FlowCanvas() {
   const [dacCode, setDacCode] = useState(() => localStorage.getItem('dacCode') || dacTemplates[0].code);
   const [dacNodes, setDacNodes, onDacNodesChange] = useNodesState(loadState('dacNodes', []));
   const [dacEdges, setDacEdges, onDacEdgesChange] = useEdgesState(loadState('dacEdges', []));
+  const dacNodesRef = useRef(dacNodes);
+  const dacEdgesRef = useRef(dacEdges);
+  useEffect(() => { dacNodesRef.current = dacNodes; }, [dacNodes]);
+  useEffect(() => { dacEdgesRef.current = dacEdges; }, [dacEdges]);
   const [dacStatus, setDacStatus] = useState({ ok: true, message: '' });
   const [showTemplateGallery, setShowTemplateGallery] = useState(false);
   const [dacGalFilter, setDacGalFilter] = useState('All');
@@ -908,6 +920,8 @@ function FlowCanvas() {
   const onConnect = useCallback((params) => setEdges((eds) => addEdge({ ...params, type: 'custom', animated: true, style: { strokeWidth: 3, stroke: '#94a3b8' } }, eds)), [setEdges]);
 
   const [selectedNodeId, setSelectedNodeId] = useState(null);
+  const selectedNodeIdRef = useRef(null);
+  useEffect(() => { selectedNodeIdRef.current = selectedNodeId; }, [selectedNodeId]);
   const [selectedEdgeId, setSelectedEdgeId] = useState(null);
   useOnSelectionChange({
     onChange: ({ nodes, edges }) => {
@@ -1017,6 +1031,7 @@ function FlowCanvas() {
     dacSourceRef.current = 'canvas';
     setDacCode(serializeMermaid(newNodes, newEdges, dacDirRef.current || 'TB'));
   };
+  useEffect(() => { dacCommitRef.current = dacCommit; });
 
   // Allocate a fresh, unused node id of the form n1, n2, …
   const nextDacId = (existingNodes) => {
@@ -1050,6 +1065,9 @@ function FlowCanvas() {
     });
   };
 
+  const dacCommitRef = useRef(null);
+  const dacAddDirectionalRef = useRef(null);
+
   // Add a new node connected from the right-clicked node.
   const dacAddConnected = (sourceId, shape, rounded = false) => {
     const src = dacNodes.find(n => n.id === sourceId);
@@ -1080,7 +1098,54 @@ function FlowCanvas() {
     };
     dacCommit([...dacNodes, newNode], [...dacEdges, newEdge]);
     setContextMenu(null);
+    return newId;
   };
+
+  // Directional child creation via Ctrl+Arrow — uses refs to avoid stale closure in keyDown.
+  const dacAddDirectional = useCallback((direction) => {
+    const sourceId = selectedNodeIdRef.current;
+    if (!sourceId) return;
+    const currentNodes = dacNodesRef.current;
+    const src = currentNodes.find(n => n.id === sourceId);
+    if (!src) return;
+    const w = parseInt(src.style?.width || 160, 10);
+    const h = parseInt(src.style?.height || 80, 10);
+    const offsets = {
+      right:  { x: w + 80, y: 0,        sh: 'right',  th: 'left'   },
+      left:   { x: -(w + 80), y: 0,     sh: 'left',   th: 'right'  },
+      down:   { x: 0, y: h + 80,        sh: 'bottom', th: 'top'    },
+      up:     { x: 0, y: -(h + 80),     sh: 'top',    th: 'bottom' },
+    };
+    const o = offsets[direction];
+    if (!o) return;
+    const newId = nextDacId(currentNodes);
+    const newNode = {
+      id: newId,
+      type: 'custom',
+      position: { x: src.position.x + o.x, y: src.position.y + o.y },
+      parentId: src.parentId,
+      data: { label: 'New Node', shape: src.data.shape, rounded: src.data.rounded, color: src.data.color || '#3b82f6', isEip: src.data.isEip || false, fontSize: src.data.fontSize || '0.82rem' },
+    };
+    const sz = estimateDacNodeSize(newNode);
+    if (sz) { newNode.style = { width: sz.width, height: sz.height }; newNode.data.width = sz.width; newNode.data.height = sz.height; }
+    const newEdge = {
+      id: uuidv4(),
+      source: sourceId,
+      target: newId,
+      label: '',
+      type: 'custom',
+      markerEnd: { type: MarkerType.ArrowClosed },
+      sourceHandle: o.sh,
+      targetHandle: o.th,
+      data: {},
+    };
+    const currentEdges = dacEdgesRef.current;
+    dacCommitRef.current?.([...currentNodes, newNode], [...currentEdges, newEdge]);
+    setSelectedNodeId(newId);
+  }, []);
+
+  useEffect(() => { dacAddDirectionalRef.current = dacAddDirectional; }, [dacAddDirectional]);
+
 
   const dacUpdateNode = (nodeId, patch) => {
     const newNodes = dacNodes.map(n => n.id === nodeId ? { ...n, data: { ...n.data, ...patch } } : n);
@@ -2458,6 +2523,46 @@ function FlowCanvas() {
     return URL.createObjectURL(new Blob([patched], { type: 'image/svg+xml;charset=utf-8' }));
   };
 
+  /* Capture all canvas nodes by temporarily fitting them into the visible
+     viewport, screenshotting the renderer element (which already carries
+     the correct CSS background), then restoring the viewport.
+     This avoids the bounds-computation / transform-juggling approach that
+     clips rough strokes, shadows and text overflow. */
+  const captureCanvasAsPng = async (filename) => {
+    const rendererEl = document.querySelector('.react-flow__renderer');
+    if (!rendererEl) return;
+    const savedVp = reactFlowInstance.getViewport();
+    reactFlowInstance.fitView({ padding: 0.08, duration: 0 });
+    // Two animation frames so React has committed the new viewport
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    try {
+      const dataUrl = await toPng(rendererEl, { pixelRatio: 2 });
+      // Stamp background (renderer may be transparent in html-to-image)
+      const { width, height } = rendererEl.getBoundingClientRect();
+      const stamped = await stampBackground(dataUrl, width, height, exportBgColor);
+      const link = document.createElement('a');
+      link.download = filename; link.href = stamped; link.click();
+    } catch (err) { console.error('PNG export error:', err); }
+    finally { reactFlowInstance.setViewport(savedVp, { duration: 300 }); }
+  };
+
+  const captureCanvasAsSvg = async (filename) => {
+    const rendererEl = document.querySelector('.react-flow__renderer');
+    if (!rendererEl) return;
+    const savedVp = reactFlowInstance.getViewport();
+    reactFlowInstance.fitView({ padding: 0.08, duration: 0 });
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    try {
+      const { width, height } = rendererEl.getBoundingClientRect();
+      const dataUri = await toSvg(rendererEl);
+      const blobUrl = injectSvgBackground(dataUri, width, height, exportBgColor);
+      const link = document.createElement('a');
+      link.download = filename; link.href = blobUrl; link.click();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+    } catch (err) { console.error('SVG export error:', err); }
+    finally { reactFlowInstance.setViewport(savedVp, { duration: 300 }); }
+  };
+
   const exportAsPng = () => {
     const filename = `${diagramTitle.toLowerCase().replace(/\s+/g, '-')}.png`;
 
@@ -2490,20 +2595,7 @@ function FlowCanvas() {
     }
 
     if (nodes.length === 0) return;
-    const nodesBounds = getNodesBounds(nodes);
-    const padding = 50;
-    const width = nodesBounds.width + padding * 2;
-    const height = nodesBounds.height + padding * 2;
-    const viewportEl = document.querySelector('.react-flow__viewport');
-    if (!viewportEl) return;
-
-    toPng(viewportEl, {
-      width, height,
-      style: { width: `${width}px`, height: `${height}px`, transform: `translate(${-nodesBounds.x + padding}px, ${-nodesBounds.y + padding}px) scale(1)` },
-    })
-      .then(dataUrl => stampBackground(dataUrl, width, height, exportBgColor))
-      .then(dataUrl => { const link = document.createElement('a'); link.download = filename; link.href = dataUrl; link.click(); })
-      .catch(err => console.error('PNG export error:', err));
+    captureCanvasAsPng(filename);
   };
 
   const exportAsSvg = () => {
@@ -2528,20 +2620,7 @@ function FlowCanvas() {
     }
 
     if (nodes.length === 0) return;
-    const nodesBounds = getNodesBounds(nodes);
-    const padding = 50;
-    const width = nodesBounds.width + padding * 2;
-    const height = nodesBounds.height + padding * 2;
-    const viewportEl = document.querySelector('.react-flow__viewport');
-    if (!viewportEl) return;
-
-    toSvg(viewportEl, {
-      width, height,
-      style: { width: `${width}px`, height: `${height}px`, transform: `translate(${-nodesBounds.x + padding}px, ${-nodesBounds.y + padding}px) scale(1)` },
-    })
-      .then(dataUri => injectSvgBackground(dataUri, width, height, exportBgColor))
-      .then(blobUrl => { const link = document.createElement('a'); link.download = filename; link.href = blobUrl; link.click(); setTimeout(() => URL.revokeObjectURL(blobUrl), 10000); })
-      .catch(err => console.error('SVG export error:', err));
+    captureCanvasAsSvg(filename);
   };
 
   const ctxNode = contextMenu ? nodes.find(n => n.id === contextMenu.id) : null;

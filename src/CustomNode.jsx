@@ -32,7 +32,7 @@ export default function CustomNode({ id, data, selected, ...props }) {
       
       const options = {
         stroke,
-        strokeWidth: isDrawing ? (data.strokeWidth || 2) : 2,
+        strokeWidth: data.strokeWidth || 2,
         roughness: isDrawing ? 0.8 : 1.5,
         bowing: isDrawing ? 0 : 1.5,
         fill: data.hideFill ? undefined : (data.fillColor || `${stroke}33`),
@@ -66,7 +66,7 @@ export default function CustomNode({ id, data, selected, ...props }) {
         rc.curve(data.points, options);
       }
     }
-  }, [data.shape, data.isRough, data.color, data.fillColor, data.fillStyle, data.hideFill, data.strokeStyle, data.points, width, height, id]);
+  }, [data.shape, data.isRough, data.color, data.fillColor, data.fillStyle, data.hideFill, data.strokeStyle, data.strokeWidth, data.points, width, height, id]);
 
   const IconComponent = LucideIcons[data.icon] || LucideIcons.Box;
   const geometricShapes = ['rectangle', 'circle', 'oval', 'diamond', 'triangle', 'cylinder', 'box', 'diamond-tactical', 'layers', 'server', 'database', 'settings', 'building', 'message', 'zap', 'workflow', 'filetext', 'boxselect', 'table', 'type', 'cloud', 'playcircle', 'plug', 'shuffle'];
