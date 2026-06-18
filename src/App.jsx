@@ -1146,12 +1146,18 @@ function FlowCanvas() {
     if (!src) return;
     const w = parseInt(src.style?.width || 160, 10);
     const h = parseInt(src.style?.height || 80, 10);
+    // For left/up, reverse edge direction: new node→parent (left/top handles are target-only)
+    const reversed = direction === 'left' || direction === 'up';
     const shMap = { right: 'right', left: 'left', down: 'bottom', up: 'top' };
     const thMap = { right: 'left', left: 'right', down: 'top', up: 'bottom' };
     const sh = shMap[direction];
     const th = thMap[direction];
-    // Find existing children from this source in this direction
-    const siblingIds = new Set(currentEdges.filter(e => e.source === sourceId && (e.sourceHandle === sh || (!e.sourceHandle && sh === 'right'))).map(e => e.target));
+    // Find siblings: nodes already placed in this direction from source
+    const siblingIds = new Set(
+      currentEdges
+        .filter(e => reversed ? (e.target === sourceId && e.targetHandle === sh) : (e.source === sourceId && e.sourceHandle === sh))
+        .map(e => reversed ? e.source : e.target)
+    );
     const siblings = currentNodes.filter(n => siblingIds.has(n.id));
     const newId = nextDacId(currentNodes);
     const newNode = {
@@ -1163,10 +1169,9 @@ function FlowCanvas() {
     };
     const sz = estimateDacNodeSize(newNode);
     if (sz) { newNode.style = { width: sz.width, height: sz.height }; newNode.data.width = sz.width; newNode.data.height = sz.height; }
-    const newEdge = {
-      id: uuidv4(), source: sourceId, target: newId, label: '', type: 'custom',
-      markerEnd: { type: MarkerType.ArrowClosed }, sourceHandle: sh, targetHandle: th, data: {},
-    };
+    const newEdge = reversed
+      ? { id: uuidv4(), source: newId, target: sourceId, label: '', type: 'custom', markerEnd: { type: MarkerType.ArrowClosed }, sourceHandle: th, targetHandle: sh, data: {} }
+      : { id: uuidv4(), source: sourceId, target: newId, label: '', type: 'custom', markerEnd: { type: MarkerType.ArrowClosed }, sourceHandle: sh, targetHandle: th, data: {} };
     dacCommitRef.current?.([...currentNodes, newNode], [...currentEdges, newEdge]);
   }, []);
 
@@ -1182,11 +1187,16 @@ function FlowCanvas() {
     if (!src) return;
     const w = parseInt(src.style?.width || 150, 10);
     const h = parseInt(src.style?.height || 80, 10);
+    const reversed = direction === 'left' || direction === 'up';
     const shMap = { right: 'right', left: 'left', down: 'bottom', up: 'top' };
     const thMap = { right: 'left', left: 'right', down: 'top', up: 'bottom' };
     const sh = shMap[direction];
     const th = thMap[direction];
-    const siblingIds = new Set(currentEdges.filter(e => e.source === sourceId && (e.sourceHandle === sh || (!e.sourceHandle && sh === 'right'))).map(e => e.target));
+    const siblingIds = new Set(
+      currentEdges
+        .filter(e => reversed ? (e.target === sourceId && e.targetHandle === sh) : (e.source === sourceId && e.sourceHandle === sh))
+        .map(e => reversed ? e.source : e.target)
+    );
     const siblings = currentNodes.filter(n => siblingIds.has(n.id));
     const newId = uuidv4();
     const newNode = {
@@ -1196,13 +1206,10 @@ function FlowCanvas() {
       style: { width: w, height: h },
       data: { ...src.data, label: '', isGhost: false, isNew: false, width: w, height: h },
     };
-    const newEdge = {
-      id: uuidv4(), source: sourceId, target: newId, type: 'custom',
-      sourceHandle: sh, targetHandle: th,
-      markerEnd: { type: MarkerType.ArrowClosed },
-      style: { strokeWidth: src.data.strokeWidth || 2, stroke: src.data.color || '#3b82f6' },
-      data: {},
-    };
+    const edgeStyle = { strokeWidth: src.data.strokeWidth || 2, stroke: src.data.color || '#3b82f6' };
+    const newEdge = reversed
+      ? { id: uuidv4(), source: newId, target: sourceId, type: 'custom', sourceHandle: th, targetHandle: sh, markerEnd: { type: MarkerType.ArrowClosed }, style: edgeStyle, data: {} }
+      : { id: uuidv4(), source: sourceId, target: newId, type: 'custom', sourceHandle: sh, targetHandle: th, markerEnd: { type: MarkerType.ArrowClosed }, style: edgeStyle, data: {} };
     setDrawNodes(nds => [...nds, newNode]);
     setDrawEdges(eds => [...eds, newEdge]);
   }, []);
