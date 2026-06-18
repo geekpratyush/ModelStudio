@@ -3248,7 +3248,7 @@ function FlowCanvas() {
                 <button className="btn btn-icon-only" onClick={() => setShowTemplateGallery(false)}><X size={18} /></button>
               </div>
               <div style={{ display: 'flex', gap: '8px', padding: '12px 22px', borderBottom: '1px solid var(--border-color)', flexWrap: 'wrap' }}>
-                {['All', 'Flowchart', 'Architecture', 'Sequence', 'C4', 'ER / DB', 'State & Git', 'Analytics', 'Other'].map(cat => (
+                {['All', 'Flowchart', 'OrgChart', 'Architecture', 'Sequence', 'C4', 'ER / DB', 'State & Git', 'Analytics', 'Story', 'Other'].map(cat => (
                   <button
                     key={cat}
                     onClick={() => setDacGalFilter(cat)}
@@ -3272,6 +3272,8 @@ function FlowCanvas() {
                   if (dacGalFilter === 'ER / DB') return ['ER', 'Class', 'Requirement'].includes(t.type);
                   if (dacGalFilter === 'State & Git') return ['State', 'Git'].includes(t.type);
                   if (dacGalFilter === 'Analytics') return ['Pie', 'XY', 'Radar', 'Quadrant', 'Sankey', 'Gantt', 'Timeline', 'Journey', 'Kanban'].includes(t.type);
+                  if (dacGalFilter === 'OrgChart') return t.type === 'OrgChart';
+                  if (dacGalFilter === 'Story') return t.type === 'Story';
                   if (dacGalFilter === 'Other') return ['Mindmap', 'Packet'].includes(t.type);
                   return true;
                 }).map((t) => {
@@ -3296,6 +3298,8 @@ function FlowCanvas() {
                     Journey: { bg: 'rgba(234,88,12,0.10)', border: '#ea580c', text: '#f97316' },
                     Mindmap: { bg: 'rgba(124,58,237,0.10)', border: '#7c3aed', text: '#8b5cf6' },
                     Kanban: { bg: 'rgba(5,150,105,0.10)', border: '#059669', text: '#10b981' },
+                    OrgChart: { bg: 'rgba(245,158,11,0.10)', border: '#f59e0b', text: '#fbbf24' },
+                    Story: { bg: 'rgba(236,72,153,0.10)', border: '#ec4899', text: '#f472b6' },
                   };
                   const c = typeColors[t.type] || { bg: 'rgba(71,85,105,0.10)', border: '#475569', text: '#94a3b8' };
                   return (
