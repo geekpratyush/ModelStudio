@@ -2429,11 +2429,22 @@ function FlowCanvas() {
   });
 
   /* Inject a <rect> background into an SVG data-URI string and return new data-URI. */
+  /* Decode an SVG data-URI (base64 or URL-encoded), inject a background rect,
+     and return a Blob URL ready for download. */
+  const svgDataUriToText = (dataUri) => {
+    if (dataUri.startsWith('data:image/svg+xml;base64,')) {
+      return atob(dataUri.slice('data:image/svg+xml;base64,'.length));
+    }
+    // URL-encoded form
+    return decodeURIComponent(dataUri.replace(/^data:image\/svg\+xml,/, ''));
+  };
+
   const injectSvgBackground = (svgDataUri, w, h, bg) => {
-    const svgText = decodeURIComponent(svgDataUri.replace(/^data:image\/svg\+xml,/, ''));
+    const svgText = svgDataUriToText(svgDataUri);
     const bgRect = `<rect width="${w}" height="${h}" fill="${bg}"/>`;
     const patched = svgText.replace(/(<svg[^>]*>)/, `$1${bgRect}`);
-    return 'data:image/svg+xml,' + encodeURIComponent(patched);
+    // Return a Blob URL so the browser treats it as a real SVG file
+    return URL.createObjectURL(new Blob([patched], { type: 'image/svg+xml;charset=utf-8' }));
   };
 
   const exportAsPng = () => {
@@ -2518,7 +2529,7 @@ function FlowCanvas() {
       style: { width: `${width}px`, height: `${height}px`, transform: `translate(${-nodesBounds.x + padding}px, ${-nodesBounds.y + padding}px) scale(1)` },
     })
       .then(dataUri => injectSvgBackground(dataUri, width, height, exportBgColor))
-      .then(dataUri => { const link = document.createElement('a'); link.download = filename; link.href = dataUri; link.click(); })
+      .then(blobUrl => { const link = document.createElement('a'); link.download = filename; link.href = blobUrl; link.click(); URL.revokeObjectURL(blobUrl); })
       .catch(err => console.error('SVG export error:', err));
   };
 
@@ -2830,9 +2841,14 @@ function FlowCanvas() {
         style={{ display: 'flex', flexDirection: 'row' }}
       >
         {workspace === 'draw' && (
-          <div style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', zIndex: 50, display: 'flex', flexDirection: 'row', alignItems: 'flex-start' }}>
+          <div
+            style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', zIndex: 50, display: 'flex', flexDirection: 'row', alignItems: 'flex-start' }}
+            onMouseDown={e => e.stopPropagation()}
+            onPointerDown={e => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
+          >
             <button
-              onClick={() => setShowDrawTray(v => !v)}
+              onClick={(e) => { e.stopPropagation(); setShowDrawTray(v => !v); }}
               style={{
                 width: 24, padding: '12px 4px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
                 borderLeft: 'none', borderRadius: '0 8px 8px 0', cursor: 'pointer', color: 'var(--text-secondary)',
