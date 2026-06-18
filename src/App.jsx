@@ -1360,6 +1360,7 @@ function FlowCanvas() {
   };
   const [contextMenu, setContextMenu] = useState(null);
   const [showIconPicker, setShowIconPicker] = useState(false);
+  const [showDrawTray, setShowDrawTray] = useState(false);
   const [iconSearch, setIconSearch] = useState('');
   const onNodeContextMenu = useCallback(
    (event, node) => {
@@ -2586,7 +2587,7 @@ function FlowCanvas() {
 
   return (
     <div className="app-container">
-      {workspace !== 'dac' && (
+      {workspace !== 'dac' && workspace !== 'draw' && (
         <aside className={`sidebar ${!isSidebarOpen ? 'collapsed' : ''}`}>
         <button 
           className="sidebar-toggle-btn" 
@@ -2799,12 +2800,98 @@ function FlowCanvas() {
       </aside>
       )}
       
-      <main 
-        className={`canvas-area ${theme === 'dark' ? 'theme-dark' : 'theme-light'}`} 
+      <main
+        className={`canvas-area ${theme === 'dark' ? 'theme-dark' : 'theme-light'}`}
         data-drawing-active={isDrawingMode || (workspace === 'draw' && activeTool !== 'select') ? 'true' : 'false'}
         ref={reactFlowWrapper}
         style={{ display: 'flex', flexDirection: 'row' }}
       >
+        {workspace === 'draw' && (
+          <div style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', zIndex: 50, display: 'flex', flexDirection: 'row', alignItems: 'flex-start' }}>
+            <button
+              onClick={() => setShowDrawTray(v => !v)}
+              style={{
+                width: 24, padding: '12px 4px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
+                borderLeft: 'none', borderRadius: '0 8px 8px 0', cursor: 'pointer', color: 'var(--text-secondary)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', writingMode: 'vertical-rl',
+                fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em', gap: 6,
+                boxShadow: 'var(--shadow)'
+              }}
+              title="System icon palette"
+            >
+              {showDrawTray ? '‹' : '›'} Icons
+            </button>
+            {showDrawTray && (
+              <div style={{
+                background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
+                borderLeft: 'none', borderRadius: '0 8px 8px 0', padding: '10px 8px',
+                display: 'flex', flexDirection: 'column', gap: 4, maxHeight: '70vh', overflowY: 'auto',
+                boxShadow: 'var(--shadow-lg)', width: 200
+              }}>
+                {[
+                  { group: 'Infrastructure', items: [
+                    { label: 'Server / VM', icon: Server, color: '#ef4444', type: 'Server' },
+                    { label: 'Database', icon: Database, color: '#10b981', type: 'Database' },
+                    { label: 'Cloud', icon: Cloud, color: '#0ea5e9', type: 'Cloud' },
+                    { label: 'CPU / Compute', icon: Cpu, color: '#8b5cf6', type: 'Cpu' },
+                    { label: 'Storage / Disk', icon: HardDrive, color: '#64748b', type: 'HardDrive' },
+                    { label: 'Container / Pod', icon: Package, color: '#06b6d4', type: 'Package' },
+                    { label: 'Microservice', icon: Box, color: '#3b82f6', type: 'Box' },
+                  ]},
+                  { group: 'Network & Security', items: [
+                    { label: 'Internet / Globe', icon: Globe, color: '#0ea5e9', type: 'Globe' },
+                    { label: 'Firewall / Shield', icon: Shield, color: '#22c55e', type: 'Shield' },
+                    { label: 'Lock / Auth', icon: Lock, color: '#f59e0b', type: 'Lock' },
+                    { label: 'Network Switch', icon: Network, color: '#a855f7', type: 'Network' },
+                    { label: 'WiFi', icon: Wifi, color: '#06b6d4', type: 'Wifi' },
+                    { label: 'Radio Tower', icon: RadioTower, color: '#ec4899', type: 'RadioTower' },
+                  ]},
+                  { group: 'Applications', items: [
+                    { label: 'Browser / Desktop', icon: Monitor, color: '#3b82f6', type: 'Monitor' },
+                    { label: 'Mobile App', icon: Smartphone, color: '#8b5cf6', type: 'Smartphone' },
+                    { label: 'Terminal / CLI', icon: Terminal, color: '#10b981', type: 'Terminal' },
+                    { label: 'Code / IDE', icon: Code, color: '#f59e0b', type: 'Code' },
+                    { label: 'API', icon: Webhook, color: '#ec4899', type: 'Webhook' },
+                    { label: 'File / Doc', icon: FileText, color: '#64748b', type: 'FileText' },
+                  ]},
+                  { group: 'Middleware', items: [
+                    { label: 'Message Queue', icon: MessageSquare, color: '#f59e0b', type: 'MessageSquare' },
+                    { label: 'Kafka / Stream', icon: RadioTower, color: '#a855f7', type: 'RadioTower' },
+                    { label: 'Load Balancer', icon: Scale, color: '#0ea5e9', type: 'Scale' },
+                    { label: 'API Gateway', icon: Layers, color: '#f97316', type: 'Layers' },
+                    { label: 'Cache / Redis', icon: Zap, color: '#22c55e', type: 'Zap' },
+                    { label: 'Search Engine', icon: Search, color: '#6366f1', type: 'Search' },
+                  ]},
+                  { group: 'People', items: [
+                    { label: 'User / Actor', icon: User, color: '#eab308', type: 'User' },
+                    { label: 'Team / Group', icon: Users, color: '#3b82f6', type: 'Users' },
+                    { label: 'Organization', icon: Building, color: '#8b5cf6', type: 'Building' },
+                    { label: 'External System', icon: Building2, color: '#64748b', type: 'Building2' },
+                  ]},
+                ].map(({ group, items }) => (
+                  <div key={group}>
+                    <div style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '6px 4px 3px' }}>{group}</div>
+                    {items.map(({ label, icon: Ic, color, type }) => {
+                      const onDragStart = (e) => {
+                        e.dataTransfer.setData('application/reactflow', JSON.stringify({ label, icon: type, color, shape: undefined, isContainer: false, isEip: false, textAlign: 'center', verticalAlign: 'middle' }));
+                        e.dataTransfer.effectAllowed = 'move';
+                      };
+                      return (
+                        <div key={label} draggable onDragStart={onDragStart} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '4px 6px', borderRadius: 6, cursor: 'grab', fontSize: '0.78rem', color: 'var(--text-secondary)' }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                          <Ic size={15} style={{ color, flexShrink: 0 }} />
+                          {label}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {workspace === 'dac' && showDacEditor && (
           <div className="dac-editor-pane" style={{ width: splitWidth }}>
             <div className="dac-header">
