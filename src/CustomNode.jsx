@@ -4,22 +4,24 @@ import * as LucideIcons from 'lucide-react';
 
 export default function CustomNode({ id, data, selected, ...props }) {
   const { setNodes, setEdges, getNodes } = useReactFlow();
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(!!data.isNew);
   const canvasRef = useRef(null);
   
   // Use measured dimensions if available, otherwise style dimensions, finally defaults.
   // Ensure we don't fallback to 150/80 when the value is intentionally 0 (during drag start).
-  const width = Math.max(0, props.width ?? (props.style?.width !== undefined ? parseInt(props.style.width, 10) : 150));
-  const height = Math.max(0, props.height ?? (props.style?.height !== undefined ? parseInt(props.style.height, 10) : 80));
+  const width = Math.max(1, data.width ?? props.width ?? (props.style?.width !== undefined ? parseInt(props.style.width, 10) : 150));
+  const height = Math.max(1, data.height ?? props.height ?? (props.style?.height !== undefined ? parseInt(props.style.height, 10) : 80));
+
+  const isRoughActive = data.isRough && window.rough;
 
   useEffect(() => {
-    if (data.isRough && canvasRef.current && window.rough) {
+    if (isRoughActive && canvasRef.current) {
       const canvas = canvasRef.current;
       const rc = window.rough.canvas(canvas);
       const ctx = canvas.getContext('2d');
       
-      const w = Math.max(1, width);
-      const h = Math.max(1, height);
+      const w = width;
+      const h = height;
       if (canvas.width !== w) canvas.width = w;
       if (canvas.height !== h) canvas.height = h;
       
@@ -61,7 +63,7 @@ export default function CustomNode({ id, data, selected, ...props }) {
       } else if (data.shape === 'cloud') {
         rc.path(`M ${w*0.25} ${h*0.3} Q ${w*0.1} ${h*0.3} ${w*0.1} ${h*0.5} Q ${w*0.1} ${h*0.7} ${w*0.25} ${h*0.7} L ${w*0.75} ${h*0.7} Q ${w*0.9} ${h*0.7} ${w*0.9} ${h*0.5} Q ${w*0.9} ${h*0.3} ${w*0.75} ${h*0.3} Q ${w*0.75} ${h*0.1} ${w*0.5} ${h*0.1} Q ${w*0.25} ${h*0.1} ${w*0.25} ${h*0.3} Z`, options);
       } else if (data.shape === 'drawing' && data.points && data.points.length > 1) {
-        rc.linearPath(data.points, options);
+        rc.curve(data.points, options);
       }
     }
   }, [data.shape, data.isRough, data.color, data.fillColor, data.fillStyle, data.hideFill, data.strokeStyle, data.points, width, height, id]);
@@ -158,6 +160,21 @@ export default function CustomNode({ id, data, selected, ...props }) {
     />
   );
 
+  if (data.shape === 'dummy') {
+    return (
+      <div 
+        style={{ 
+          width: '100%', 
+          height: '100%', 
+          pointerEvents: 'auto', 
+          border: selected ? '2px dashed var(--accent-blue, #3b82f6)' : '1px dashed transparent', 
+          borderRadius: '8px',
+          boxSizing: 'border-box'
+        }} 
+      />
+    );
+  }
+
   if (data.isContainer) {
     return (
       <>
@@ -193,6 +210,34 @@ export default function CustomNode({ id, data, selected, ...props }) {
     );
   }
 
+  const getSvgFill = () => {
+    if (data.hideFill) return 'none';
+    if (data.fillType === 'gradient') return `url(#grad-${id})`;
+    return data.fillColor || `${color}11`;
+  };
+
+  const renderGradientDef = () => {
+    if (data.fillType !== 'gradient') return null;
+    const c1 = data.gradientColor1 || '#ffffff';
+    const c2 = data.gradientColor2 || color;
+    // Calculate simple x/y vectors for standard angles
+    const angle = parseInt(data.gradientAngle) || 90;
+    const rad = (angle - 90) * (Math.PI / 180);
+    const x1 = Math.round(50 + Math.cos(rad) * 50) + "%";
+    const y1 = Math.round(50 + Math.sin(rad) * 50) + "%";
+    const x2 = Math.round(50 + Math.cos(rad + Math.PI) * 50) + "%";
+    const y2 = Math.round(50 + Math.sin(rad + Math.PI) * 50) + "%";
+    
+    return (
+      <defs>
+        <linearGradient id={`grad-${id}`} x1={x1} y1={y1} x2={x2} y2={y2}>
+          <stop offset="0%" stopColor={c1} />
+          <stop offset="100%" stopColor={c2} />
+        </linearGradient>
+      </defs>
+    );
+  };
+
   if (isGeometric) {
     return (
       <>
@@ -203,9 +248,9 @@ export default function CustomNode({ id, data, selected, ...props }) {
           style={{ 
             width: '100%', 
             height: '100%', 
-            borderColor: (data.hideBorder || data.isRough || data.shape === 'diamond' || data.shape === 'triangle' || data.shape === 'cloud') ? 'transparent' : color, 
-            background: (data.hideBorder || data.isRough || data.shape === 'diamond' || data.shape === 'triangle' || data.shape === 'cloud') ? 'transparent' : undefined,
-            boxShadow: (data.hideBorder || data.isRough || data.shape === 'diamond' || data.shape === 'triangle' || data.shape === 'cloud') ? 'none' : undefined,
+            borderColor: (data.hideBorder || isRoughActive || data.shape === 'diamond' || data.shape === 'triangle' || data.shape === 'cloud') ? 'transparent' : color, 
+            background: (data.hideBorder || isRoughActive || data.shape === 'diamond' || data.shape === 'triangle' || data.shape === 'cloud') ? 'transparent' : (data.fillType === 'gradient' && !data.hideFill ? `linear-gradient(${data.gradientAngle || 90}deg, ${data.gradientColor1 || '#ffffff'}, ${data.gradientColor2 || color})` : undefined),
+            boxShadow: (data.hideBorder || isRoughActive || data.shape === 'diamond' || data.shape === 'triangle' || data.shape === 'cloud') ? 'none' : undefined,
             '--accent-color': color,
             display: 'flex',
             flexDirection: 'column',
@@ -216,10 +261,10 @@ export default function CustomNode({ id, data, selected, ...props }) {
             overflow: 'visible'
           }}
         >
-          <Handle type="target" position={Position.Top} id="top" />
           <Handle type="target" position={Position.Left} id="left" />
+          <Handle type="target" position={Position.Top} id="top" />
           
-          {data.isRough ? (
+          {isRoughActive ? (
             <canvas 
               ref={canvasRef} 
               width={parseInt(width)} 
@@ -228,13 +273,29 @@ export default function CustomNode({ id, data, selected, ...props }) {
             />
           ) : (
             <>
-              {data.shape === 'diamond' && <div className="diamond-inner" style={{ borderColor: color, backgroundColor: data.hideFill ? 'transparent' : (data.fillColor || `${color}11`) }} />}
-              
+              {(data.shape === 'rectangle' || !data.shape || data.shape === 'box' || data.shape === 'note') && (
+                 <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, border: `2px solid ${color}`, background: data.hideFill ? 'transparent' : (data.fillType === 'gradient' ? `linear-gradient(${data.gradientAngle || 90}deg, ${data.gradientColor1 || '#ffffff'}, ${data.gradientColor2 || color})` : (data.fillColor || `${color}11`)), borderRadius: data.shape === 'note' ? 0 : 4, zIndex: 0 }} />
+              )}
+              {data.shape === 'diamond' && (
+                <svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0, zIndex: 0, overflow: 'visible' }}>
+                  {renderGradientDef()}
+                  <polygon 
+                    points={`${width/2},2 ${width-2},${height/2} ${width/2},${height-2} 2,${height/2}`} 
+                    fill={getSvgFill()} 
+                    stroke={color} 
+                    strokeWidth={data.strokeWidth || 2}
+                    strokeDasharray={data.strokeStyle === 'dashed' ? '5,5' : (data.strokeStyle === 'dotted' ? '2,2' : 'none')}
+                    style={{ opacity: data.opacity ? data.opacity / 100 : 1 }}
+                  />
+                </svg>
+              )}
+
               {data.shape === 'triangle' && (
                 <svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0, zIndex: 0, overflow: 'visible' }}>
+                  {renderGradientDef()}
                   <polygon 
                     points={`${width/2},2 ${width-2},${height-2} 2,${height-2}`} 
-                    fill={data.hideFill ? 'none' : (data.fillColor || `${color}11`)} 
+                    fill={getSvgFill()} 
                     stroke={color} 
                     strokeWidth={data.strokeWidth || 2}
                     strokeDasharray={data.strokeStyle === 'dashed' ? '5,5' : (data.strokeStyle === 'dotted' ? '2,2' : 'none')}
@@ -245,9 +306,24 @@ export default function CustomNode({ id, data, selected, ...props }) {
 
               {data.shape === 'cloud' && (
                 <svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0, zIndex: 0, overflow: 'visible' }}>
+                  {renderGradientDef()}
                   <path 
                     d={`M ${width*0.25} ${height*0.3} Q ${width*0.1} ${height*0.3} ${width*0.1} ${height*0.5} Q ${width*0.1} ${height*0.7} ${width*0.25} ${height*0.7} L ${width*0.75} ${height*0.7} Q ${width*0.9} ${height*0.7} ${width*0.9} ${height*0.5} Q ${width*0.9} ${height*0.3} ${width*0.75} ${height*0.3} Q ${width*0.75} ${height*0.1} ${width*0.5} ${height*0.1} Q ${width*0.25} ${height*0.1} ${width*0.25} ${height*0.3} Z`} 
-                    fill={data.hideFill ? 'none' : (data.fillColor || `${color}11`)} 
+                    fill={getSvgFill()} 
+                    stroke={color} 
+                    strokeWidth={data.strokeWidth || 2}
+                    strokeDasharray={data.strokeStyle === 'dashed' ? '5,5' : (data.strokeStyle === 'dotted' ? '2,2' : 'none')}
+                    style={{ opacity: data.opacity ? data.opacity / 100 : 1 }}
+                  />
+                </svg>
+              )}
+
+              {(data.shape === 'circle' || data.shape === 'oval') && (
+                <svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0, zIndex: 0, overflow: 'visible' }}>
+                  {renderGradientDef()}
+                  <ellipse 
+                    cx={width/2} cy={height/2} rx={width/2 - 5} ry={height/2 - 5}
+                    fill={getSvgFill()} 
                     stroke={color} 
                     strokeWidth={data.strokeWidth || 2}
                     strokeDasharray={data.strokeStyle === 'dashed' ? '5,5' : (data.strokeStyle === 'dotted' ? '2,2' : 'none')}
@@ -265,8 +341,8 @@ export default function CustomNode({ id, data, selected, ...props }) {
             </>
           )}
 
-          <div className="is-geometric-content" style={{ 
-            pointerEvents: isEditing ? 'auto' : 'none', 
+          <div className={`is-geometric-content ${isEditing ? 'nodrag' : ''}`} style={{ 
+            pointerEvents: 'auto', 
             display: 'flex', 
             flexDirection: 'column', 
             alignItems: flexAlign,
@@ -276,7 +352,10 @@ export default function CustomNode({ id, data, selected, ...props }) {
             height: '100%',
             gap: (data.icon && data.label) ? 4 : 0
           }}
-          onDoubleClick={() => setIsEditing(true)}
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            setIsEditing(true);
+          }}
           >
             {data.icon && IconComponent && <IconComponent size={Math.max(20, 24)} color={color} style={{ flexShrink: 0 }} />}
             <div className="node-label" style={{ 
@@ -287,11 +366,12 @@ export default function CustomNode({ id, data, selected, ...props }) {
               color: 'var(--text-primary)', 
               wordBreak: 'break-word', 
               maxWidth: '100%',
-              flex: 'none'
+              flex: 'none',
+              width: '100%'
             }}>
               {isEditing ? (
-                <input
-                  value={data.label}
+                <textarea
+                  value={data.label || ''}
                   onChange={(e) => {
                     setNodes((nodes) =>
                       nodes.map((n) => {
@@ -304,7 +384,11 @@ export default function CustomNode({ id, data, selected, ...props }) {
                   }}
                   onBlur={() => setIsEditing(false)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') setIsEditing(false);
+                    // Let Shift+Enter add a new line, but Enter completes editing
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      setIsEditing(false);
+                    }
                   }}
                   autoFocus
                   style={{
@@ -317,11 +401,14 @@ export default function CustomNode({ id, data, selected, ...props }) {
                     fontWeight: 'inherit',
                     textAlign: textAlign,
                     width: '100%',
-                    padding: 0
+                    padding: 0,
+                    resize: 'none',
+                    overflow: 'hidden',
+                    minHeight: '2em'
                   }}
                 />
               ) : (
-                <span title="Double click to edit text">{data.label}</span>
+                <span title="Double click to edit text" style={{ cursor: 'text', display: 'inline-block', width: '100%', minHeight: '1em' }}>{data.label}</span>
               )}
             </div>
           </div>
@@ -367,7 +454,7 @@ export default function CustomNode({ id, data, selected, ...props }) {
           <Handle type="target" position={Position.Left} id="left" />
           <LucideIcons.User size={Math.min(34, 48)} color={color} strokeWidth={1.5} style={{ flexShrink: 0 }} />
           <div style={{ marginTop: '6px', fontSize: '0.65rem', fontWeight: 'bold', color: 'var(--text-primary)', textAlign: 'center', background: data.hideBorder ? 'transparent' : 'var(--bg-glass)', padding: '2px 6px', borderRadius: '4px', wordBreak: 'break-word', maxWidth: '100%' }}>{data.label}</div>
-          <Handle type="source" position={Position.Right} />
+          <Handle type="source" position={Position.Right} id="right" />
           <Handle type="source" position={Position.Bottom} id="bottom" />
         </div>
       </>
@@ -391,6 +478,7 @@ export default function CustomNode({ id, data, selected, ...props }) {
             borderWidth: 1,
             boxShadow: 'none',
             display: 'flex',
+            flexDirection: 'column',
             alignItems: flexAlign,
             justifyContent: flexJustify,
             position: 'relative'
@@ -407,8 +495,9 @@ export default function CustomNode({ id, data, selected, ...props }) {
             whiteSpace: 'pre-wrap',
             lineHeight: 1.2,
             display: 'flex',
-            alignItems: flexAlign,
-            justifyContent: flexJustify,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: flexAlign,
             gap: '8px',
             fontFamily: data.fontFamily === 'virgil' ? 'Virgil, cursive' : (data.fontFamily || 'inherit'),
           }}>
@@ -664,14 +753,17 @@ export default function CustomNode({ id, data, selected, ...props }) {
           height: '100%', 
           position: 'relative',
           overflow: 'visible',
-          pointerEvents: 'none'
+          pointerEvents: 'all'
         }}
       >
+        <Handle type="target" position={Position.Top} id="top" style={{ opacity: 0 }} />
+        <Handle type="target" position={Position.Left} id="left" style={{ opacity: 0 }} />
+        
         {selected && (
           <div style={{ position: 'absolute', top: -4, left: -4, right: -4, bottom: -4, border: '1px dashed #3b82f6', borderRadius: 4, pointerEvents: 'none' }} />
         )}
         
-        {data.isRough ? (
+        {isRoughActive ? (
           <canvas 
             ref={canvasRef} 
             width={parseInt(width)} 
@@ -700,6 +792,8 @@ export default function CustomNode({ id, data, selected, ...props }) {
             />
           </svg>
         )}
+        <Handle type="source" position={Position.Right} id="right" style={{ opacity: 0 }} />
+        <Handle type="source" position={Position.Bottom} id="bottom" style={{ opacity: 0 }} />
       </div>
     );
   }

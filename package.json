@@ -10,10 +10,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
+    "@uiw/react-textarea-code-editor": "^3.1.1",
     "@xyflow/react": "^12.11.0",
     "html-to-image": "^1.11.13",
     "js-yaml": "^4.2.0",
     "lucide-react": "^1.18.0",
+    "mermaid": "^11.15.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "uuid": "^14.0.0"
