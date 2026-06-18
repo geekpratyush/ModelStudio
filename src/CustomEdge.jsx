@@ -6,88 +6,14 @@ import {
 } from '@xyflow/react';
 import { Trash2, Pencil } from 'lucide-react';
 
-const getAbsoluteNodeRect = (node, allNodes) => {
-  let x = node.position.x;
-  let y = node.position.y;
-  let width = node.style?.width || (node.data?.isContainer ? 400 : 160);
-  let height = node.style?.height || (node.data?.isContainer ? 300 : 72);
-  
-  if (node.data?.shape === 'class') {
-    height = 120;
-  } else if (node.data?.shape === 'actor') {
-    width = 90;
-    height = 90;
-  } else if (node.data?.shape === 'diamond') {
-    width = 100;
-    height = 100;
-  }
-
-  width = parseInt(width, 10);
-  height = parseInt(height, 10);
-
-  let parentId = node.parentId;
-  while (parentId) {
-    const parentNode = allNodes.find(n => n.id === parentId);
-    if (!parentNode) break;
-    x += parentNode.position.x;
-    y += parentNode.position.y;
-    parentId = parentNode.parentId;
-  }
-
-  return { x, y, width, height };
-};
-
-const getPoints = (rect) => {
-  return [
-    { x: rect.x + rect.width / 2, y: rect.y, position: 'top' },
-    { x: rect.x + rect.width / 2, y: rect.y + rect.height, position: 'bottom' },
-    { x: rect.x, y: rect.y + rect.height / 2, position: 'left' },
-    { x: rect.x + rect.width, y: rect.y + rect.height / 2, position: 'right' },
-  ];
-};
-
-const getClosestPoints = (nodeA, nodeB, allNodes) => {
-  const rectA = getAbsoluteNodeRect(nodeA, allNodes);
-  const rectB = getAbsoluteNodeRect(nodeB, allNodes);
-
-  const pointsA = getPoints(rectA);
-  const pointsB = getPoints(rectB);
-
-  let minDistance = Infinity;
-  let bestPointA = pointsA[0];
-  let bestPointB = pointsB[0];
-
-  for (const pA of pointsA) {
-    for (const pB of pointsB) {
-      const dx = pA.x - pB.x;
-      const dy = pA.y - pB.y;
-      const distance = dx * dx + dy * dy;
-      if (distance < minDistance) {
-        minDistance = distance;
-        bestPointA = pA;
-        bestPointB = pB;
-      }
-    }
-  }
-
-  return {
-    sourceX: bestPointA.x,
-    sourceY: bestPointA.y,
-    sourcePosition: bestPointA.position,
-    targetX: bestPointB.x,
-    targetY: bestPointB.y,
-    targetPosition: bestPointB.position,
-  };
-};
-
 export default function CustomEdge({
   id,
-  sourceX: initialSourceX,
-  sourceY: initialSourceY,
-  targetX: initialTargetX,
-  targetY: initialTargetY,
-  sourcePosition: initialSourcePosition,
-  targetPosition: initialTargetPosition,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
   style = {},
   markerEnd,
   markerStart,
@@ -100,27 +26,6 @@ export default function CustomEdge({
   ...props
 }) {
   const { setEdges, getNodes } = useReactFlow();
-  const allNodes = getNodes();
-
-  const sourceNode = allNodes.find(n => n.id === props.source);
-  const targetNode = allNodes.find(n => n.id === props.target);
-
-  let sourceX = initialSourceX;
-  let sourceY = initialSourceY;
-  let sourcePosition = initialSourcePosition;
-  let targetX = initialTargetX;
-  let targetY = initialTargetY;
-  let targetPosition = initialTargetPosition;
-
-  if (sourceNode && targetNode) {
-    const coords = getClosestPoints(sourceNode, targetNode, allNodes);
-    sourceX = coords.sourceX;
-    sourceY = coords.sourceY;
-    sourcePosition = coords.sourcePosition;
-    targetX = coords.targetX;
-    targetY = coords.targetY;
-    targetPosition = coords.targetPosition;
-  }
 
   const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX,

@@ -1,4 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import Editor from '@monaco-editor/react';
+import { parseMermaid, serializeMermaid, serializePlantUML, serializeD2, validateMermaid, detectDiagramKind } from './utils/dacUtils';
+import MermaidPreview from './MermaidPreview';
+import { registerMermaidLanguage } from './utils/monacoMermaid';
+import dacTemplates from './templates/dacTemplates.json';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -17,8 +22,9 @@ import '@xyflow/react/dist/style.css';
 import { toPng, toSvg } from 'html-to-image';
 import { v4 as uuidv4 } from 'uuid';
 import yaml from 'js-yaml';
-import { Download, Upload, FileJson, Image, PlayCircle, Box, Diamond, Server, Trash2, Database, Cloud, MousePointer2, Hand, Grid3X3, Code, ChevronLeft, ChevronRight, ChevronsDown, ChevronsUp, Filter, ListOrdered, FileText, ShieldCheck, MessageSquare, Send, Skull, Mail, Clock, GitMerge, GitBranch, Workflow, Network, ArrowRightLeft, Route, FilePlus, RefreshCw, Radio, Share2, ListChecks, Scale, Settings2, ArrowDownUp, TerminalSquare, CheckCircle2, PackageOpen, Package, FileArchive, MessageCircle, RadioTower, Webhook, Hexagon, Building2, CloudLightning, BoxSelect, Plug, Zap, Cpu, User, File, Type, Table, Building, Layers, Search, X, Target, Eraser, StickyNote, Info, Pencil, Paintbrush, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Triangle, ArrowUpRight, Minus, Circle as CircleIcon, Square } from 'lucide-react';
+import { Download, Upload, FileJson, Image, PlayCircle, Box, Diamond, Server, Trash2, Database, Cloud, MousePointer2, Hand, Grid3X3, Code, ChevronLeft, ChevronRight, ChevronsDown, ChevronsUp, Filter, ListOrdered, FileText, ShieldCheck, MessageSquare, Send, Skull, Mail, Clock, GitMerge, GitBranch, Workflow, Network, ArrowRightLeft, Route, FilePlus, RefreshCw, Radio, Share2, ListChecks, Scale, Settings2, ArrowDownUp, TerminalSquare, CheckCircle2, PackageOpen, Package, FileArchive, MessageCircle, RadioTower, Webhook, Hexagon, Building2, CloudLightning, BoxSelect, Plug, Zap, Cpu, User, File, Type, Table, Building, Layers, Search, X, Target, Eraser, StickyNote, Info, Pencil, Paintbrush, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Triangle, ArrowUpRight, Minus, Circle as CircleIcon, Square, LayoutGrid, Copy, Plus, Palette, Shapes, Globe, Lock, Wifi, Monitor, Smartphone, Terminal, HardDrive, Users } from 'lucide-react';
 import ThemeToggle from './components/ThemeToggle';
+import MSLogo from './components/MSLogo';
 import { useTheme } from './contexts/ThemeContext';
 import * as AllIcons from 'lucide-react';
 
@@ -174,8 +180,8 @@ const templates = {
         { id: "note-strat", type: 'custom', position: { x: 500, y: 400 }, data: { label: "STRATEGIC DESIGN:\n1. Core (Red): Competitive advantage.\n2. Generic (Grey): Standard industry needs.\n3. Supporting (Blue): Necessary but not core.", shape: "note", color: "#fef08a" }, style: { width: 350, height: 200 } }
       ],
       edges: [
-        { id: "e-ship-bill", source: "core-shipping", target: "gen-billing", label: "Customer/Supplier", animated: true, type: "custom" },
-        { id: "e-cat-ship", source: "supp-catalog", target: "core-shipping", label: "ACL", animated: true, type: "custom" }
+        { id: "e-ship-bill", source: "core-shipping", target: "gen-billing", label: "Customer/Supplier", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left" },
+        { id: "e-cat-ship", source: "supp-catalog", target: "core-shipping", label: "ACL", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left" }
       ]
     },
     {
@@ -205,8 +211,8 @@ const templates = {
         { id: "node-db-inst", type: 'custom', position: { x: 550, y: 150 }, data: { label: "Database", icon: "Database", color: "#10b981", shape: "cylinder" } }
       ],
       edges: [
-        { id: "e-1", source: "node-cli", target: "node-web", animated: true, type: "custom", label: "HTTP" },
-        { id: "e-2", source: "node-web", target: "node-db-inst", animated: true, type: "custom", label: "SQL Connect" }
+        { id: "e-1", source: "node-cli", target: "node-web", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left", label: "HTTP" },
+        { id: "e-2", source: "node-web", target: "node-db-inst", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left", label: "SQL Connect" }
       ]
     },
     {
@@ -219,9 +225,9 @@ const templates = {
         { id: "node-db", type: 'custom', position: { x: 860, y: 150 }, data: { label: "User Database", icon: "Database", color: "#f59e0b", shape: "cylinder" } }
       ],
       edges: [
-        { id: "e-client-gw", source: "node-client", target: "node-gateway", animated: true, type: "custom", label: "HTTPS" },
-        { id: "e-gw-app", source: "node-gateway", target: "node-app", animated: true, type: "custom", label: "gRPC" },
-        { id: "e-app-db", source: "node-app", target: "node-db", animated: true, type: "custom", label: "SQL Connect" }
+        { id: "e-client-gw", source: "node-client", target: "node-gateway", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left", label: "HTTPS" },
+        { id: "e-gw-app", source: "node-gateway", target: "node-app", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left", label: "gRPC" },
+        { id: "e-app-db", source: "node-app", target: "node-db", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left", label: "SQL Connect" }
       ]
     },
     {
@@ -240,13 +246,13 @@ const templates = {
         { id: "node-catalog-db", type: 'custom', position: { x: 860, y: 290 }, data: { label: "Catalog DB", icon: "Database", color: "#eab308", shape: "cylinder" } }
       ],
       edges: [
-        { id: "e-lb-gw", source: "node-lb", target: "node-gw", animated: true, type: "custom" },
-        { id: "e-gw-orders", source: "node-gw", target: "node-orders", animated: true, type: "custom" },
-        { id: "e-gw-cat", source: "node-gw", target: "node-catalog", animated: true, type: "custom" },
-        { id: "e-orders-db", source: "node-orders", target: "node-order-db", animated: true, type: "custom" },
-        { id: "e-cat-db", source: "node-catalog", target: "node-catalog-db", animated: true, type: "custom" },
-        { id: "e-orders-broker", source: "node-orders", target: "node-broker", animated: true, type: "custom", label: "Publishes" },
-        { id: "e-broker-cat", source: "node-broker", target: "node-catalog", animated: true, type: "custom", label: "Consumes" }
+        { id: "e-lb-gw", source: "node-lb", target: "node-gw", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left" },
+        { id: "e-gw-orders", source: "node-gw", target: "node-orders", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left" },
+        { id: "e-gw-cat", source: "node-gw", target: "node-catalog", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left" },
+        { id: "e-orders-db", source: "node-orders", target: "node-order-db", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left" },
+        { id: "e-cat-db", source: "node-catalog", target: "node-catalog-db", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left" },
+        { id: "e-orders-broker", source: "node-orders", target: "node-broker", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left", label: "Publishes" },
+        { id: "e-broker-cat", source: "node-broker", target: "node-catalog", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left", label: "Consumes" }
       ]
     },
     {
@@ -265,15 +271,15 @@ const templates = {
         { id: "ac-pg-rep", type: 'custom', position: { x: 1510, y: 280 }, data: { label: "Postgres Replica", icon: "Database", color: "#94a3b8", shape: "cylinder" } }
       ],
       edges: [
-        { id: "ae-1", source: "ac-cli", target: "ac-dns", animated: true, type: "custom" },
-        { id: "ae-2", source: "ac-dns", target: "ac-alb", animated: true, type: "custom" },
-        { id: "ae-3", source: "ac-alb", target: "ac-ecs1", animated: true, type: "custom" },
-        { id: "ae-4", source: "ac-alb", target: "ac-ecs2", animated: true, type: "custom" },
-        { id: "ae-5", source: "ac-ecs1", target: "ac-redis", animated: true, type: "custom", label: "Cache" },
-        { id: "ae-6", source: "ac-ecs2", target: "ac-redis", animated: true, type: "custom", label: "Cache" },
-        { id: "ae-7", source: "ac-ecs1", target: "ac-pg-prim", animated: true, type: "custom", label: "Write" },
-        { id: "ae-8", source: "ac-ecs2", target: "ac-pg-prim", animated: true, type: "custom", label: "Write" },
-        { id: "ae-9", source: "ac-pg-prim", target: "ac-pg-rep", animated: true, type: "custom", label: "Replicate", style: { strokeWidth: 3, stroke: '#f59e0b' } }
+        { id: "ae-1", source: "ac-cli", target: "ac-dns", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left" },
+        { id: "ae-2", source: "ac-dns", target: "ac-alb", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left" },
+        { id: "ae-3", source: "ac-alb", target: "ac-ecs1", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left" },
+        { id: "ae-4", source: "ac-alb", target: "ac-ecs2", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left" },
+        { id: "ae-5", source: "ac-ecs1", target: "ac-redis", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left", label: "Cache" },
+        { id: "ae-6", source: "ac-ecs2", target: "ac-redis", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left", label: "Cache" },
+        { id: "ae-7", source: "ac-ecs1", target: "ac-pg-prim", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left", label: "Write" },
+        { id: "ae-8", source: "ac-ecs2", target: "ac-pg-prim", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left", label: "Write" },
+        { id: "ae-9", source: "ac-pg-prim", target: "ac-pg-rep", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left", label: "Replicate", style: { strokeWidth: 3, stroke: '#f59e0b' } }
       ]
     }
   ],
@@ -286,72 +292,72 @@ const templates = {
         { id: "node-logger-out", type: 'custom', position: { x: 300, y: 150 }, data: { label: "Log", icon: "Code", color: "#64748b", isEip: true } }
       ],
       edges: [
-        { id: "e-ftp-log", source: "node-ftp", target: "node-logger-out", animated: true, type: "custom" }
+        { id: "e-ftp-log", source: "node-ftp", target: "node-logger-out", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left" }
       ]
     },
     {
       name: "2. Content-Based Router Route (Medium)",
       description: "Classic Camel EIP pattern routing a timer-triggered request to a SQL Database or a logger, depending on message body structure.",
       nodes: [
-        { id: "node-timer", type: 'custom', position: { x: 50, y: 200 }, data: { label: "Timer", icon: "Clock", color: "#3b82f6", isEip: true } },
-        { id: "node-choice", type: 'custom', position: { x: 300, y: 200 }, data: { label: "Choice", icon: "GitBranch", color: "#8b5cf6", isEip: true } },
-        { id: "node-when", type: 'custom', position: { x: 550, y: 120 }, data: { label: "When", icon: "Filter", color: "#eab308", isEip: true, expressionType: "simple", expression: "${body} != null" } },
-        { id: "node-otherwise", type: 'custom', position: { x: 550, y: 280 }, data: { label: "Otherwise", icon: "RefreshCw", color: "#94a3b8", isEip: true } },
-        { id: "node-db", type: 'custom', position: { x: 800, y: 120 }, data: { label: "Database", icon: "Database", color: "#10b981", isEip: true } },
-        { id: "node-log", type: 'custom', position: { x: 800, y: 280 }, data: { label: "Log", icon: "TerminalSquare", color: "#ef4444", isEip: true } }
+        { id: "node-timer", type: 'custom', position: { x: 50, y: 200 }, style: { width: 120, height: 60 }, data: { label: "Timer", icon: "Clock", color: "#3b82f6", isEip: true } },
+        { id: "node-choice", type: 'custom', position: { x: 200, y: 200 }, style: { width: 120, height: 60 }, data: { label: "Choice", icon: "GitBranch", color: "#8b5cf6", isEip: true } },
+        { id: "node-when", type: 'custom', position: { x: 350, y: 140 }, style: { width: 120, height: 60 }, data: { label: "When", icon: "Filter", color: "#eab308", isEip: true, expressionType: "simple", expression: "${body} != null" } },
+        { id: "node-otherwise", type: 'custom', position: { x: 350, y: 260 }, style: { width: 120, height: 60 }, data: { label: "Otherwise", icon: "RefreshCw", color: "#94a3b8", isEip: true } },
+        { id: "node-db", type: 'custom', position: { x: 500, y: 140 }, style: { width: 120, height: 60 }, data: { label: "Database", icon: "Database", color: "#10b981", isEip: true } },
+        { id: "node-log", type: 'custom', position: { x: 500, y: 260 }, style: { width: 120, height: 60 }, data: { label: "Log", icon: "TerminalSquare", color: "#ef4444", isEip: true } }
       ],
       edges: [
-        { id: "e-timer-choice", source: "node-timer", target: "node-choice", animated: true, type: "custom" },
-        { id: "e-choice-when", source: "node-choice", target: "node-when", animated: true, type: "custom" },
-        { id: "e-choice-oth", source: "node-choice", target: "node-otherwise", animated: true, type: "custom" },
-        { id: "e-when-db", source: "node-when", target: "node-db", animated: true, type: "custom" },
-        { id: "e-oth-log", source: "node-otherwise", target: "node-log", animated: true, type: "custom" }
+        { id: "e-timer-choice", source: "node-timer", target: "node-choice", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left" },
+        { id: "e-choice-when", source: "node-choice", target: "node-when", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left" },
+        { id: "e-choice-oth", source: "node-choice", target: "node-otherwise", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left" },
+        { id: "e-when-db", source: "node-when", target: "node-db", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left" },
+        { id: "e-oth-log", source: "node-otherwise", target: "node-log", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left" }
       ]
     },
     {
       name: "3. Wire Tap & Enrich Pipeline (Complex)",
       description: "Diverts incoming message to an Audit Log channel (via Wire Tap) while processing it through a body enricher into a message queue.",
       nodes: [
-        { id: "node-trigger", type: 'custom', position: { x: 50, y: 150 }, data: { label: "Timer Trigger", icon: "Clock", color: "#3b82f6", isEip: true } },
-        { id: "node-tap", type: 'custom', position: { x: 300, y: 150 }, data: { label: "Wire Tap", icon: "Radio", color: "#d946ef", isEip: true } },
-        { id: "node-audit", type: 'custom', position: { x: 550, y: 50 }, data: { label: "Audit Logger", icon: "TerminalSquare", color: "#ef4444", isEip: true } },
-        { id: "node-enrich", type: 'custom', position: { x: 550, y: 250 }, data: { label: "setBody Enricher", icon: "Box", color: "#10b981", isEip: true, expressionType: "simple", expression: "Hello from anti-gravity!" } },
-        { id: "node-queue", type: 'custom', position: { x: 800, y: 250 }, data: { label: "ActiveMQ Queue", icon: "MessageSquare", color: "#0ea5e9", isEip: true } }
+        { id: "node-trigger", type: 'custom', position: { x: 50, y: 150 }, style: { width: 120, height: 60 }, data: { label: "Timer Trigger", icon: "Clock", color: "#3b82f6", isEip: true } },
+        { id: "node-tap", type: 'custom', position: { x: 200, y: 150 }, style: { width: 120, height: 60 }, data: { label: "Wire Tap", icon: "Radio", color: "#d946ef", isEip: true } },
+        { id: "node-audit", type: 'custom', position: { x: 350, y: 70 }, style: { width: 120, height: 60 }, data: { label: "Audit Logger", icon: "TerminalSquare", color: "#ef4444", isEip: true } },
+        { id: "node-enrich", type: 'custom', position: { x: 350, y: 230 }, style: { width: 120, height: 60 }, data: { label: "setBody Enricher", icon: "Box", color: "#10b981", isEip: true, expressionType: "simple", expression: "Hello from anti-gravity!" } },
+        { id: "node-queue", type: 'custom', position: { x: 500, y: 230 }, style: { width: 120, height: 60 }, data: { label: "ActiveMQ Queue", icon: "MessageSquare", color: "#0ea5e9", isEip: true } }
       ],
       edges: [
-        { id: "e-t-w", source: "node-trigger", target: "node-tap", animated: true, type: "custom" },
-        { id: "e-w-audit", source: "node-tap", target: "node-audit", animated: true, type: "custom", label: "Tapped Copy" },
-        { id: "e-w-enrich", source: "node-tap", target: "node-enrich", animated: true, type: "custom", label: "Primary Flow" },
-        { id: "e-e-q", source: "node-enrich", target: "node-queue", animated: true, type: "custom" }
+        { id: "e-t-w", source: "node-trigger", target: "node-tap", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left" },
+        { id: "e-w-audit", source: "node-tap", target: "node-audit", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left", label: "Tapped Copy" },
+        { id: "e-w-enrich", source: "node-tap", target: "node-enrich", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left", label: "Primary Flow" },
+        { id: "e-e-q", source: "node-enrich", target: "node-queue", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left" }
       ]
     },
     {
       name: "4. Transactional Saga Pipeline (Very Complex)",
       description: "A highly complex Camel pipeline using Http, Splitters, Choices, Kafka/ActiveMQ messaging, Message Aggregation and final DB storage.",
       nodes: [
-        { id: "ts-http", type: 'custom', position: { x: 50, y: 150 }, data: { label: "REST API", icon: "Webhook", color: "#06b6d4", isEip: true } },
-        { id: "ts-split", type: 'custom', position: { x: 330, y: 150 }, data: { label: "Splitter", icon: "Workflow", color: "#a855f7", isEip: true } },
-        { id: "ts-choice", type: 'custom', position: { x: 610, y: 150 }, data: { label: "Choice (Router)", icon: "GitBranch", color: "#f59e0b", isEip: true } },
+        { id: "ts-http", type: 'custom', position: { x: 50, y: 150 }, style: { width: 120, height: 60 }, data: { label: "REST API", icon: "Webhook", color: "#06b6d4", isEip: true } },
+        { id: "ts-split", type: 'custom', position: { x: 200, y: 150 }, style: { width: 120, height: 60 }, data: { label: "Splitter", icon: "Workflow", color: "#a855f7", isEip: true } },
+        { id: "ts-choice", type: 'custom', position: { x: 350, y: 150 }, style: { width: 120, height: 60 }, data: { label: "Choice (Router)", icon: "GitBranch", color: "#f59e0b", isEip: true } },
         
-        { id: "ts-when", type: 'custom', position: { x: 890, y: 70 }, data: { label: "When", icon: "Filter", color: "#eab308", isEip: true, expressionType: "simple", expression: "${body.isPriority} == true" } },
-        { id: "ts-other", type: 'custom', position: { x: 890, y: 230 }, data: { label: "Otherwise", icon: "RefreshCw", color: "#94a3b8", isEip: true } },
+        { id: "ts-when", type: 'custom', position: { x: 500, y: 90 }, style: { width: 120, height: 60 }, data: { label: "When", icon: "Filter", color: "#eab308", isEip: true, expressionType: "simple", expression: "${body.isPriority} == true" } },
+        { id: "ts-other", type: 'custom', position: { x: 500, y: 210 }, style: { width: 120, height: 60 }, data: { label: "Otherwise", icon: "RefreshCw", color: "#94a3b8", isEip: true } },
         
-        { id: "ts-kafka", type: 'custom', position: { x: 1170, y: 70 }, data: { label: "Kafka Topic", icon: "RadioTower", color: "#a855f7", isEip: true } },
-        { id: "ts-activemq", type: 'custom', position: { x: 1170, y: 230 }, data: { label: "ActiveMQ", icon: "MessageCircle", color: "#ef4444", isEip: true } },
+        { id: "ts-kafka", type: 'custom', position: { x: 650, y: 90 }, style: { width: 120, height: 60 }, data: { label: "Kafka Topic", icon: "RadioTower", color: "#a855f7", isEip: true } },
+        { id: "ts-activemq", type: 'custom', position: { x: 650, y: 210 }, style: { width: 120, height: 60 }, data: { label: "ActiveMQ", icon: "MessageCircle", color: "#ef4444", isEip: true } },
         
-        { id: "ts-agg", type: 'custom', position: { x: 1450, y: 150 }, data: { label: "Aggregator", icon: "GitMerge", color: "#8b5cf6", isEip: true } },
-        { id: "ts-db", type: 'custom', position: { x: 1730, y: 150 }, data: { label: "Database / JDBC", icon: "Database", color: "#10b981", isEip: true } }
+        { id: "ts-agg", type: 'custom', position: { x: 800, y: 150 }, style: { width: 120, height: 60 }, data: { label: "Aggregator", icon: "GitMerge", color: "#8b5cf6", isEip: true } },
+        { id: "ts-db", type: 'custom', position: { x: 950, y: 150 }, style: { width: 120, height: 60 }, data: { label: "Database / JDBC", icon: "Database", color: "#10b981", isEip: true } }
       ],
       edges: [
-        { id: "te-1", source: "ts-http", target: "ts-split", animated: true, type: "custom" },
-        { id: "te-2", source: "ts-split", target: "ts-choice", animated: true, type: "custom" },
-        { id: "te-3", source: "ts-choice", target: "ts-when", animated: true, type: "custom" },
-        { id: "te-4", source: "ts-choice", target: "ts-other", animated: true, type: "custom" },
-        { id: "te-5", source: "ts-when", target: "ts-kafka", animated: true, type: "custom" },
-        { id: "te-6", source: "ts-other", target: "ts-activemq", animated: true, type: "custom" },
-        { id: "te-7", source: "ts-kafka", target: "ts-agg", animated: true, type: "custom" },
-        { id: "te-8", source: "ts-activemq", target: "ts-agg", animated: true, type: "custom" },
-        { id: "te-9", source: "ts-agg", target: "ts-db", animated: true, type: "custom" }
+        { id: "te-1", source: "ts-http", target: "ts-split", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left" },
+        { id: "te-2", source: "ts-split", target: "ts-choice", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left" },
+        { id: "te-3", source: "ts-choice", target: "ts-when", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left" },
+        { id: "te-4", source: "ts-choice", target: "ts-other", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left" },
+        { id: "te-5", source: "ts-when", target: "ts-kafka", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left" },
+        { id: "te-6", source: "ts-other", target: "ts-activemq", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left" },
+        { id: "te-7", source: "ts-kafka", target: "ts-agg", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left" },
+        { id: "te-8", source: "ts-activemq", target: "ts-agg", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left" },
+        { id: "te-9", source: "ts-agg", target: "ts-db", animated: true, type: "custom", sourceHandle: "right", targetHandle: "left" }
       ]
     }
   ]
@@ -469,6 +475,57 @@ const loadState = (key, defaultVal) => {
   return defaultVal;
 };
 
+// Component palette for the "Code as Diagram" gallery. `{{idN}}` placeholders are
+// replaced with fresh unique node ids when the snippet is inserted into the editor.
+const DAC_SHAPES = [
+  { name: 'Rectangle',     hint: 'process / step',   snippet: '{{id1}}["Rectangle"]' },
+  { name: 'Rounded',       hint: 'soft process',     snippet: '{{id1}}("Rounded")' },
+  { name: 'Stadium',       hint: 'start / end',      snippet: '{{id1}}(["Stadium"])' },
+  { name: 'Subroutine',    hint: 'predefined',       snippet: '{{id1}}[["Subroutine"]]' },
+  { name: 'Database',      hint: 'store / cylinder', snippet: '{{id1}}[("Database")]' },
+  { name: 'Circle',        hint: 'state',            snippet: '{{id1}}(("Circle"))' },
+  { name: 'Decision',      hint: 'branch / diamond', snippet: '{{id1}}{"Decision?"}' },
+  { name: 'Hexagon',       hint: 'preparation',      snippet: '{{id1}}{{"Hexagon"}}' },
+  { name: 'Parallelogram', hint: 'input / output',   snippet: '{{id1}}[/"Input"/]' },
+  { name: 'Flag',          hint: 'asymmetric',       snippet: '{{id1}}>"Flag"]' },
+];
+
+const DAC_EDGES = [
+  { name: 'Arrow',          hint: 'A --> B',        snippet: '{{id1}} --> {{id2}}' },
+  { name: 'Open link',      hint: 'A --- B',        snippet: '{{id1}} --- {{id2}}' },
+  { name: 'Dotted',         hint: 'A -.-> B',       snippet: '{{id1}} -.-> {{id2}}' },
+  { name: 'Thick',          hint: 'A ==> B',        snippet: '{{id1}} ==> {{id2}}' },
+  { name: 'Labelled',       hint: 'A -->|text| B',  snippet: '{{id1}} -->|label| {{id2}}' },
+  { name: 'Cross end',      hint: 'A --x B',        snippet: '{{id1}} --x {{id2}}' },
+  { name: 'Circle end',     hint: 'A --o B',        snippet: '{{id1}} --o {{id2}}' },
+  { name: 'Bi-directional', hint: 'A <--> B',       snippet: '{{id1}} <--> {{id2}}' },
+];
+
+// Size a DaC node to fit its label so the auto-layout spacing matches the actual
+// box size — this keeps connectors short and the boxes/text comfortably readable.
+const estimateDacNodeSize = (node) => {
+  if (node.data?.isContainer) return null; // containers are sized from their children
+  const label = String(node.data?.label ?? node.id ?? '');
+  const lines = label.split('\n');
+  const longest = Math.max(1, ...lines.map(l => l.length));
+  let w = Math.min(340, Math.max(150, Math.round(longest * 8.4 + 44)));
+  let h = Math.max(60, lines.length * 20 + 30);
+  switch (node.data?.shape) {
+    case 'circle': { const d = Math.max(w, h, 96); w = d; h = d; break; }
+    case 'diamond': { w = Math.max(w, 140); h = Math.max(h, 96); break; }
+    case 'cylinder': { h = Math.max(h, 82); break; }
+    default: break;
+  }
+  return { width: w, height: h };
+};
+
+const DAC_STRUCTURES = [
+  { name: 'Subgraph',  hint: 'group of nodes',     snippet: 'subgraph {{id1}} ["Group"]\n    {{id2}}["Child"]\n  end' },
+  { name: 'Class def', hint: 'reusable colour',    snippet: 'classDef hot fill:#ef444422,stroke:#ef4444\n  class {{id1}} hot' },
+  { name: 'Inline style', hint: 'colour one node', snippet: '{{id1}}["Styled"]\n  style {{id1}} fill:#22c55e22,stroke:#22c55e' },
+  { name: 'Comment',   hint: 'note in source',     snippet: '%% your comment here' },
+];
+
 function FlowCanvas() {
   const { theme } = useTheme();
   const reactFlowWrapper = useRef(null);
@@ -483,6 +540,7 @@ function FlowCanvas() {
   const [drawingStrokeWidth, setDrawingStrokeWidth] = useState(3);
   const [drawStrokeStyle, setDrawStrokeStyle] = useState('solid'); // 'solid', 'dashed', 'dotted'
   const [currentPath, setCurrentPath] = useState([]);
+  const currentPathRef = useRef([]);
   const [brandSearch, setBrandSearch] = useState('');
 
   // Separate states for DDD vs Diagram vs EIP workspaces
@@ -495,7 +553,7 @@ function FlowCanvas() {
   const [eipNodes, setEipNodes, onEipNodesChange] = useNodesState(loadState('eipNodes', []));
   const [eipEdges, setEipEdges, onEipEdgesChange] = useEdgesState(loadState('eipEdges', []));
 
-  const [workspace, setWorkspace] = useState(localStorage.getItem('workspace') || 'ddd');
+  const [workspace, setWorkspace] = useState(localStorage.getItem('workspace') || 'diagram');
   const [activeTool, setActiveTool] = useState('select'); 
   const [interactionMode, setInteractionMode] = useState('move'); 
   const [sectionsOpen, setSectionsOpen] = useState({ 
@@ -515,27 +573,47 @@ function FlowCanvas() {
     draw_sketch: true,
     draw_shapes: true,
     draw_annotations: true,
-    draw_brands: true
+    draw_brands: true,
+    draw_infra: true,
+    draw_network: true,
+    draw_apps: true,
+    draw_middleware: true,
+    draw_people: true,
   });
 
   const toggleSection = (key) => setSectionsOpen(prev => ({ ...prev, [key]: !prev[key] }));
-  const expandAll = () => setSectionsOpen({ ddd_strategic: true, ddd_tactical: true, ddd_event: true, flowchart: true, sysarch: true, uml: true, er: true, mindmap: true, eip_core: true, eip_endpoints: true, eip_transforms: true, eip_logic: true, draw_sketch: true, draw_shapes: true, draw_annotations: true, draw_brands: true });
-  const collapseAll = () => setSectionsOpen({ ddd_strategic: false, ddd_tactical: false, ddd_event: false, flowchart: false, sysarch: false, uml: false, er: false, mindmap: false, eip_core: false, eip_endpoints: false, eip_transforms: false, eip_logic: false, draw_sketch: false, draw_shapes: false, draw_annotations: false, draw_brands: false });
+  const expandAll = () => setSectionsOpen({ ddd_strategic: true, ddd_tactical: true, ddd_event: true, flowchart: true, sysarch: true, uml: true, er: true, mindmap: true, eip_core: true, eip_endpoints: true, eip_transforms: true, eip_logic: true, draw_sketch: true, draw_shapes: true, draw_annotations: true, draw_brands: true, draw_infra: true, draw_network: true, draw_apps: true, draw_middleware: true, draw_people: true, annotations: true });
+  const collapseAll = () => setSectionsOpen({ ddd_strategic: false, ddd_tactical: false, ddd_event: false, flowchart: false, sysarch: false, uml: false, er: false, mindmap: false, eip_core: false, eip_endpoints: false, eip_transforms: false, eip_logic: false, draw_sketch: false, draw_shapes: false, draw_annotations: false, draw_brands: false, draw_infra: false, draw_network: false, draw_apps: false, draw_middleware: false, draw_people: false, annotations: false });
 
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const clearCanvas = () => {
     setShowClearConfirm(true);
   };
 
+  const [dragStartPos, setDragStartPos] = useState(null);
+  const [ghostNode, setGhostNode] = useState(null);
+  const dragStartPosRef = useRef(null);
+  const ghostNodeRef = useRef(null);
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (document.activeElement?.closest?.('.monaco-editor') || document.activeElement?.closest?.('.monaco-editor-container')) return;
 
       const key = e.key.toLowerCase();
 
       // Global hotkeys
       if (key === 'v') { setActiveTool('select'); setIsDrawingMode(false); setInteractionMode('move'); return; }
       if (key === 'h') { setInteractionMode('pan'); return; }
+      if (key === 'escape') {
+        setActiveTool('select');
+        setIsDrawingMode(false);
+        setInteractionMode('move');
+        setDragStartPos(null);
+        setGhostNode(null);
+        setCurrentPath([]);
+        return;
+      }
 
       if (workspace !== 'draw') return;
 
@@ -567,7 +645,23 @@ function FlowCanvas() {
   const [editorContent, setEditorContent] = useState('');
   const [autoArrangeOnImport, setAutoArrangeOnImport] = useState(true);
   const [showExportDropdown, setShowExportDropdown] = useState(false);
-  const [diagramTitle, setDiagramTitle] = useState(() => {
+  const [showDacEditor, setShowDacEditor] = useState(true);
+  const [splitWidth, setSplitWidth] = useState(450);
+  const [dacCode, setDacCode] = useState(() => localStorage.getItem('dacCode') || dacTemplates[0].code);
+  const [dacNodes, setDacNodes, onDacNodesChange] = useNodesState(loadState('dacNodes', []));
+  const [dacEdges, setDacEdges, onDacEdgesChange] = useEdgesState(loadState('dacEdges', []));
+  const [dacStatus, setDacStatus] = useState({ ok: true, message: '' });
+  const [showTemplateGallery, setShowTemplateGallery] = useState(false);
+  const [dacGalFilter, setDacGalFilter] = useState('All');
+  const dacSigRef = useRef(null);       // last structural signature applied to canvas
+  const dacSourceRef = useRef('code');  // 'code' | 'canvas' — who last changed dacCode
+  const dacDirRef = useRef('TB');       // last parsed flow direction (for serialise round-trip)
+  const dacIdRef = useRef(0);           // monotonic counter for generated node ids
+  const dacReadyRef = useRef(false);    // true once code has been applied to the canvas at least once
+  const dacEditorRef = useRef(null);    // monaco editor instance
+  const dacMonacoRef = useRef(null);    // monaco namespace
+  const dacKind = workspace === 'dac' ? detectDiagramKind(dacCode) : 'flowchart'; // 'flowchart' | 'other'
+  const [diagramTitle] = useState(() => {
     return localStorage.getItem(`${workspace}-title`) || (
       workspace === 'ddd' ? 'Domain-Driven Design Blueprint' :
       workspace === 'diagram' ? 'System Architecture Topology' :
@@ -577,9 +671,70 @@ function FlowCanvas() {
 
   useEffect(() => {
     localStorage.setItem('workspace', workspace);
+    if (workspace === 'dac') setShowDacEditor(true);
   }, [workspace]);
 
-  const [isRoughGlobal, setIsRoughGlobal] = useState(loadState('isRoughGlobal', true));
+  // Sync DaC Code -> Canvas (debounced). Preserves manual positions when the
+  // graph structure is unchanged; re-lays-out cleanly when it changes.
+  useEffect(() => {
+    if (workspace !== 'dac') return;
+
+    // Strict one-way code -> canvas compilation enabled.
+    // If a canvas interaction tried to set the source, reset it to 'code' to prevent feedback loops.
+    if (dacSourceRef.current === 'canvas') {
+      dacSourceRef.current = 'code';
+    }
+
+    // For DAC workspace, React Flow always maintains a single dummy node.
+    // The actual Mermaid rendering is handled by MermaidPreview.
+    const activeDummy = dacNodes.find(n => n.id === 'mermaid-other-node');
+    if (!activeDummy || dacNodes.length > 1 || dacEdges.length > 0) {
+      setDacNodes([{
+        id: 'mermaid-other-node',
+        type: 'custom',
+        position: { x: 0, y: 0 },
+        data: { label: '', shape: 'dummy', width: 800, height: 600 },
+        style: { width: 800, height: 600 }
+      }]);
+      setDacEdges([]);
+    }
+
+    // Validate Mermaid code for status display in the editor.
+    const timeout = setTimeout(() => {
+      const status = validateMermaid(dacCode);
+      setDacStatus(status);
+    }, 350);
+    return () => clearTimeout(timeout);
+  }, [dacCode, workspace]);
+
+  // Canvas -> Code serialization removed for strict one-way code-to-diagram compilation.
+
+  // VSCode-style error squiggles: surface parse/render errors as Monaco markers.
+  useEffect(() => {
+    const editor = dacEditorRef.current;
+    const monaco = dacMonacoRef.current;
+    if (workspace !== 'dac' || !editor || !monaco) return;
+    const model = editor.getModel();
+    if (!model) return;
+    if (dacStatus.ok) {
+      monaco.editor.setModelMarkers(model, 'mermaid', []);
+      return;
+    }
+    const msg = dacStatus.message || 'Syntax error';
+    const lineMatch = /line[s]?\s*[:#]?\s*(\d+)/i.exec(msg);
+    const total = model.getLineCount();
+    const line = Math.min(total, Math.max(1, lineMatch ? parseInt(lineMatch[1], 10) : 1));
+    monaco.editor.setModelMarkers(model, 'mermaid', [{
+      severity: monaco.MarkerSeverity.Error,
+      message: msg,
+      startLineNumber: line,
+      startColumn: 1,
+      endLineNumber: line,
+      endColumn: model.getLineMaxColumn(line),
+    }]);
+  }, [dacStatus, workspace, dacCode]);
+
+  const [isRoughGlobal, setIsRoughGlobal] = useState(loadState('isRoughGlobal', false));
 
   useEffect(() => {
     localStorage.setItem('isRoughGlobal', JSON.stringify(isRoughGlobal));
@@ -615,12 +770,21 @@ function FlowCanvas() {
     localStorage.setItem('eipEdges', JSON.stringify(eipEdges));
   }, [eipNodes, eipEdges]);
 
+  useEffect(() => {
+    localStorage.setItem('dacNodes', JSON.stringify(dacNodes));
+    localStorage.setItem('dacEdges', JSON.stringify(dacEdges));
+  }, [dacNodes, dacEdges]);
+
   const nodes = workspace === 'ddd' ? dddNodes : (workspace === 'diagram' ? diagramNodes : (workspace === 'draw' ? drawNodes : eipNodes));
   const edges = workspace === 'ddd' ? dddEdges : (workspace === 'diagram' ? diagramEdges : (workspace === 'draw' ? drawEdges : eipEdges));
-  const setNodes = workspace === 'ddd' ? setDddNodes : (workspace === 'diagram' ? setDiagramNodes : (workspace === 'draw' ? setDrawNodes : setEipNodes));
-  const setEdges = workspace === 'ddd' ? setDddEdges : (workspace === 'diagram' ? setDiagramEdges : (workspace === 'draw' ? setDrawEdges : setEipEdges));
-  const onNodesChange = workspace === 'ddd' ? onDddNodesChange : (workspace === 'diagram' ? onDiagramNodesChange : (workspace === 'draw' ? onDrawNodesChange : onEipNodesChange));
-  const onEdgesChange = workspace === 'ddd' ? onDddEdgesChange : (workspace === 'diagram' ? onDiagramEdgesChange : (workspace === 'draw' ? onDrawEdgesChange : onEipEdgesChange));
+
+  // In dac workspace, we always explicitly pass only the dummy node to ReactFlow
+  const reactFlowNodes = workspace === 'dac' ? dacNodes : nodes;
+  const reactFlowEdges = workspace === 'dac' ? dacEdges : edges;
+  const setNodes = workspace === 'ddd' ? setDddNodes : (workspace === 'diagram' ? setDiagramNodes : (workspace === 'draw' ? setDrawNodes : (workspace === 'dac' ? setDacNodes : setEipNodes)));
+  const setEdges = workspace === 'ddd' ? setDddEdges : (workspace === 'diagram' ? setDiagramEdges : (workspace === 'draw' ? setDrawEdges : (workspace === 'dac' ? setDacEdges : setEipEdges)));
+  const onNodesChange = workspace === 'ddd' ? onDddNodesChange : (workspace === 'diagram' ? onDiagramNodesChange : (workspace === 'draw' ? onDrawNodesChange : (workspace === 'dac' ? onDacNodesChange : onEipNodesChange)));
+  const onEdgesChange = workspace === 'ddd' ? onDddEdgesChange : (workspace === 'diagram' ? onDiagramEdgesChange : (workspace === 'draw' ? onDrawEdgesChange : (workspace === 'dac' ? onDacEdgesChange : onEipEdgesChange)));
 
   const handleNodesChange = useCallback((changes) => {
     const removeChanges = changes.filter(c => c.type === 'remove');
@@ -695,11 +859,41 @@ function FlowCanvas() {
         });
       });
     }
-  }, [nodes, onNodesChange, setEdges, setNodes]);
+
+    // (DaC canvas -> code serialisation is handled by the debounced canonical-diff
+    //  effect, which covers drags, deletes, label/colour/shape edits and connects.)
+  }, [nodes, edges, onNodesChange, setEdges, setNodes, workspace]);
   
-  const { zoom } = useViewport();
+  const { x, y, zoom } = useViewport();
 
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
+
+  const [isResizing, setIsResizing] = useState(false);
+
+  const startResizing = useCallback((e) => {
+    setIsResizing(true);
+  }, []);
+
+  const stopResizing = useCallback(() => {
+    setIsResizing(false);
+  }, []);
+
+  const resize = useCallback((e) => {
+    if (isResizing) {
+      setSplitWidth(Math.max(200, Math.min(e.clientX, window.innerWidth - 400)));
+    }
+  }, [isResizing]);
+
+  useEffect(() => {
+    if (isResizing) {
+      window.addEventListener('mousemove', resize);
+      window.addEventListener('mouseup', stopResizing);
+    }
+    return () => {
+      window.removeEventListener('mousemove', resize);
+      window.removeEventListener('mouseup', stopResizing);
+    };
+  }, [isResizing, resize, stopResizing]);
 
   const onMoveEnd = useCallback((event, viewport) => {
     localStorage.setItem('flow-viewport', JSON.stringify(viewport));
@@ -812,6 +1006,114 @@ function FlowCanvas() {
     setContextMenu(null);
   };
 
+  /* ----------------------------------------------------------------------- */
+  /*  Code-as-Diagram canvas mutations. Code is the source of truth, so every */
+  /*  edit re-serialises back into the editor (dacSourceRef = 'canvas' keeps   */
+  /*  the sync effect from clobbering the layout).                            */
+  /* ----------------------------------------------------------------------- */
+  const dacCommit = (newNodes, newEdges) => {
+    setDacNodes(newNodes);
+    setDacEdges(newEdges);
+    dacSourceRef.current = 'canvas';
+    setDacCode(serializeMermaid(newNodes, newEdges, dacDirRef.current || 'TB'));
+  };
+
+  // Allocate a fresh, unused node id of the form n1, n2, …
+  const nextDacId = (existingNodes) => {
+    const ids = new Set(existingNodes.map(n => n.id));
+    let i = Math.max(1, dacIdRef.current + 1);
+    while (ids.has(`n${i}`)) i++;
+    dacIdRef.current = i;
+    return `n${i}`;
+  };
+
+  // Append a palette snippet to the code; placeholders become unique ids.
+  const dacInsertSnippet = (rawSnippet) => {
+    const ids = new Set(dacNodes.map(n => n.id));
+    const map = {};
+    let i = dacIdRef.current;
+    const snippet = rawSnippet.replace(/\{\{(id\d+)\}\}/g, (_, key) => {
+      if (!map[key]) {
+        do { i++; } while (ids.has(`n${i}`));
+        ids.add(`n${i}`);
+        map[key] = `n${i}`;
+      }
+      return map[key];
+    });
+    dacIdRef.current = i;
+    dacSourceRef.current = 'code';
+    dacSigRef.current = null;
+    setDacCode(prev => {
+      const trimmed = (prev || '').replace(/\s+$/, '');
+      const base = trimmed || 'flowchart TB';
+      return `${base}\n  ${snippet}\n`;
+    });
+  };
+
+  // Add a new node connected from the right-clicked node.
+  const dacAddConnected = (sourceId, shape, rounded = false) => {
+    const src = dacNodes.find(n => n.id === sourceId);
+    const newId = nextDacId(dacNodes);
+    const horizontal = dacDirRef.current === 'LR' || dacDirRef.current === 'RL';
+    const pos = src
+      ? { x: src.position.x + (horizontal ? 240 : 40), y: src.position.y + (horizontal ? 30 : 160) }
+      : { x: 120, y: 120 };
+    const newNode = {
+      id: newId,
+      type: 'custom',
+      position: pos,
+      parentId: src?.parentId,
+      data: { label: 'New Node', shape, rounded, color: '#3b82f6', isEip: false, fontSize: '0.82rem' },
+    };
+    const sz = estimateDacNodeSize(newNode);
+    if (sz) { newNode.style = { width: sz.width, height: sz.height }; newNode.data.width = sz.width; newNode.data.height = sz.height; }
+    const newEdge = {
+      id: uuidv4(),
+      source: sourceId,
+      target: newId,
+      label: '',
+      type: 'custom',
+      markerEnd: { type: MarkerType.ArrowClosed },
+      sourceHandle: horizontal ? 'right' : 'bottom',
+      targetHandle: horizontal ? 'left' : 'top',
+      data: {},
+    };
+    dacCommit([...dacNodes, newNode], [...dacEdges, newEdge]);
+    setContextMenu(null);
+  };
+
+  const dacUpdateNode = (nodeId, patch) => {
+    const newNodes = dacNodes.map(n => n.id === nodeId ? { ...n, data: { ...n.data, ...patch } } : n);
+    dacCommit(newNodes, dacEdges);
+  };
+
+  const dacRenameNode = (nodeId) => {
+    const node = dacNodes.find(n => n.id === nodeId);
+    const next = window.prompt('Node label:', node?.data?.label || '');
+    if (next == null) return;
+    dacUpdateNode(nodeId, { label: next });
+    setContextMenu(null);
+  };
+
+  const dacDeleteNode = (nodeId) => {
+    const idsSet = new Set([nodeId]);
+    const queue = [nodeId];
+    while (queue.length > 0) {
+      const currentId = queue.shift();
+      dacNodes.forEach(node => {
+        if (node.parentId === currentId && !idsSet.has(node.id)) {
+          idsSet.add(node.id);
+          queue.push(node.id);
+        }
+      });
+    }
+    const newNodes = dacNodes.filter(n => !idsSet.has(n.id));
+    const newEdges = dacEdges.filter(e => !idsSet.has(e.source) && !idsSet.has(e.target));
+    dacCommit(newNodes, newEdges);
+    if (selectedNodeId && idsSet.has(selectedNodeId)) setSelectedNodeId(null);
+    setContextMenu(null);
+  };
+
   const bringToFront = () => {
     if (!contextMenu) return;
     setNodes(nds => {
@@ -899,7 +1201,6 @@ function FlowCanvas() {
 
       // Position children in a clean grid inside the container
       const cols = 2; 
-      const childWidth = 160;
       const gapX = 50;
       const gapY = 50;
 
@@ -907,21 +1208,23 @@ function FlowCanvas() {
         const colIndex = index % cols;
         const rowIndex = Math.floor(index / cols);
         
+        // Get actual child width/height or use defaults
+        const actualChildWidth = child.width || 160;
+        let actualChildHeight = child.height || 80;
+        if (child.data?.shape === 'class') actualChildHeight = child.height || 120;
+        else if (child.data?.shape === 'actor') actualChildHeight = child.height || 90;
+        
         let posY = 70; // Start below the header
         for (let r = 0; r < rowIndex; r++) {
           const rowChildren = children.slice(r * cols, (r + 1) * cols);
-          const rowMaxHeight = Math.max(80, ...rowChildren.map(c => {
-            if (c.data?.shape === 'class') return 120;
-            if (c.data?.shape === 'actor') return 90;
-            return 80;
-          }));
+          const rowMaxHeight = Math.max(80, ...rowChildren.map(c => c.height || (c.data?.shape === 'class' ? 120 : (c.data?.shape === 'actor' ? 90 : 80))));
           posY += rowMaxHeight + gapY;
         }
 
         const childInUpdated = updatedNodes.find(un => un.id === child.id);
         if (childInUpdated) {
           childInUpdated.position = {
-            x: 40 + colIndex * (childWidth + gapX),
+            x: 40 + colIndex * (actualChildWidth + gapX),
             y: posY
           };
         }
@@ -935,12 +1238,13 @@ function FlowCanvas() {
         const posX = childInUpdated ? childInUpdated.position.x : 40;
         const posY = childInUpdated ? childInUpdated.position.y : 70;
         
-        let nodeHeight = 80;
-        if (child.data?.shape === 'class') nodeHeight = 120;
-        else if (child.data?.shape === 'actor') nodeHeight = 90;
+        const actualChildWidth = child.width || 160;
+        let actualChildHeight = child.height || 80;
+        if (child.data?.shape === 'class') actualChildHeight = child.height || 120;
+        else if (child.data?.shape === 'actor') actualChildHeight = child.height || 90;
 
-        const rightSide = posX + childWidth;
-        const bottomSide = posY + nodeHeight;
+        const rightSide = posX + actualChildWidth;
+        const bottomSide = posY + actualChildHeight;
         
         if (rightSide > maxX) maxX = rightSide;
         if (bottomSide > maxY) maxY = bottomSide;
@@ -1000,8 +1304,9 @@ function FlowCanvas() {
     topLevelNodes.forEach(n => {
       const depth = depths[n.id];
       const updatedNode = updatedNodes.find(un => un.id === n.id);
-      const w = parseInt(updatedNode?.style?.width || 180, 10);
-      const h = parseInt(updatedNode?.style?.height || 100, 10);
+      // Use actual node dimensions if available, otherwise fallback to style or defaults
+      const w = updatedNode.width || parseInt(updatedNode?.style?.width || 180, 10);
+      const h = updatedNode.height || parseInt(updatedNode?.style?.height || 100, 10);
       
       if (!levelMaxDim[depth]) {
         levelMaxDim[depth] = { width: 0, height: 0 };
@@ -1014,10 +1319,13 @@ function FlowCanvas() {
     let currentOffset = 100;
     const maxDepth = Math.max(-1, ...topLevelNodes.map(n => depths[n.id]));
     
+    const gapOffset = workspace === 'eip' ? 20 : (workspace === 'dac' ? 60 : 150);
+    
     for (let i = 0; i <= maxDepth; i++) {
       depthOffset[i] = currentOffset;
+      // Use dimensions from levelMaxDim, fallback to reasonable defaults if a depth has no nodes
       const maxDim = levelMaxDim[i] || { width: 180, height: 100 };
-      currentOffset += (direction === 'LR' ? maxDim.width : maxDim.height) + 150;
+      currentOffset += (direction === 'LR' ? maxDim.width : maxDim.height) + gapOffset;
     }
 
     const levelCounts = {};
@@ -1028,14 +1336,16 @@ function FlowCanvas() {
       
       const updatedNode = updatedNodes.find(un => un.id === n.id);
       if (updatedNode) {
+        // Use max dimensions for the current level for consistent spacing
+        const maxDimForLevel = levelMaxDim[depth] || { width: 180, height: 100 };
         if (direction === 'LR') {
           updatedNode.position = {
             x: depthOffset[depth],
-            y: 100 + index * (levelMaxDim[depth].height + 100)
+            y: 100 + index * (maxDimForLevel.height + gapOffset)
           };
         } else {
           updatedNode.position = {
-            x: 100 + index * (levelMaxDim[depth].width + 120),
+            x: 100 + index * (maxDimForLevel.width + gapOffset),
             y: depthOffset[depth]
           };
         }
@@ -1046,7 +1356,7 @@ function FlowCanvas() {
     
     setTimeout(() => {
       if (reactFlowInstance) reactFlowInstance.fitView({ padding: 0.2, duration: 800 });
-    }, 50);
+    }, 200);
   };
   const [contextMenu, setContextMenu] = useState(null);
   const [showIconPicker, setShowIconPicker] = useState(false);
@@ -1065,55 +1375,38 @@ function FlowCanvas() {
    },
    [setContextMenu]
   );
-  const [dragStartPos, setDragStartPos] = useState(null);
-  const [ghostNode, setGhostNode] = useState(null);
+
+  const isDraggingRef = useRef(false);
 
   const handlePaneMouseDown = useCallback((e) => {
     if (workspace !== 'draw' || activeTool === 'select' || activeTool === 'pencil' || isDrawingMode) return;
-    
+
+    // Avoid starting drawing if clicking on a node or UI element
+    if (e.target.closest('.react-flow__node') || e.target.closest('.toolbar') || e.target.closest('.sidebar') || e.target.closest('.btn')) return;
+
     const wrapperEl = reactFlowWrapper.current;
     if (!wrapperEl || !reactFlowInstance) return;
-    
-    const flowPos = reactFlowInstance.screenToFlowPosition({ x: e.clientX, y: e.clientY });
-    
-    setDragStartPos(flowPos);
-    
-    // For arrow/line tools, we draw an SVG line overlay, not a ghost node
-    if (activeTool === 'arrow' || activeTool === 'line') {
-      const id = `ghost-${uuidv4()}`;
-      const newGhost = {
-        id,
-        type: 'custom',
-        position: flowPos,
-        style: { width: 1, height: 1 },
-        data: {
-          label: '',
-          shape: activeTool,
-          isRough: isRoughGlobal,
-          fillStyle: 'hachure',
-          color: drawingColor,
-          strokeWidth: drawingStrokeWidth,
-          strokeStyle: drawStrokeStyle,
-          opacity: drawOpacity,
-          isGhost: true,
-          arrowStart: { x: 0, y: 0 },
-          arrowEnd: { x: 0, y: 0 }
-        }
-      };
-      setGhostNode(newGhost);
-      setDrawNodes(nds => nds.concat(newGhost));
-      return;
-    }
-    
-    const id = `ghost-${uuidv4()}`;
+
+    // Use nativeEvent for most reliable coordinates
+    const clientX = e.clientX || e.nativeEvent.clientX;
+    const clientY = e.clientY || e.nativeEvent.clientY;
+
+    const flowPos = reactFlowInstance.screenToFlowPosition({ x: clientX, y: clientY });
+    const startPos = flowPos;
+    const ghostId = `ghost-${uuidv4()}`;
+    isDraggingRef.current = true;
+
+    // Create the initial ghost node
     const newGhost = {
-      id,
+      id: ghostId,
       type: 'custom',
       position: flowPos,
-      style: { width: 1, height: 1 },
+      style: { width: 1, height: 1, zIndex: 1000, overflow: 'visible' },
       data: {
         label: '',
         shape: activeTool,
+        width: 1,
+        height: 1,
         isRough: isRoughGlobal,
         fillStyle: 'hachure',
         color: drawingColor,
@@ -1121,94 +1414,91 @@ function FlowCanvas() {
         strokeWidth: drawingStrokeWidth,
         strokeStyle: drawStrokeStyle,
         opacity: drawOpacity,
-        isGhost: true
+        isGhost: true,
+        fontFamily: 'virgil',
+        ...( (activeTool === 'arrow' || activeTool === 'line') ? { arrowStart: { x: 0, y: 0 }, arrowEnd: { x: 0, y: 0 } } : {} )
       }
     };
-    setGhostNode(newGhost);
-    setDrawNodes(nds => nds.concat(newGhost));
-  }, [workspace, activeTool, isDrawingMode, isRoughGlobal, drawingColor, drawFillColor, drawingStrokeWidth, drawStrokeStyle, drawOpacity, reactFlowInstance]);
 
-  const handlePaneMouseMove = useCallback((e) => {
-    if (!dragStartPos || !ghostNode) return;
-    
-    const flowPos = reactFlowInstance.screenToFlowPosition({ x: e.clientX, y: e.clientY });
-    
-    // For arrow/line, update the endpoint coordinates
-    if (ghostNode.data.shape === 'arrow' || ghostNode.data.shape === 'line') {
-      const x = Math.min(flowPos.x, dragStartPos.x);
-      const y = Math.min(flowPos.y, dragStartPos.y);
-      const width = Math.abs(flowPos.x - dragStartPos.x);
-      const height = Math.abs(flowPos.y - dragStartPos.y);
+    setGhostNode(newGhost);
+    setDrawNodes(nds => [...nds, newGhost]);
+
+    const handleMove = (ev) => {
+      if (!isDraggingRef.current || !reactFlowInstance) return;
+      const currentPos = reactFlowInstance.screenToFlowPosition({ x: ev.clientX, y: ev.clientY });
       
       setDrawNodes(nds => nds.map(n => {
-        if (n.id === ghostNode.id) {
-          return {
-            ...n,
-            position: { x, y },
-            style: { width: Math.max(width, 2), height: Math.max(height, 2) },
-            data: {
-              ...n.data,
-              arrowStart: { x: dragStartPos.x - x, y: dragStartPos.y - y },
-              arrowEnd: { x: flowPos.x - x, y: flowPos.y - y }
+        if (n.id === ghostId) {
+          const x = Math.min(currentPos.x, startPos.x);
+          const y = Math.min(currentPos.y, startPos.y);
+          const width = Math.max(Math.abs(currentPos.x - startPos.x), 1);
+          const height = Math.max(Math.abs(currentPos.y - startPos.y), 1);
+
+          if (activeTool === 'arrow' || activeTool === 'line') {
+            return {
+              ...n,
+              position: { x, y },
+              style: { ...n.style, width, height },
+              data: {
+                ...n.data,
+                width,
+                height,
+                arrowStart: { x: startPos.x - x, y: startPos.y - y },
+                arrowEnd: { x: currentPos.x - x, y: currentPos.y - y }
+              }
+            };
+          } else {
+            return {
+              ...n,
+              position: { x, y },
+              style: { ...n.style, width, height },
+              data: { ...n.data, width, height }
+            };
+          }
+        }
+        return n;
+      }));
+    };
+
+    const handleUp = () => {
+      isDraggingRef.current = false;
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+      
+      setDrawNodes(nds => nds.map(n => {
+        if (n.id === ghostId) {
+          let w = n.style?.width || 0;
+          let h = n.style?.height || 0;
+          
+          if (w < 5 && h < 5 && activeTool !== 'arrow' && activeTool !== 'line') {
+            w = activeTool === 'note' ? 160 : 150;
+            h = activeTool === 'note' ? 160 : 80;
+          } else if (w < 10 && h < 10 && activeTool !== 'arrow' && activeTool !== 'line') {
+            return null;
+          }
+
+          return { 
+            ...n, 
+            data: { ...n.data, width: Math.max(w, 20), height: Math.max(h, 20), isGhost: false, isNew: (activeTool === 'text' || activeTool === 'note' || activeTool === 'callout') },
+            style: { 
+              ...n.style, 
+              width: Math.max(w, 20), 
+              height: Math.max(h, 20) 
             }
           };
         }
         return n;
-      }));
-      return;
-    }
-    
-    const width = Math.abs(flowPos.x - dragStartPos.x);
-    const height = Math.abs(flowPos.y - dragStartPos.y);
-    const x = Math.min(flowPos.x, dragStartPos.x);
-    const y = Math.min(flowPos.y, dragStartPos.y);
-    
-    setDrawNodes(nds => nds.map(n => {
-      if (n.id === ghostNode.id) {
-        return {
-          ...n,
-          position: { x, y },
-          style: { width, height }
-        };
-      }
-      return n;
-    }));
-  }, [dragStartPos, ghostNode, reactFlowInstance]);
+      }).filter(Boolean));
 
-  const handlePaneMouseUp = useCallback(() => {
-    if (!ghostNode) return;
-    
-    // Enforce minimum size or use default and finalize
-    setDrawNodes(nds => nds.map(n => {
-      if (n.id === ghostNode.id) {
-        let w = n.style?.width || 0;
-        let h = n.style?.height || 0;
-        
-        // If it's just a click (very small drag), give it a default size
-        if (w < 5 && h < 5 && n.data.shape !== 'arrow' && n.data.shape !== 'line') {
-          w = n.data.shape === 'note' ? 160 : 150;
-          h = n.data.shape === 'note' ? 160 : 80;
-        } else if (w < 10 && h < 10 && n.data.shape !== 'arrow' && n.data.shape !== 'line') {
-          return null; // Accidental small drag, remove
-        }
+      setGhostNode(null);
+      // Auto-switch back to select tool for better UX, but optional
+      setActiveTool('select');
+      setInteractionMode('move');
+    };
 
-        return { 
-          ...n, 
-          data: { ...n.data, isGhost: false },
-          style: { 
-            ...n.style, 
-            width: Math.max(w, 20), 
-            height: Math.max(h, 20) 
-          }
-        };
-      }
-      return n;
-    }).filter(Boolean));
-    
-    setSelectedNodeId(ghostNode.id);
-    setDragStartPos(null);
-    setGhostNode(null);
-  }, [ghostNode]);
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
+  }, [workspace, activeTool, isDrawingMode, isRoughGlobal, drawingColor, drawFillColor, drawingStrokeWidth, drawStrokeStyle, drawOpacity, reactFlowInstance, setDrawNodes]);
 
   const addCanvasWidget = (shapeType) => {
     let x = 250;
@@ -1234,7 +1524,9 @@ function FlowCanvas() {
         color: shapeType === 'text' ? 'var(--text-primary)' : (shapeType === 'note' ? '#fef08a' : '#3b82f6'),
         icon: shapeType === 'callout' ? 'Info' : undefined,
         isRough: workspace === 'draw' ? isRoughGlobal : false,
-        fillStyle: 'hachure'
+        fontFamily: workspace === 'draw' ? 'virgil' : 'inherit',
+        fillStyle: 'hachure',
+        isNew: true
       }
     };
 
@@ -1288,102 +1580,68 @@ function FlowCanvas() {
     setSelectedNodeId(id);
   };
 
-  const handleDrawingStart = (e) => {
-    e.preventDefault();
+  const handleDrawingStart = useCallback((e) => {
+    // Avoid starting drawing if clicking on a node or UI element
+    if (e.target.closest('.react-flow__node') || e.target.closest('.toolbar') || e.target.closest('.sidebar') || e.target.closest('.btn')) return;
+
     const wrapperEl = reactFlowWrapper.current;
     if (!wrapperEl || !reactFlowInstance) return;
     const rect = wrapperEl.getBoundingClientRect();
-    const screenX = e.clientX - rect.left;
-    const screenY = e.clientY - rect.top;
-    const flowPos = reactFlowInstance.screenToFlowPosition({ x: e.clientX, y: e.clientY });
     
-    setCurrentPath([{ screenX, screenY, flowX: flowPos.x, flowY: flowPos.y }]);
+    // Use nativeEvent for reliability
+    const clientX = e.clientX || e.nativeEvent.clientX;
+    const clientY = e.clientY || e.nativeEvent.clientY;
+
+    const screenX = clientX - rect.left;
+    const screenY = clientY - rect.top;
+    const flowPos = reactFlowInstance.screenToFlowPosition({ x: clientX, y: clientY });
+
+    const initialPoint = { screenX, screenY, flowX: flowPos.x, flowY: flowPos.y };
+    currentPathRef.current = [initialPoint];
+    setCurrentPath([initialPoint]);
     setIsDrawing(true);
-  };
+    isDraggingRef.current = true;
 
-  const handleDrawingMove = (e) => {
-    if (!isDrawing || !reactFlowInstance) return;
-    const wrapperEl = reactFlowWrapper.current;
-    if (!wrapperEl) return;
-    const rect = wrapperEl.getBoundingClientRect();
-    const screenX = e.clientX - rect.left;
-    const screenY = e.clientY - rect.top;
-    const flowPos = reactFlowInstance.screenToFlowPosition({ x: e.clientX, y: e.clientY });
-    
-    setCurrentPath((prev) => {
+    const handleMove = (ev) => {
+      if (!isDraggingRef.current || !reactFlowInstance) return;
+      const rect2 = wrapperEl.getBoundingClientRect();
+      const sX = ev.clientX - rect2.left;
+      const sY = ev.clientY - rect2.top;
+      const fPos = reactFlowInstance.screenToFlowPosition({ x: ev.clientX, y: ev.clientY });
+      
+      const prev = currentPathRef.current;
       const last = prev[prev.length - 1];
-      if (last && Math.abs(last.flowX - flowPos.x) < 0.5 && Math.abs(last.flowY - flowPos.y) < 0.5) return prev;
-      return [...prev, { screenX, screenY, flowX: flowPos.x, flowY: flowPos.y }];
-    });
-  };
-
-  const handleDrawingEnd = () => {
-    if (!isDrawing) return;
-    setIsDrawing(false);
-    
-    if (currentPath.length < 2) {
-      setCurrentPath([]);
-      return;
-    }
-
-    // Try to detect if drawing connects two nodes
-    const firstPoint = currentPath[0];
-    const lastPoint = currentPath[currentPath.length - 1];
-    
-    const currentNodes = reactFlowInstance.getNodes();
-    
-    const findClosestNode = (point) => {
-      let closest = null;
-      let minDistance = 120; // threshold
+      // Use higher sensitivity for smoother lines
+      if (last && Math.abs(last.flowX - fPos.x) < 0.1 && Math.abs(last.flowY - fPos.y) < 0.1) return;
       
-      currentNodes.forEach((node) => {
-        let w = node.style?.width || (node.data?.shape === 'note' ? 160 : 120);
-        let h = node.style?.height || (node.data?.shape === 'note' ? 160 : 60);
-        if (typeof w === 'string') w = parseInt(w) || 120;
-        if (typeof h === 'string') h = parseInt(h) || 60;
-        
-        const centerX = node.position.x + w / 2;
-        const centerY = node.position.y + h / 2;
-        
-        const dist = Math.sqrt(
-          Math.pow(point.flowX - centerX, 2) + Math.pow(point.flowY - centerY, 2)
-        );
-        
-        if (dist < minDistance) {
-          minDistance = dist;
-          closest = node;
-        }
-      });
-      
-      return closest;
+      const newPoint = { screenX: sX, screenY: sY, flowX: fPos.x, flowY: fPos.y };
+      currentPathRef.current = [...prev, newPoint];
+      setCurrentPath(currentPathRef.current);
     };
 
-    const startNode = findClosestNode(firstPoint);
-    const endNode = findClosestNode(lastPoint);
+    const handleUp = () => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+      
+      if (!isDraggingRef.current) return;
+      setIsDrawing(false);
+      isDraggingRef.current = false;
+      
+      const finalPath = currentPathRef.current;
+      setCurrentPath([]);
+      currentPathRef.current = [];
+      
+      if (finalPath.length < 2) return;
 
-    if (startNode && endNode && startNode.id !== endNode.id) {
-      // Convert to connector (edge)
-      const newEdge = {
-        id: `pencil-edge-${uuidv4()}`,
-        source: startNode.id,
-        target: endNode.id,
-        animated: true,
-        type: 'custom',
-        label: 'Connector'
-      };
-      setEdges((eds) => eds.concat(newEdge));
-    } else {
-      // Keep as freehand sketch node
-      const flowPoints = currentPath.map(p => ({ x: p.flowX, y: p.flowY }));
+      const flowPoints = finalPath.map(p => ({ x: p.flowX, y: p.flowY }));
       const minX = Math.min(...flowPoints.map(p => p.x));
       const maxX = Math.max(...flowPoints.map(p => p.x));
       const minY = Math.min(...flowPoints.map(p => p.y));
       const maxY = Math.max(...flowPoints.map(p => p.y));
       
-      const width = maxX - minX;
-      const height = maxY - minY;
+      const width = Math.max(maxX - minX, 10);
+      const height = Math.max(maxY - minY, 10);
       
-      // Normalize local points
       const localPoints = flowPoints.map(p => [
         p.x - minX,
         p.y - minY
@@ -1393,23 +1651,30 @@ function FlowCanvas() {
         id: `drawing-${uuidv4()}`,
         type: 'custom',
         position: { x: minX, y: minY },
-        style: { width: Math.max(width, 20), height: Math.max(height, 20) },
+        style: { width, height, zIndex: 1000, overflow: 'visible' },
         data: {
           shape: 'drawing',
           points: localPoints,
-          color: drawingColor,
-          strokeWidth: drawingStrokeWidth,
-          label: 'Freehand Sketch',
+          color: drawingColor || '#3b82f6',
+          strokeWidth: drawingStrokeWidth || 3,
+          label: '',
           isRough: isRoughGlobal,
-          fillStyle: 'hachure'
+          fillStyle: 'hachure',
+          fontFamily: 'virgil'
         }
       };
       
-      setNodes((nds) => nds.concat(newNode));
-    }
+      setDrawNodes((nds) => [...nds, newNode]);
+      
+      // Auto-switch back to select tool
+      setActiveTool('select');
+      setIsDrawingMode(false);
+      setInteractionMode('move');
+    };
     
-    setCurrentPath([]);
-  };
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
+  }, [reactFlowInstance, drawingColor, drawingStrokeWidth, isRoughGlobal, setDrawNodes]);
 
   const handleImageImport = (e) => {
     const file = e.target.files?.[0];
@@ -1458,7 +1723,7 @@ function FlowCanvas() {
     let label = 'Processor';
     let icon = 'Cpu';
     let color = '#0ea5e9';
-    let shape = 'box';
+    let shape = 'eip';
 
     if (eipType === 'setBody') { label = 'setBody'; icon = 'FileText'; color = '#10b981'; }
     if (eipType === 'setHeader') { label = 'setHeader'; icon = 'Code'; color = '#8b5cf6'; }
@@ -1473,13 +1738,16 @@ function FlowCanvas() {
     if (eipType === 'ibmmq') { label = 'IBM MQ'; icon = 'Server'; color = '#ef4444'; }
     if (eipType === 'solace') { label = 'Solace'; icon = 'Cloud'; color = '#0ea5e9'; }
 
+    const gap = workspace === 'eip' ? 40 : 200;
+
     const newNode = {
       id: uuidv4(),
       type: 'custom',
       position: {
-        x: targetNode.position.x + (direction === 'after' ? 200 : -200),
+        x: targetNode.position.x + (direction === 'after' ? gap : -gap),
         y: targetNode.position.y
       },
+      style: workspace === 'eip' ? { width: 120, height: 60 } : undefined,
       data: { label, icon, color, shape, isEip: workspace === 'eip' },
     };
 
@@ -1490,13 +1758,13 @@ function FlowCanvas() {
       if (outgoingEdge) {
         setEdges(eds => eds.map(e => e.id === outgoingEdge.id ? { ...e, source: newNode.id } : e));
       }
-      setEdges((eds) => addEdge({ source: targetNodeId, target: newNode.id, ...defaultEdgeOptions }, eds));
+      setEdges((eds) => addEdge({ source: targetNodeId, target: newNode.id, sourceHandle: 'right', targetHandle: 'left', ...defaultEdgeOptions }, eds));
     } else {
       const incomingEdge = edges.find(e => e.target === targetNodeId);
       if (incomingEdge) {
         setEdges(eds => eds.map(e => e.id === incomingEdge.id ? { ...e, target: newNode.id } : e));
       }
-      setEdges((eds) => addEdge({ source: newNode.id, target: targetNodeId, ...defaultEdgeOptions }, eds));
+      setEdges((eds) => addEdge({ source: newNode.id, target: targetNodeId, sourceHandle: 'right', targetHandle: 'left', ...defaultEdgeOptions }, eds));
     }
 
     setContextMenu(null);
@@ -1713,7 +1981,7 @@ function FlowCanvas() {
           // If dropped near the center or roughly below, snap it to a clean vertical flow
           if (Math.abs(position.x - lastNode.position.x) < 200 && position.y > lastNode.position.y) {
             position.x = lastNode.position.x;
-            position.y = lastNode.position.y + 120;
+            position.y = lastNode.position.y + 40;
           }
 
           const newNodeId = uuidv4();
@@ -1723,6 +1991,7 @@ function FlowCanvas() {
             position,
             parentId,
             extent: parentId ? 'parent' : undefined,
+            style: { width: 120, height: 60 },
             data: { ...data, isEip: true },
           };
 
@@ -1730,6 +1999,8 @@ function FlowCanvas() {
             id: uuidv4(),
             source: lastNode.id,
             target: newNodeId,
+            sourceHandle: 'right',
+            targetHandle: 'left',
             ...defaultEdgeOptions
           };
 
@@ -1737,19 +2008,21 @@ function FlowCanvas() {
           if (data.label.includes('Choice')) {
              const whenNode = {
                id: uuidv4(), type: 'custom',
-               position: { x: position.x + 160, y: position.y - 60 },
+               position: { x: position.x + 100, y: position.y - 40 },
+               style: { width: 120, height: 60 },
                data: { label: 'When', icon: 'Filter', color: '#eab308', shape: '', isEip: true }
              };
              const otherwiseNode = {
                id: uuidv4(), type: 'custom',
-               position: { x: position.x + 160, y: position.y + 60 },
+               position: { x: position.x + 100, y: position.y + 40 },
+               style: { width: 120, height: 60 },
                data: { label: 'Otherwise', icon: 'RefreshCw', color: '#94a3b8', shape: '', isEip: true }
              };
              setNodes(nds => nds.concat(newNode, whenNode, otherwiseNode));
              setEdges(eds => eds.concat(
                newEdge,
-               { id: uuidv4(), source: newNodeId, target: whenNode.id, ...defaultEdgeOptions },
-               { id: uuidv4(), source: newNodeId, target: otherwiseNode.id, ...defaultEdgeOptions }
+               { id: uuidv4(), source: newNodeId, target: whenNode.id, sourceHandle: 'right', targetHandle: 'left', ...defaultEdgeOptions },
+               { id: uuidv4(), source: newNodeId, target: otherwiseNode.id, sourceHandle: 'right', targetHandle: 'left', ...defaultEdgeOptions }
              ));
           } else {
              setNodes(nds => nds.concat(newNode));
@@ -1765,8 +2038,8 @@ function FlowCanvas() {
         position,
         parentId,
         extent: parentId ? 'parent' : undefined,
-        style: data.isContainer ? { width: 400, height: 300, zIndex: -1 } : (data.shape === 'note' ? { width: 160, height: 160 } : (data.shape === 'callout' ? { width: 200, height: 80 } : (data.shape === 'brand' ? { width: 80, height: 80 } : undefined))),
-        data: { ...data, isRough: workspace === 'draw' ? isRoughGlobal : false },
+        style: data.isContainer ? { width: 400, height: 300, zIndex: -1 } : (data.shape === 'note' ? { width: 160, height: 160 } : (data.shape === 'callout' ? { width: 200, height: 80 } : (data.shape === 'brand' ? { width: 80, height: 80 } : (data.isEip ? { width: 120, height: 60 } : undefined)))),
+        data: { ...data, isRough: workspace === 'draw' ? isRoughGlobal : false, isNew: (data.shape === 'text' || data.shape === 'note' || data.shape === 'callout') },
       };
 
       setNodes((nds) => {
@@ -1974,7 +2247,11 @@ function FlowCanvas() {
 
   const resetZoom = () => {
     if (reactFlowInstance) {
-      reactFlowInstance.fitView({ padding: 0.2, duration: 800, minZoom: 1, maxZoom: 1 });
+      if (workspace === 'dac') {
+        window.dispatchEvent(new Event('dac-fit-preview'));
+      } else {
+        reactFlowInstance.zoomTo(1, { duration: 300 });
+      }
     }
   };
 
@@ -2051,7 +2328,7 @@ function FlowCanvas() {
         setEditorContent('');
         setTimeout(() => {
           if (reactFlowInstance) reactFlowInstance.fitView({ padding: 0.2, duration: 800 });
-        }, 100);
+        }, 200);
       } else {
         alert("Input does not contain a valid visual layout (nodes/edges structure). Please provide a valid JSON/YAML structure.");
       }
@@ -2069,6 +2346,13 @@ function FlowCanvas() {
     reader.onload = (e) => {
       const text = e.target?.result;
       if (typeof text !== 'string') return;
+
+      if (workspace === 'dac') {
+        // Direct .mermaid code file loading into the panel
+        setDacCode(text);
+        return;
+      }
+
       try {
         const parsed = yaml.load(text);
         if (parsed && Array.isArray(parsed.nodes)) {
@@ -2080,7 +2364,7 @@ function FlowCanvas() {
           }
           setTimeout(() => {
             if (reactFlowInstance) reactFlowInstance.fitView({ padding: 0.2, duration: 800 });
-          }, 100);
+          }, 200);
         } else {
           alert("Imported file does not contain a visual layout (nodes/edges structure). Please import a saved JSON/YAML diagram exported from this tool.");
         }
@@ -2122,81 +2406,96 @@ function FlowCanvas() {
     
     setTimeout(() => {
       if (reactFlowInstance) reactFlowInstance.fitView({ padding: 0.2, duration: 800 });
-    }, 100);
+    }, 200);
+  };
+
+  const getResolvedCssVars = () => {
+    const cs = getComputedStyle(document.documentElement);
+    const names = ['--bg-primary','--bg-secondary','--bg-tertiary','--bg-glass','--text-primary','--text-secondary','--text-muted','--text-on-accent','--border-color','--border-strong','--accent-blue','--accent-blue-hover','--accent-purple','--accent-purple-hover','--accent-green','--accent-orange','--accent-red','--code-bg','--shadow','--shadow-lg'];
+    return Object.fromEntries(names.map(n => [n, cs.getPropertyValue(n).trim()]));
   };
 
   const exportAsPng = () => {
+    const filename = `${diagramTitle.toLowerCase().replace(/\s+/g, '-')}.png`;
+
+    if (workspace === 'dac') {
+      const svgEl = document.querySelector('.mmd-scroll svg');
+      if (!svgEl) return;
+      const svgData = new XMLSerializer().serializeToString(svgEl);
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(svgBlob);
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const scale = 2;
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext('2d');
+        ctx.scale(scale, scale);
+        ctx.fillStyle = theme === 'dark' ? '#0f111a' : '#ffffff';
+        ctx.fillRect(0, 0, img.width, img.height);
+        ctx.drawImage(img, 0, 0);
+        URL.revokeObjectURL(url);
+        canvas.toBlob((blob) => {
+          const link = document.createElement('a');
+          link.download = filename;
+          link.href = URL.createObjectURL(blob);
+          link.click();
+        }, 'image/png');
+      };
+      img.src = url;
+      return;
+    }
+
     if (nodes.length === 0) return;
     const nodesBounds = getNodesBounds(nodes);
     const padding = 50;
     const width = nodesBounds.width + padding * 2;
     const height = nodesBounds.height + padding * 2;
-    
-    const transform = {
-      x: -nodesBounds.x + padding,
-      y: -nodesBounds.y + padding,
-      zoom: 1
-    };
-
+    const transform = { x: -nodesBounds.x + padding, y: -nodesBounds.y + padding, zoom: 1 };
     const viewportEl = document.querySelector('.react-flow__viewport');
     if (!viewportEl) return;
 
     toPng(viewportEl, {
       backgroundColor: theme === 'dark' ? '#0f111a' : '#ffffff',
-      width: width,
-      height: height,
-      style: {
-        width: `${width}px`,
-        height: `${height}px`,
-        transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.zoom})`,
-      },
+      width, height,
+      style: { width: `${width}px`, height: `${height}px`, transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.zoom})`, ...getResolvedCssVars() },
     })
-      .then((dataUrl) => {
-        const link = document.createElement('a');
-        link.download = `${diagramTitle.toLowerCase().replace(/\s+/g, '-')}.png`;
-        link.href = dataUrl;
-        link.click();
-      })
-      .catch((error) => {
-        console.error('Error exporting PNG:', error);
-      });
+      .then((dataUrl) => { const link = document.createElement('a'); link.download = filename; link.href = dataUrl; link.click(); })
+      .catch((error) => { console.error('Error exporting PNG:', error); });
   };
 
   const exportAsSvg = () => {
+    const filename = `${diagramTitle.toLowerCase().replace(/\s+/g, '-')}.svg`;
+
+    if (workspace === 'dac') {
+      const svgEl = document.querySelector('.mmd-scroll svg');
+      if (!svgEl) return;
+      const svgData = new XMLSerializer().serializeToString(svgEl);
+      const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = URL.createObjectURL(blob);
+      link.click();
+      return;
+    }
+
     if (nodes.length === 0) return;
     const nodesBounds = getNodesBounds(nodes);
     const padding = 50;
     const width = nodesBounds.width + padding * 2;
     const height = nodesBounds.height + padding * 2;
-    
-    const transform = {
-      x: -nodesBounds.x + padding,
-      y: -nodesBounds.y + padding,
-      zoom: 1
-    };
-
+    const transform = { x: -nodesBounds.x + padding, y: -nodesBounds.y + padding, zoom: 1 };
     const viewportEl = document.querySelector('.react-flow__viewport');
     if (!viewportEl) return;
 
     toSvg(viewportEl, {
       backgroundColor: theme === 'dark' ? '#0f111a' : '#ffffff',
-      width: width,
-      height: height,
-      style: {
-        width: `${width}px`,
-        height: `${height}px`,
-        transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.zoom})`,
-      },
+      width, height,
+      style: { width: `${width}px`, height: `${height}px`, transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.zoom})`, ...getResolvedCssVars() },
     })
-      .then((dataUrl) => {
-        const link = document.createElement('a');
-        link.download = `${diagramTitle.toLowerCase().replace(/\s+/g, '-')}.svg`;
-        link.href = dataUrl;
-        link.click();
-      })
-      .catch((error) => {
-        console.error('Error exporting SVG:', error);
-      });
+      .then((dataUrl) => { const link = document.createElement('a'); link.download = filename; link.href = dataUrl; link.click(); })
+      .catch((error) => { console.error('Error exporting SVG:', error); });
   };
 
   const ctxNode = contextMenu ? nodes.find(n => n.id === contextMenu.id) : null;
@@ -2287,7 +2586,7 @@ function FlowCanvas() {
 
   return (
     <div className="app-container">
-      {workspace !== 'draw' && (
+      {workspace !== 'dac' && (
         <aside className={`sidebar ${!isSidebarOpen ? 'collapsed' : ''}`}>
         <button 
           className="sidebar-toggle-btn" 
@@ -2302,93 +2601,6 @@ function FlowCanvas() {
           </div>
           
           <div className="sidebar-content">
-            {workspace === 'draw' ? (
-              <div className="draw-sidebar-inner" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
-                  <button 
-                    className={`draw-tool-btn ${activeTool === 'select' ? 'active' : ''}`}
-                    onClick={() => { setActiveTool('select'); setIsDrawingMode(false); setInteractionMode('move'); }}
-                    data-tooltip="Selection (V)"
-                  >
-                    <MousePointer2 size={20} />
-                  </button>
-                  <button 
-                    className={`draw-tool-btn ${activeTool === 'pencil' ? 'active' : ''}`}
-                    onClick={() => { setActiveTool('pencil'); setIsDrawingMode(true); }}
-                    data-tooltip="Pencil (P)"
-                  >
-                    <Pencil size={20} />
-                  </button>
-                  <div style={{ width: '30px', height: '1px', background: 'var(--border-color)', margin: '4px 0' }} />
-                  
-                  <button className={`draw-tool-btn ${activeTool === 'rectangle' ? 'active' : ''}`} onClick={() => setActiveTool('rectangle')} data-tooltip="Rectangle (R)"><Box size={20} /></button>
-                  <button className={`draw-tool-btn ${activeTool === 'diamond' ? 'active' : ''}`} onClick={() => setActiveTool('diamond')} data-tooltip="Diamond (D)"><Diamond size={20} /></button>
-                  <button className={`draw-tool-btn ${activeTool === 'circle' ? 'active' : ''}`} onClick={() => setActiveTool('circle')} data-tooltip="Circle (O)"><PlayCircle size={20} /></button>
-                  <button className={`draw-tool-btn ${activeTool === 'triangle' ? 'active' : ''}`} onClick={() => setActiveTool('triangle')} data-tooltip="Triangle (T)"><Hexagon size={20} style={{ transform: 'rotate(90deg)' }} /></button>
-                  <button className={`draw-tool-btn ${activeTool === 'cloud' ? 'active' : ''}`} onClick={() => setActiveTool('cloud')} data-tooltip="Cloud (C)"><Cloud size={20} /></button>
-                  <button className={`draw-tool-btn ${activeTool === 'note' ? 'active' : ''}`} onClick={() => setActiveTool('note')} data-tooltip="Sticky Note (S)"><StickyNote size={20} /></button>
-                  
-                  <div style={{ width: '30px', height: '1px', background: 'var(--border-color)', margin: '4px 0' }} />
-                  
-                  <button className={`draw-tool-btn ${activeTool === 'text' ? 'active' : ''}`} onClick={() => setActiveTool('text')} data-tooltip="Text (T)"><Type size={20} /></button>
-                  <button className="draw-tool-btn" onClick={() => imageInputRef.current?.click()} data-tooltip="Insert Image"><Image size={20} /></button>
-                </div>
-                
-                <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '20px' }}>
-                   <div style={{ width: '30px', height: '1px', background: 'var(--border-color)', margin: '4px auto' }} />
-                   <button 
-                     className={`draw-tool-btn ${isRoughGlobal ? 'active' : ''}`}
-                     onClick={() => setIsRoughGlobal(!isRoughGlobal)}
-                     data-tooltip="Toggle Hand-drawn Look"
-                   >
-                     <Paintbrush size={20} />
-                   </button>
-                   <button className="draw-tool-btn" onClick={clearCanvas} data-tooltip="Clear Canvas" style={{ color: '#ef4444' }}><Eraser size={20} /></button>
-                   
-                   <div style={{ width: '30px', height: '1px', background: 'var(--border-color)', margin: '4px auto' }} />
-                   <button className="draw-tool-btn" onClick={() => toggleSection('draw_brands')} data-tooltip="Brand Library & Tech Icons"><Package size={20} /></button>
-                </div>
-                
-                {sectionsOpen.draw_brands && (
-                  <div style={{ position: 'fixed', left: '60px', top: '200px', width: '220px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '16px', boxShadow: '10px 0 30px rgba(0,0,0,0.3)', zIndex: 200 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>Brand Library</span>
-                      <X size={14} style={{ cursor: 'pointer' }} onClick={() => toggleSection('draw_brands')} />
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '4px 8px', marginBottom: '8px' }}>
-                      <Search size={14} style={{ marginRight: '6px', color: 'var(--text-secondary)' }} />
-                      <input
-                        type="text"
-                        placeholder="Search..."
-                        value={brandSearch}
-                        onChange={(e) => setBrandSearch(e.target.value)}
-                        style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '0.8rem', outline: 'none', width: '100%' }}
-                      />
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', maxHeight: '250px', overflowY: 'auto', paddingRight: '4px' }}>
-                      {BRAND_ICONS.filter(b => b.name.toLowerCase().includes(brandSearch.toLowerCase()) || b.tags.toLowerCase().includes(brandSearch.toLowerCase())).map((b) => (
-                        <div
-                          key={b.name}
-                          onClick={() => {
-                            addDrawNode('brand', b.name, null, b.svg, b.color);
-                            toggleSection('draw_brands');
-                          }}
-                          style={{
-                            display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s', textAlign: 'center'
-                          }}
-                          onMouseOver={(e) => { e.currentTarget.style.borderColor = b.color; e.currentTarget.style.background = `${b.color}11`; }}
-                          onMouseOut={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.background = 'var(--bg-tertiary)'; }}
-                        >
-                          <div style={{ width: 24, height: 24, marginBottom: '4px' }} dangerouslySetInnerHTML={{ __html: b.svg }} />
-                          <span style={{ fontSize: '0.6rem', color: 'var(--text-primary)', width: '100%', whiteSpace: 'nowrap', overflow: 'hidden' }}>{b.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <>
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', justifyContent: 'flex-end' }}>
                   <button className="btn btn-icon-only" onClick={expandAll} title="Expand All">
                     <ChevronsDown size={16} />
@@ -2528,65 +2740,322 @@ function FlowCanvas() {
                   </>
                 )}
 
+                {workspace === 'draw' && (
+                  <>
+                    <CollapsibleSection title="Infrastructure" isOpen={sectionsOpen.draw_infra} onToggle={() => toggleSection('draw_infra')}>
+                      <PaletteItem label="Server / VM" icon={Server} color="#ef4444" type="Server" />
+                      <PaletteItem label="Database" icon={Database} color="#10b981" type="Database" />
+                      <PaletteItem label="Cloud" icon={Cloud} color="#0ea5e9" type="Cloud" />
+                      <PaletteItem label="CPU / Compute" icon={Cpu} color="#8b5cf6" type="Cpu" />
+                      <PaletteItem label="Storage / Disk" icon={HardDrive} color="#64748b" type="HardDrive" />
+                      <PaletteItem label="Container / Pod" icon={Package} color="#06b6d4" type="Package" />
+                      <PaletteItem label="Microservice" icon={Box} color="#3b82f6" type="Box" />
+                    </CollapsibleSection>
+                    <CollapsibleSection title="Network & Security" isOpen={sectionsOpen.draw_network} onToggle={() => toggleSection('draw_network')}>
+                      <PaletteItem label="Internet / Globe" icon={Globe} color="#0ea5e9" type="Globe" />
+                      <PaletteItem label="Firewall / Shield" icon={Shield} color="#22c55e" type="Shield" />
+                      <PaletteItem label="Lock / Auth" icon={Lock} color="#f59e0b" type="Lock" />
+                      <PaletteItem label="Network Switch" icon={Network} color="#a855f7" type="Network" />
+                      <PaletteItem label="WiFi" icon={Wifi} color="#06b6d4" type="Wifi" />
+                      <PaletteItem label="Radio Tower" icon={RadioTower} color="#ec4899" type="RadioTower" />
+                    </CollapsibleSection>
+                    <CollapsibleSection title="Applications" isOpen={sectionsOpen.draw_apps} onToggle={() => toggleSection('draw_apps')}>
+                      <PaletteItem label="Browser / Desktop" icon={Monitor} color="#3b82f6" type="Monitor" />
+                      <PaletteItem label="Mobile App" icon={Smartphone} color="#8b5cf6" type="Smartphone" />
+                      <PaletteItem label="Terminal / CLI" icon={Terminal} color="#10b981" type="Terminal" />
+                      <PaletteItem label="Code / IDE" icon={Code} color="#f59e0b" type="Code" />
+                      <PaletteItem label="API" icon={Webhook} color="#ec4899" type="Webhook" />
+                      <PaletteItem label="File / Doc" icon={FileText} color="#64748b" type="FileText" />
+                    </CollapsibleSection>
+                    <CollapsibleSection title="Middleware & Services" isOpen={sectionsOpen.draw_middleware} onToggle={() => toggleSection('draw_middleware')}>
+                      <PaletteItem label="Message Queue" icon={MessageSquare} color="#f59e0b" type="MessageSquare" />
+                      <PaletteItem label="Kafka / Stream" icon={RadioTower} color="#a855f7" type="RadioTower" />
+                      <PaletteItem label="Load Balancer" icon={Scale} color="#0ea5e9" type="Scale" />
+                      <PaletteItem label="API Gateway" icon={Layers} color="#f97316" type="Layers" />
+                      <PaletteItem label="Cache / Redis" icon={Zap} color="#22c55e" type="Zap" />
+                      <PaletteItem label="Search Engine" icon={Search} color="#6366f1" type="Search" />
+                    </CollapsibleSection>
+                    <CollapsibleSection title="People & Actors" isOpen={sectionsOpen.draw_people} onToggle={() => toggleSection('draw_people')}>
+                      <PaletteItem label="User / Actor" icon={User} color="#eab308" type="User" shape="actor" />
+                      <PaletteItem label="Team / Group" icon={Users} color="#3b82f6" type="Users" />
+                      <PaletteItem label="Organization" icon={Building} color="#8b5cf6" type="Building" />
+                      <PaletteItem label="External System" icon={Building2} color="#64748b" type="Building2" />
+                    </CollapsibleSection>
+                    <CollapsibleSection title="Shapes" isOpen={sectionsOpen.draw_shapes} onToggle={() => toggleSection('draw_shapes')}>
+                      <PaletteItem label="Box / Rect" icon={Box} color="#60a5fa" type="Box" />
+                      <PaletteItem label="Oval / Ellipse" icon={CircleIcon} color="#34d399" type="Circle" shape="oval" />
+                      <PaletteItem label="Decision" icon={Diamond} color="#fbbf24" type="Diamond" shape="diamond" />
+                    </CollapsibleSection>
+                  </>
+                )}
+
                 {/* General Annotations & Widgets */}
                 <CollapsibleSection title="Annotations & Notes" isOpen={sectionsOpen.annotations} onToggle={() => toggleSection('annotations')}>
                   <PaletteItem label="Title / Header" icon={Type} color="var(--text-primary)" type="Type" shape="text" />
                   <PaletteItem label="Sticky Note" icon={StickyNote} color="#fef08a" type="StickyNote" shape="note" />
                 </CollapsibleSection>
-              </>
-            )}
           </div>
         </div>
       </aside>
       )}
       
-      <main className={`canvas-area ${theme === 'dark' ? 'theme-dark' : 'theme-light'}`} ref={reactFlowWrapper}>
-        {(isDrawingMode || (workspace === 'draw' && activeTool !== 'select') || ghostNode) && (
+      <main 
+        className={`canvas-area ${theme === 'dark' ? 'theme-dark' : 'theme-light'}`} 
+        data-drawing-active={isDrawingMode || (workspace === 'draw' && activeTool !== 'select') ? 'true' : 'false'}
+        ref={reactFlowWrapper}
+        style={{ display: 'flex', flexDirection: 'row' }}
+      >
+        {workspace === 'dac' && showDacEditor && (
+          <div className="dac-editor-pane" style={{ width: splitWidth }}>
+            <div className="dac-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div className="dac-logo-mark">
+                  <MSLogo size={22} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, lineHeight: 1 }}>Code&nbsp;as&nbsp;Diagram</h3>
+                  <span style={{ fontSize: '0.62rem', color: 'var(--text-secondary)', letterSpacing: '0.04em' }}>Mermaid · live preview</span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                {/^flowchart\b/m.test(dacCode) && (
+                  <div style={{ display: 'flex', gap: '2px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '2px' }}>
+                    <button
+                      className={`btn btn-icon-only${/^flowchart\s+(LR|RL)/m.test(dacCode) ? ' btn-primary' : ''}`}
+                      title="Left → Right layout"
+                      style={{ padding: '3px 8px', fontSize: '0.68rem', fontWeight: 700 }}
+                      onClick={() => { dacSourceRef.current = 'code'; setDacCode(c => c.replace(/^(flowchart\s+)(LR|TD|TB|RL|BT)/m, '$1LR')); }}
+                    >LR</button>
+                    <button
+                      className={`btn btn-icon-only${/^flowchart\s+(TD|TB)/m.test(dacCode) ? ' btn-primary' : ''}`}
+                      title="Top → Down layout"
+                      style={{ padding: '3px 8px', fontSize: '0.68rem', fontWeight: 700 }}
+                      onClick={() => { dacSourceRef.current = 'code'; setDacCode(c => c.replace(/^(flowchart\s+)(LR|TD|TB|RL|BT)/m, '$1TD')); }}
+                    >TD</button>
+                  </div>
+                )}
+                <select
+                  title="Mermaid theme"
+                  value={(() => { const m = dacCode.match(/%%\{init[^%]*['"]theme['"]:\s*['"](\w+)['"]/s); return m?.[1] || ''; })()}
+                  onChange={(e) => {
+                    const key = e.target.value;
+                    const THEME_DIRECTIVES = {
+                      default:    `%%{init: {'theme': 'default'}}%%`,
+                      dark:       `%%{init: {'theme': 'dark'}}%%`,
+                      forest:     `%%{init: {'theme': 'forest'}}%%`,
+                      base:       `%%{init: {'theme': 'base'}}%%`,
+                      neutral:    `%%{init: {'theme': 'neutral'}}%%`,
+                      ocean:      `%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#1e3a5f', 'primaryTextColor': '#93c5fd', 'primaryBorderColor': '#2563eb', 'secondaryColor': '#1e293b', 'tertiaryColor': '#0f172a', 'background': '#0a1628', 'lineColor': '#3b82f6', 'edgeLabelBackground': '#1e3a5f', 'clusterBkg': '#0f1f3d'}}}%%`,
+                      midnight:   `%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#0f0f23', 'primaryTextColor': '#a5b4fc', 'primaryBorderColor': '#4f46e5', 'secondaryColor': '#1e1b4b', 'tertiaryColor': '#070714', 'background': '#020209', 'lineColor': '#6366f1', 'edgeLabelBackground': '#0f0f23', 'clusterBkg': '#0a0a1a'}}}%%`,
+                      emerald:    `%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#064e3b', 'primaryTextColor': '#6ee7b7', 'primaryBorderColor': '#059669', 'secondaryColor': '#065f46', 'tertiaryColor': '#022c22', 'background': '#011c16', 'lineColor': '#10b981', 'edgeLabelBackground': '#064e3b', 'clusterBkg': '#052e20'}}}%%`,
+                      amethyst:   `%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#2e1065', 'primaryTextColor': '#d8b4fe', 'primaryBorderColor': '#7c3aed', 'secondaryColor': '#3b0764', 'tertiaryColor': '#1a0535', 'background': '#0d0117', 'lineColor': '#8b5cf6', 'edgeLabelBackground': '#2e1065', 'clusterBkg': '#1e0940'}}}%%`,
+                      rose:       `%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#4c0519', 'primaryTextColor': '#fda4af', 'primaryBorderColor': '#be123c', 'secondaryColor': '#881337', 'tertiaryColor': '#1c0a0e', 'background': '#0f0608', 'lineColor': '#f43f5e', 'edgeLabelBackground': '#4c0519', 'clusterBkg': '#2d0510'}}}%%`,
+                      sunrise:    `%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#431407', 'primaryTextColor': '#fed7aa', 'primaryBorderColor': '#c2410c', 'secondaryColor': '#7c2d12', 'tertiaryColor': '#1c0a03', 'background': '#0e0603', 'lineColor': '#f97316', 'edgeLabelBackground': '#431407', 'clusterBkg': '#2c0e05'}}}%%`,
+                      slate:      `%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#1e293b', 'primaryTextColor': '#e2e8f0', 'primaryBorderColor': '#475569', 'secondaryColor': '#334155', 'tertiaryColor': '#0f172a', 'background': '#020617', 'lineColor': '#64748b', 'edgeLabelBackground': '#1e293b', 'clusterBkg': '#0f1729'}}}%%`,
+                      mono:       `%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#1a1a1a', 'primaryTextColor': '#e5e5e5', 'primaryBorderColor': '#525252', 'secondaryColor': '#262626', 'tertiaryColor': '#0a0a0a', 'background': '#000000', 'lineColor': '#737373', 'edgeLabelBackground': '#1a1a1a', 'clusterBkg': '#111111'}}}%%`,
+                      corporate:  `%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#dbeafe', 'primaryTextColor': '#1e3a5f', 'primaryBorderColor': '#2563eb', 'secondaryColor': '#eff6ff', 'tertiaryColor': '#f0f4ff', 'background': '#ffffff', 'lineColor': '#2563eb', 'edgeLabelBackground': '#f8fafc', 'clusterBkg': '#f0f6ff', 'titleColor': '#1e3a5f', 'edgeLabelBackground': '#ffffff', 'nodeTextColor': '#1e3a5f'}}}%%`,
+                    };
+                    dacSourceRef.current = 'code';
+                    setDacCode(prev => {
+                      const cleaned = prev.replace(/^%%\{init[^%]*%%\s*\n?/ms, '');
+                      return key ? `${THEME_DIRECTIVES[key]}\n${cleaned}` : cleaned;
+                    });
+                  }}
+                  style={{ fontSize: '0.7rem', padding: '3px 6px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', borderRadius: '6px', cursor: 'pointer', outline: 'none', minWidth: '100px' }}
+                >
+                  <option value="">Theme: auto</option>
+                  <optgroup label="Built-in">
+                    <option value="default">Default</option>
+                    <option value="dark">Dark</option>
+                    <option value="forest">Forest</option>
+                    <option value="neutral">Neutral</option>
+                    <option value="base">Base</option>
+                  </optgroup>
+                  <optgroup label="Custom Dark">
+                    <option value="ocean">🌊 Ocean</option>
+                    <option value="midnight">🌙 Midnight</option>
+                    <option value="emerald">🌿 Emerald</option>
+                    <option value="amethyst">💜 Amethyst</option>
+                    <option value="rose">🌹 Rose</option>
+                    <option value="sunrise">🌅 Sunrise</option>
+                    <option value="slate">🪨 Slate</option>
+                    <option value="mono">⬛ Monochrome</option>
+                  </optgroup>
+                  <optgroup label="Light">
+                    <option value="corporate">🏢 Corporate</option>
+                  </optgroup>
+                </select>
+                <button className="btn btn-primary" title="Render Diagram" onClick={() => {
+                  dacSourceRef.current = 'code';
+                  const current = dacCode;
+                  setDacCode('');
+                  setTimeout(() => setDacCode(current), 10);
+                }} style={{ padding: '4px 10px', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <PlayCircle size={13} /> Render
+                </button>
+                <button className="btn btn-icon-only" title="Templates" onClick={() => setShowTemplateGallery(true)} style={{ padding: '4px' }}>
+                  <LayoutGrid size={15} />
+                </button>
+                <button className="btn btn-icon-only" title="Copy code" onClick={() => { navigator.clipboard?.writeText(dacCode); }} style={{ padding: '4px' }}>
+                  <Copy size={15} />
+                </button>
+              </div>
+            </div>
+            <div className="monaco-editor-container" onKeyDown={(e) => e.stopPropagation()}>
+              <Editor
+                height="100%"
+                language="mermaid"
+                theme={theme === 'dark' ? 'mermaid-dark' : 'mermaid-light'}
+                value={dacCode}
+                beforeMount={(monaco) => registerMermaidLanguage(monaco)}
+                onMount={(editor, monaco) => { dacEditorRef.current = editor; dacMonacoRef.current = monaco; }}
+                onChange={(value) => { dacSourceRef.current = 'code'; setDacCode(value || ''); }}
+                options={{
+                  minimap: { enabled: true, scale: 1, renderCharacters: false },
+                  fontSize: 14,
+                  lineHeight: 22,
+                  wordWrap: 'on',
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                  padding: { top: 14, bottom: 14 },
+                  smoothScrolling: true,
+                  cursorBlinking: 'smooth',
+                  cursorSmoothCaretAnimation: 'on',
+                  renderLineHighlight: 'all',
+                  fontLigatures: true,
+                  fontFamily: "'JetBrains Mono', 'Fira Code', 'SF Mono', Menlo, monospace",
+                  bracketPairColorization: { enabled: true },
+                  guides: { indentation: true, bracketPairs: true },
+                  folding: true,
+                  lineNumbersMinChars: 3,
+                  scrollbar: { verticalScrollbarSize: 10, horizontalScrollbarSize: 10 },
+                  stickyScroll: { enabled: false },
+                  tabSize: 2,
+                }}
+              />
+            </div>
+            <div className={`dac-status ${dacStatus.ok ? 'ok' : 'err'}`}>
+              <span className="dac-status-dot" />
+              {dacStatus.ok
+                ? (dacStatus.message || 'Ready')
+                : dacStatus.message}
+            </div>
+            <div className="dac-resizer" onMouseDown={startResizing} />
+          </div>
+        )}
+
+        {workspace === 'dac' && showTemplateGallery && (
+          <div className="dac-gallery-overlay" onClick={() => setShowTemplateGallery(false)}>
+            <div className="dac-gallery" onClick={(e) => e.stopPropagation()} style={{ width: 'min(1100px, 95vw)', maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}>
+              <div className="dac-gallery-head">
+                <div>
+                  <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Diagram Templates</h2>
+                  <p style={{ margin: '4px 0 0', color: 'var(--text-secondary)', fontSize: '0.78rem' }}>
+                    Click a template to load it into the editor
+                  </p>
+                </div>
+                <button className="btn btn-icon-only" onClick={() => setShowTemplateGallery(false)}><X size={18} /></button>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', padding: '12px 22px', borderBottom: '1px solid var(--border-color)', flexWrap: 'wrap' }}>
+                {['All', 'Flowchart', 'Architecture', 'Sequence', 'C4', 'ER / DB', 'State & Git', 'Analytics', 'Other'].map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setDacGalFilter(cat)}
+                    style={{
+                      padding: '5px 14px', fontSize: '0.75rem', fontWeight: 600, borderRadius: '999px', cursor: 'pointer', border: '1px solid',
+                      background: dacGalFilter === cat ? 'var(--accent-blue, #2563eb)' : 'transparent',
+                      borderColor: dacGalFilter === cat ? 'var(--accent-blue, #2563eb)' : 'var(--border-color)',
+                      color: dacGalFilter === cat ? '#fff' : 'var(--text-secondary)',
+                      transition: 'all 0.15s',
+                    }}
+                  >{cat}</button>
+                ))}
+              </div>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '20px 22px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px', alignContent: 'start' }}>
+                {dacTemplates.filter(t => {
+                  if (dacGalFilter === 'All') return true;
+                  if (dacGalFilter === 'Flowchart') return t.type === 'Flowchart';
+                  if (dacGalFilter === 'Architecture') return ['Architecture', 'Block'].includes(t.type);
+                  if (dacGalFilter === 'Sequence') return t.type === 'Sequence';
+                  if (dacGalFilter === 'C4') return t.type === 'C4';
+                  if (dacGalFilter === 'ER / DB') return ['ER', 'Class', 'Requirement'].includes(t.type);
+                  if (dacGalFilter === 'State & Git') return ['State', 'Git'].includes(t.type);
+                  if (dacGalFilter === 'Analytics') return ['Pie', 'XY', 'Radar', 'Quadrant', 'Sankey', 'Gantt', 'Timeline', 'Journey', 'Kanban'].includes(t.type);
+                  if (dacGalFilter === 'Other') return ['Mindmap', 'Packet'].includes(t.type);
+                  return true;
+                }).map((t) => {
+                  const typeColors = {
+                    Flowchart: { bg: 'rgba(37,99,235,0.10)', border: '#2563eb', text: '#3b82f6' },
+                    Sequence: { bg: 'rgba(124,58,237,0.10)', border: '#7c3aed', text: '#8b5cf6' },
+                    Architecture: { bg: 'rgba(8,145,178,0.10)', border: '#0891b2', text: '#06b6d4' },
+                    Block: { bg: 'rgba(8,145,178,0.10)', border: '#0891b2', text: '#06b6d4' },
+                    C4: { bg: 'rgba(13,148,136,0.10)', border: '#0d9488', text: '#14b8a6' },
+                    Class: { bg: 'rgba(21,128,61,0.10)', border: '#15803d', text: '#16a34a' },
+                    ER: { bg: 'rgba(3,105,161,0.10)', border: '#0369a1', text: '#0ea5e9' },
+                    Requirement: { bg: 'rgba(220,38,38,0.10)', border: '#dc2626', text: '#ef4444' },
+                    State: { bg: 'rgba(180,83,9,0.10)', border: '#b45309', text: '#d97706' },
+                    Git: { bg: 'rgba(55,65,81,0.15)', border: '#374151', text: '#9ca3af' },
+                    Gantt: { bg: 'rgba(190,24,93,0.10)', border: '#be185d', text: '#ec4899' },
+                    Timeline: { bg: 'rgba(190,24,93,0.10)', border: '#be185d', text: '#ec4899' },
+                    Sankey: { bg: 'rgba(147,51,234,0.10)', border: '#9333ea', text: '#a855f7' },
+                    Pie: { bg: 'rgba(147,51,234,0.10)', border: '#9333ea', text: '#a855f7' },
+                    XY: { bg: 'rgba(147,51,234,0.10)', border: '#9333ea', text: '#a855f7' },
+                    Radar: { bg: 'rgba(147,51,234,0.10)', border: '#9333ea', text: '#a855f7' },
+                    Quadrant: { bg: 'rgba(147,51,234,0.10)', border: '#9333ea', text: '#a855f7' },
+                    Journey: { bg: 'rgba(234,88,12,0.10)', border: '#ea580c', text: '#f97316' },
+                    Mindmap: { bg: 'rgba(124,58,237,0.10)', border: '#7c3aed', text: '#8b5cf6' },
+                    Kanban: { bg: 'rgba(5,150,105,0.10)', border: '#059669', text: '#10b981' },
+                  };
+                  const c = typeColors[t.type] || { bg: 'rgba(71,85,105,0.10)', border: '#475569', text: '#94a3b8' };
+                  return (
+                    <button
+                      key={t.name}
+                      className="dac-template-card"
+                      style={{ borderTop: `3px solid ${c.border}` }}
+                      onClick={() => { dacIdRef.current = 0; dacSourceRef.current = 'code'; dacSigRef.current = null; setDacCode(t.code); setShowTemplateGallery(false); }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                        <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: c.text, background: c.bg, border: `1px solid ${c.border}30`, borderRadius: '999px', padding: '2px 9px' }}>{t.type}</span>
+                      </div>
+                      <div className="dac-template-card-name">{t.name}</div>
+                      <div className="dac-template-card-desc">{t.description}</div>
+                      <pre className="dac-template-card-code">{t.code.split('\n').slice(0, 5).join('\n')}</pre>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div style={{ flex: 1, position: 'relative', height: '100%' }}>
+        {/* Pure Pointer Event Catcher for Drawing */}
+        {workspace === 'draw' && activeTool !== 'select' && (
           <div
+            className="drawing-interaction-layer"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              if (isDrawingMode) handleDrawingStart(e);
+              else handlePaneMouseDown(e);
+            }}
             style={{
               position: 'absolute',
               top: 0,
               left: 0,
               right: 0,
               bottom: 0,
-              zIndex: 10,
+              zIndex: 50,
               cursor: 'crosshair',
-              pointerEvents: 'auto'
-            }}
-            onMouseDown={(e) => {
-              if (isDrawingMode) handleDrawingStart(e);
-              else handlePaneMouseDown(e);
-            }}
-            onMouseMove={(e) => {
-              if (isDrawingMode) handleDrawingMove(e);
-              else handlePaneMouseMove(e);
-            }}
-            onMouseUp={() => {
-              if (isDrawingMode) handleDrawingEnd();
-              else handlePaneMouseUp();
-            }}
-            onMouseLeave={() => {
-              if (isDrawingMode) handleDrawingEnd();
-              else handlePaneMouseUp();
+              touchAction: 'none'
             }}
           >
-            {currentPath.length > 1 && (
-              <svg
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: '100%',
-                  pointerEvents: 'none',
-                  overflow: 'visible'
-                }}
-              >
+            {isDrawingMode && currentPath.length > 1 && (
+              <svg style={{ width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'none' }}>
                 <path
                   d={`M ${currentPath.map(p => `${p.screenX} ${p.screenY}`).join(' L ')}`}
                   fill="none"
-                  stroke={drawingColor}
-                  strokeWidth={drawingStrokeWidth}
+                  stroke={drawingColor || '#3b82f6'}
+                  strokeWidth={drawingStrokeWidth + 2}
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
@@ -2596,28 +3065,36 @@ function FlowCanvas() {
         )}
 
         <ReactFlow
-          nodes={nodes}
+          nodes={reactFlowNodes}
           proOptions={{ hideAttribution: true }}
-          edges={edges}
-          onNodesChange={handleNodesChange}
-          onEdgesChange={onEdgesChange}
+          edges={reactFlowEdges}
+          onNodesChange={handleNodesChange} // This will only affect non-DAC nodes
+          onEdgesChange={onEdgesChange}    // This will only affect non-DAC edges
           onConnect={onConnect}
           onInit={setReactFlowInstance}
           onDrop={onDrop}
           onDragOver={onDragOver}
           onNodeContextMenu={onNodeContextMenu}
+          onPaneMouseDown={(e) => {
+            if (workspace !== 'draw' && workspace !== 'dac') return;
+            if (workspace === 'draw' && isDrawingMode) handleDrawingStart(e);
+            else handlePaneMouseDown(e);
+          }}
           onPaneClick={() => { setContextMenu(null); setShowJson(false); }}
           onMoveEnd={onMoveEnd}
           onNodeDragStop={onNodeDragStop}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
-          panOnDrag={!isDrawingMode && interactionMode === 'pan'}
-          selectionOnDrag={!isDrawingMode && interactionMode === 'move'}
-          nodesDraggable={!isDrawingMode}
-          nodesConnectable={!isDrawingMode}
-          elementsSelectable={!isDrawingMode}
-          zoomOnScroll={true}
+          panOnDrag={workspace === 'dac' ? true : (!isDrawingMode && interactionMode === 'pan' && (workspace !== 'draw' || activeTool === 'select'))}
+          selectionOnDrag={workspace === 'dac' ? false : (!isDrawingMode && interactionMode === 'move' && (workspace !== 'draw' || activeTool === 'select'))}
+          nodesDraggable={workspace === 'dac' ? false : (!isDrawingMode && (activeTool === 'select' || workspace !== 'draw'))}
+          nodesConnectable={workspace === 'dac' ? false : (!isDrawingMode && (workspace !== 'draw' || activeTool === 'select'))}
+          elementsSelectable={workspace === 'dac' ? false : (!isDrawingMode && (workspace !== 'draw' || activeTool === 'select'))}
           panOnScroll={false}
+          panActivationKeyCode={null}
+          zoomOnScroll={workspace === 'dac' ? true : (!isDrawingMode && (workspace !== 'draw' || activeTool === 'select' || interactionMode === 'move'))}
+          minZoom={workspace === 'dac' ? 0.05 : 0.1}
+          maxZoom={workspace === 'dac' ? 4 : 2}
           defaultViewport={initialViewport}
           colorMode={theme}
           defaultEdgeOptions={defaultEdgeOptions}
@@ -2625,6 +3102,29 @@ function FlowCanvas() {
           >
           {bgVariant === 'dots' && <Background color={theme === 'dark' ? '#fff' : '#000'} gap={16} size={1} opacity={theme === 'dark' ? 0.1 : 0.05} variant="dots" />}
           <Controls />
+
+          {/* Mermaid SVG preview for non-flowchart types — rendered INSIDE the flow so
+              the floating toolbars (higher z-index) stay on top instead of vanishing. */}
+          {workspace === 'dac' && (
+            <div className="mmd-preview-layer">
+              <MermaidPreview 
+                code={dacCode} 
+                theme={theme} 
+                onStatus={setDacStatus} 
+                viewport={{ x, y, zoom }} 
+                reactFlowInstance={reactFlowInstance} 
+                onDimensions={(w, h) => {
+                  setDacNodes(nds => nds.map(n => {
+                    if (n.id !== 'mermaid-other-node') return n;
+                    const currentWidth = n.data?.width ?? n.style?.width;
+                    const currentHeight = n.data?.height ?? n.style?.height;
+                    if (Math.abs(currentWidth - w) < 1 && Math.abs(currentHeight - h) < 1) return n;
+                    return { ...n, style: { ...n.style, width: w, height: h }, data: { ...n.data, width: w, height: h } };
+                  }));
+                }}
+              />
+            </div>
+          )}
 
           {/* Interaction & Background Toolbar */}
           <Panel position="bottom-center">
@@ -2656,22 +3156,25 @@ function FlowCanvas() {
                 <Grid3X3 size={18} />
               </button>
 
-              <div style={{ width: '1px', height: '20px', background: 'var(--border-color)', margin: '0 4px' }}></div>
-              
-              <button 
-                className="btn btn-icon-only" 
-                onClick={() => autoLayout('LR')}
-                title="Auto Layout (Left to Right)"
-              >
-                <ArrowRightLeft size={18} />
-              </button>
-              <button 
-                className="btn btn-icon-only" 
-                onClick={() => autoLayout('TB')}
-                title="Auto Layout (Top to Bottom)"
-              >
-                <ArrowDownUp size={18} />
-              </button>
+              {workspace !== 'dac' && (
+                <>
+                  <div style={{ width: '1px', height: '20px', background: 'var(--border-color)', margin: '0 4px' }}></div>
+                  <button
+                    className="btn btn-icon-only"
+                    onClick={() => autoLayout('LR')}
+                    title="Auto Layout (Left to Right)"
+                  >
+                    <ArrowRightLeft size={18} />
+                  </button>
+                  <button
+                    className="btn btn-icon-only"
+                    onClick={() => autoLayout('TB')}
+                    title="Auto Layout (Top to Bottom)"
+                  >
+                    <ArrowDownUp size={18} />
+                  </button>
+                </>
+              )}
 
               <div style={{ width: '1px', height: '20px', background: 'var(--border-color)', margin: '0 4px' }}></div>
               
@@ -2688,316 +3191,74 @@ function FlowCanvas() {
               </div>
             </div>
           </Panel>
-           {workspace === 'draw' && (
-             <Panel position="top-center" style={{ top: '10px', zIndex: 1000 }}>
-               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                 {/* Main Drawing Tools Toolbar */}
-                 <div className="toolbar draw-tool-palette" style={{
-                   background: 'var(--bg-secondary)',
-                   padding: '4px',
-                   borderRadius: '12px',
-                   display: 'flex',
-                   gap: '2px',
-                   alignItems: 'center',
-                   boxShadow: '0 8px 30px rgba(0,0,0,0.4)',
-                   border: '1px solid var(--border-color)',
-                   backdropFilter: 'blur(8px)'
-                 }}>
+           {/* Main Drawing Tools Toolbar Removed from here */}
 
-                   {/* 1 - Selection */}
-                   <button 
-                     className={`draw-excali-btn ${(!isDrawingMode && activeTool === 'select') ? 'active' : ''}`}
-                     onClick={() => { setActiveTool('select'); setIsDrawingMode(false); setInteractionMode('move'); }}
-                     title="Selection — V or 1"
-                   >
-                     <MousePointer2 size={18} />
-                   </button>
-                   {/* Hand/Pan */}
-                   <button 
-                     className={`draw-excali-btn ${interactionMode === 'pan' ? 'active' : ''}`}
-                     onClick={() => { setInteractionMode(interactionMode === 'pan' ? 'move' : 'pan'); }}
-                     title="Hand (pan) — H"
-                   >
-                     <Hand size={18} />
-                   </button>
-
-                   <div className="draw-excali-separator" />
-
-                   {/* 2 - Rectangle */}
-                   <button 
-                     className={`draw-excali-btn ${activeTool === 'rectangle' ? 'active' : ''}`}
-                     onClick={() => { setActiveTool('rectangle'); setIsDrawingMode(false); setInteractionMode('move'); }}
-                     title="Rectangle — R or 2"
-                   >
-                     <Square size={18} />
-                   </button>
-                   {/* 3 - Diamond */}
-                   <button 
-                     className={`draw-excali-btn ${activeTool === 'diamond' ? 'active' : ''}`}
-                     onClick={() => { setActiveTool('diamond'); setIsDrawingMode(false); setInteractionMode('move'); }}
-                     title="Diamond — D or 3"
-                   >
-                     <Diamond size={18} />
-                   </button>
-                   {/* 4 - Ellipse */}
-                   <button 
-                     className={`draw-excali-btn ${activeTool === 'circle' ? 'active' : ''}`}
-                     onClick={() => { setActiveTool('circle'); setIsDrawingMode(false); setInteractionMode('move'); }}
-                     title="Ellipse — O or 4"
-                   >
-                     <CircleIcon size={18} />
-                   </button>
-                   {/* 5 - Arrow */}
-                   <button 
-                     className={`draw-excali-btn ${activeTool === 'arrow' ? 'active' : ''}`}
-                     onClick={() => { setActiveTool('arrow'); setIsDrawingMode(false); setInteractionMode('move'); }}
-                     title="Arrow — A or 5"
-                   >
-                     <ArrowUpRight size={18} />
-                   </button>
-                   {/* 6 - Line */}
-                   <button 
-                     className={`draw-excali-btn ${activeTool === 'line' ? 'active' : ''}`}
-                     onClick={() => { setActiveTool('line'); setIsDrawingMode(false); setInteractionMode('move'); }}
-                     title="Line — L or 6"
-                   >
-                     <Minus size={18} />
-                   </button>
-
-                   <div className="draw-excali-separator" />
-
-                   {/* 7 - Pencil / Freedraw */}
-                   <button 
-                     className={`draw-excali-btn ${isDrawingMode ? 'active' : ''}`}
-                     onClick={() => { setActiveTool('pencil'); setIsDrawingMode(true); }}
-                     title="Freedraw — P or 7"
-                   >
-                     <Pencil size={18} />
-                   </button>
-                   {/* 8 - Text */}
-                   <button 
-                     className={`draw-excali-btn ${activeTool === 'text' ? 'active' : ''}`}
-                     onClick={() => { setActiveTool('text'); setIsDrawingMode(false); setInteractionMode('move'); }}
-                     title="Text — 8"
-                   >
-                     <Type size={18} />
-                   </button>
-
-                   <div className="draw-excali-separator" />
-
-                   {/* Extra shapes */}
-                   <button 
-                     className={`draw-excali-btn ${activeTool === 'triangle' ? 'active' : ''}`}
-                     onClick={() => { setActiveTool('triangle'); setIsDrawingMode(false); setInteractionMode('move'); }}
-                     title="Triangle — 0"
-                   >
-                     <Triangle size={18} />
-                   </button>
-                   <button 
-                     className={`draw-excali-btn ${activeTool === 'cloud' ? 'active' : ''}`}
-                     onClick={() => { setActiveTool('cloud'); setIsDrawingMode(false); setInteractionMode('move'); }}
-                     title="Cloud — C"
-                   >
-                     <Cloud size={18} />
-                   </button>
-                   {/* 9 - Sticky Note */}
-                   <button 
-                     className={`draw-excali-btn ${activeTool === 'note' ? 'active' : ''}`}
-                     onClick={() => { setActiveTool('note'); setIsDrawingMode(false); setInteractionMode('move'); }}
-                     title="Sticky Note — 9"
-                   >
-                     <StickyNote size={18} />
-                   </button>
-
-                   <div className="draw-excali-separator" />
-
-                   {/* Insert Image */}
-                   <button className="draw-excali-btn" onClick={() => imageInputRef.current?.click()} title="Insert Image">
-                     <Image size={18} />
-                   </button>
-                   {/* Brand Library */}
-                   <button className="draw-excali-btn" onClick={() => setShowIconPicker(true)} title="Brand Library — B">
-                     <Package size={18} />
-                   </button>
-
-                   <div className="draw-excali-separator" />
-
-                   {/* Rough mode toggle */}
-                   <button 
-                     className={`draw-excali-btn ${isRoughGlobal ? 'active' : ''}`}
-                     onClick={() => setIsRoughGlobal(!isRoughGlobal)}
-                     title="Hand-drawn style"
-                   >
-                     <Paintbrush size={18} />
-                   </button>
-                   {/* Clear */}
-                   <button className="draw-excali-btn" onClick={clearCanvas} title="Clear Canvas" style={{ color: '#ef4444' }}>
-                     <Eraser size={18} />
-                   </button>
-                 </div>
-               </div>
-             </Panel>
-           )}
-
-           {workspace === 'draw' && activeTool !== 'select' && (
-             <Panel position="top-left" style={{ top: '60px', left: '10px', zIndex: 1000 }}>
-               <div className="draw-style-panel" style={{
-                 background: 'var(--bg-secondary)',
-                 padding: '12px 16px',
-                 borderRadius: '10px',
-                 display: 'flex',
-                 flexDirection: 'column',
-                 gap: '12px',
-                 alignItems: 'flex-start',
-                 boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-                 border: '1px solid var(--border-color)',
-                 backdropFilter: 'blur(8px)',
-                 fontSize: '0.75rem',
-                 width: '200px'
-               }}>
-                 {/* Stroke Color */}
-                 <div style={{ width: '100%' }}>
-                   <div style={{ color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '6px' }}>Stroke</div>
-                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px' }}>
-                     {['#1e1e1e', '#e03131', '#2f9e44', '#1971c2', '#f08c00', '#6741d9', '#e8590c', '#f783ac'].map(c => (
-                       <button 
-                         key={c}
-                         onClick={() => setDrawingColor(c)}
-                         style={{ 
-                           width: '100%', aspectRatio: '1', borderRadius: '4px', border: drawingColor === c ? '2px solid var(--accent-blue)' : '1px solid var(--border-color)', 
-                           background: c, cursor: 'pointer', padding: 0, transition: 'transform 0.15s',
-                           transform: drawingColor === c ? 'scale(1.15)' : 'scale(1)'
-                         }}
-                       />
-                     ))}
-                   </div>
-                   <input 
-                     type="color" value={drawingColor} onChange={(e) => setDrawingColor(e.target.value)}
-                     style={{ width: '100%', height: '24px', padding: 0, border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer', background: 'transparent', marginTop: '6px' }}
-                     title="Custom color"
-                   />
-                 </div>
-
-                 {/* Fill Color */}
-                 {!['pencil', 'arrow', 'line', 'text'].includes(activeTool) && (
-                   <div style={{ width: '100%', borderTop: '1px solid var(--border-color)', paddingTop: '10px' }}>
-                     <div style={{ color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '6px' }}>Fill</div>
-                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px' }}>
-                       <button 
-                         onClick={() => setDrawFillColor('transparent')}
-                         style={{ 
-                           width: '100%', aspectRatio: '1', borderRadius: '4px', 
-                           border: drawFillColor === 'transparent' ? '2px solid var(--accent-blue)' : '1px solid var(--border-color)', 
-                           background: 'repeating-conic-gradient(#ccc 0% 25%, white 0% 50%) 50% / 8px 8px',
-                           cursor: 'pointer', padding: 0
-                         }}
-                         title="No fill"
-                       />
-                       {['#ffc9c9', '#b2f2bb', '#a5d8ff', '#ffec99', '#d0bfff', '#ffd8a8'].map(c => (
-                         <button 
-                           key={c}
-                           onClick={() => setDrawFillColor(c)}
-                           style={{ 
-                             width: '100%', aspectRatio: '1', borderRadius: '4px', border: drawFillColor === c ? '2px solid var(--accent-blue)' : '1px solid var(--border-color)', 
-                             background: c, cursor: 'pointer', padding: 0
-                           }}
-                         />
-                       ))}
-                     </div>
-                   </div>
-                 )}
-
-                 {/* Stroke Width */}
-                 <div style={{ width: '100%', borderTop: '1px solid var(--border-color)', paddingTop: '10px' }}>
-                   <div style={{ color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '6px' }}>Width</div>
-                   <div style={{ display: 'flex', gap: '3px' }}>
-                     {[1, 2, 4, 6].map(w => (
-                       <button 
-                         key={w}
-                         onClick={() => setDrawingStrokeWidth(w)}
-                         className={`draw-excali-btn-sm ${drawingStrokeWidth === w ? 'active' : ''}`}
-                         title={`${w}px`}
-                         style={{ flex: 1 }}
-                       >
-                         {w}
-                       </button>
-                     ))}
-                   </div>
-                 </div>
-
-                 {/* Stroke Style */}
-                 <div style={{ width: '100%', borderTop: '1px solid var(--border-color)', paddingTop: '10px' }}>
-                   <div style={{ color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '6px' }}>Style</div>
-                   <div style={{ display: 'flex', gap: '3px' }}>
-                     {['solid', 'dashed', 'dotted'].map(s => (
-                       <button 
-                         key={s}
-                         onClick={() => setDrawStrokeStyle(s)}
-                         className={`draw-excali-btn-sm ${drawStrokeStyle === s ? 'active' : ''}`}
-                         title={s}
-                         style={{ flex: 1, textTransform: 'capitalize', fontSize: '0.65rem' }}
-                       >
-                         {s}
-                       </button>
-                     ))}
-                   </div>
-                 </div>
-
-                 {/* Opacity */}
-                 <div style={{ width: '100%', borderTop: '1px solid var(--border-color)', paddingTop: '10px' }}>
-                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                     <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Opacity</span>
-                     <span style={{ color: 'var(--text-secondary)', fontSize: '0.7rem' }}>{drawOpacity}%</span>
-                   </div>
-                   <input 
-                     type="range" 
-                     min="10" max="100" 
-                     value={drawOpacity} 
-                     onChange={(e) => setDrawOpacity(parseInt(e.target.value))}
-                     style={{ width: '100%', accentColor: '#3b82f6', height: '3px' }}
-                   />
-                 </div>
-               </div>
-             </Panel>
-           )}
-
-          <Panel position="top-left" style={{ margin: '10px' }}>
+           <Panel position="top-left" className="ms-topbar ms-topbar-left" style={{ top: '20px', left: '20px', margin: 0, zIndex: 1000 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--bg-secondary)', padding: '6px 12px', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 4px 15px rgba(0,0,0,0.2)', backdropFilter: 'blur(8px)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderRight: '1px solid var(--border-color)', paddingRight: '12px', marginRight: '4px' }}>
-                <Box size={20} color="#3b82f6" />
-                <span style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>Modeler Studio</span>
+                <MSLogo size={26} />
+                <span style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>Model Studio</span>
               </div>
               <div style={{ display: 'flex', gap: '4px' }}>
-                {['ddd', 'diagram', 'draw', 'eip'].map((ws) => (
+                {['diagram', 'draw', 'eip', 'dac', 'ddd'].map((ws) => (
                   <button
                     key={ws}
-                    onClick={() => setWorkspace(ws)}
+                    onClick={() => {
+                        setWorkspace(ws);
+                        setActiveTool('select');
+                        setIsDrawingMode(false);
+                        setInteractionMode('move');
+                        if (ws === 'draw') setBgVariant('plain');
+                        if (ws === 'dac') setShowDacEditor(true);
+                        if (ws !== 'dac') {
+                          setTimeout(() => reactFlowInstance?.fitView({ padding: 0.15, duration: 600 }), 80);
+                        }
+                    }}
                     className={`btn ${workspace === ws ? 'btn-primary' : ''}`}
-                    style={{ 
-                      fontSize: '0.75rem', 
-                      padding: '4px 10px', 
+                    style={{
+                      fontSize: '0.75rem',
+                      padding: '4px 10px',
                       textTransform: 'none',
                       background: workspace === ws ? undefined : 'transparent',
                       border: workspace === ws ? undefined : 'none'
                     }}
                   >
-                    {ws === 'ddd' ? 'Domain Driven Design' : (ws === 'eip' ? 'Camel' : (ws === 'diagram' ? 'Diagrams' : 'Draw'))}
+                    {ws === 'ddd' ? 'Domain Driven Design' : (ws === 'eip' ? 'Camel' : (ws === 'diagram' ? 'Diagrams' : (ws === 'dac' ? 'Code as Diagram' : 'Draw')))}
                   </button>
                 ))}
               </div>
             </div>
           </Panel>
 
-          <Panel position="top-right">
-            <div className="toolbar" style={{ position: 'relative' }}>
-              <button className="btn" onClick={() => setShowTemplatesModal(true)} style={{ fontSize: '0.8rem', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid var(--accent-blue)', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa' }}>
-                <Layers size={14} /> Templates
-              </button>
+          <Panel position="top-right" className="ms-topbar ms-topbar-right" style={{ top: '20px', right: '20px', margin: 0, maxWidth: 'calc(100vw - 300px)', zIndex: 1000, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
+            <div className="toolbar" style={{ position: 'relative', display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'flex-end' }}>
               
-              {workspace !== 'eip' && (
-                <>
-                  <div style={{ width: '1px', height: '20px', background: 'var(--border-color)', margin: '0 4px' }}></div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {/* Draw Tools Section */}
+              {workspace === 'draw' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '2px', background: 'var(--bg-tertiary)', padding: '6px 12px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 'bold', color: 'var(--text-secondary)', marginRight: '4px' }}>DRAW</span>
+                  <button className={`btn btn-icon-only ${activeTool === 'select' && !isDrawingMode ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('select'); setIsDrawingMode(false); setInteractionMode('move'); }} title="Select (V)"><MousePointer2 size={16} /></button>
+                  <div style={{ width: '1px', height: '16px', background: 'var(--border-color)', margin: '0 4px' }}></div>
+                  <button className={`btn btn-icon-only ${activeTool === 'rectangle' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('rectangle'); setIsDrawingMode(false); }} title="Rectangle (R)"><Square size={16} /></button>
+                  <button className={`btn btn-icon-only ${activeTool === 'circle' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('circle'); setIsDrawingMode(false); }} title="Circle (O)"><CircleIcon size={16} /></button>
+                  <button className={`btn btn-icon-only ${activeTool === 'diamond' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('diamond'); setIsDrawingMode(false); }} title="Diamond (D)"><Diamond size={16} /></button>
+                  <button className={`btn btn-icon-only ${activeTool === 'arrow' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('arrow'); setIsDrawingMode(false); }} title="Arrow (A)"><ArrowUpRight size={16} /></button>
+                  <button className={`btn btn-icon-only ${activeTool === 'line' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('line'); setIsDrawingMode(false); }} title="Line (L)"><Minus size={16} /></button>
+                  <button className={`btn btn-icon-only ${isDrawingMode ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('pencil'); setIsDrawingMode(true); }} title="Pencil (P)"><Pencil size={16} /></button>
+                  <div style={{ width: '1px', height: '16px', background: 'var(--border-color)', margin: '0 4px' }}></div>
+                  <button className={`btn btn-icon-only ${isRoughGlobal ? 'btn-primary' : ''}`} onClick={() => setIsRoughGlobal(!isRoughGlobal)} title="Toggle Hand-drawn Style"><Paintbrush size={16} /></button>
+                </div>
+              )}
+
+              {/* Templates & General Widgets Section */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--bg-secondary)', padding: '6px 12px', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 4px 15px rgba(0,0,0,0.2)', backdropFilter: 'blur(8px)' }}>
+                <button className="btn" onClick={() => (workspace === 'dac' ? setShowTemplateGallery(true) : setShowTemplatesModal(true))} style={{ fontSize: '0.8rem', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid var(--accent-blue)', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa' }}>
+                  <Layers size={14} /> Templates
+                </button>
+                
+                {workspace !== 'eip' && (
+                  <>
+                    <div style={{ width: '1px', height: '16px', background: 'var(--border-color)', margin: '0 4px' }}></div>
                     <button className="btn btn-icon-only" onClick={() => addCanvasWidget('text')} style={{ border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)' }} title="Insert Title / Text Header">
                       <Type size={16} />
                     </button>
@@ -3007,72 +3268,89 @@ function FlowCanvas() {
                     <button className="btn btn-icon-only" onClick={() => addCanvasWidget('callout')} style={{ border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)' }} title="Insert Callout Box">
                       <Info size={16} />
                     </button>
-                  </div>
-                </>
-              )}
-              
-              <div style={{ width: '1px', height: '20px', background: 'var(--border-color)', margin: '0 4px' }}></div>
-              
-              <button className="btn btn-icon-only" onClick={() => setShowJson(!showJson)} title="View Model Source (JSON/YAML)">
-                <Code size={16} />
-              </button>
-              <button className="btn btn-icon-only" onClick={clearCanvas} title="Clear Everything (Reset Canvas)">
-                <Eraser size={16} />
-              </button>
-              <div style={{ width: '1px', height: '20px', background: 'var(--border-color)', margin: '0 4px' }}></div>
-
-              <ThemeToggle />
-              <div style={{ width: '1px', height: '20px', background: 'var(--border-color)', margin: '0 4px' }}></div>
-
-              <button className="btn btn-icon-only" onClick={() => setShowTextEditor(true)} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: theme === 'dark' ? '#fff' : 'var(--text-primary)' }} title="Import diagram from JSON/YAML text">
-
-                <FilePlus size={16} />
-              </button>
-              <div style={{ width: '1px', height: '20px', background: 'var(--border-color)', margin: '0 4px' }}></div>
-              <button className="btn" onClick={() => fileInputRef.current?.click()} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '6px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }} title="Load JSON/YAML diagram from disk">
-                <Upload size={14} /> Import
-              </button>
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleImportFile} 
-                accept=".json,.yaml,.yml" 
-                style={{ display: 'none' }} 
-              />
-              <input 
-                type="file" 
-                ref={imageInputRef} 
-                onChange={handleImageImport} 
-                accept="image/*" 
-                style={{ display: 'none' }} 
-              />
-              
-              <div style={{ position: 'relative' }}>
-                <button className="btn btn-primary" onClick={() => setShowExportDropdown(!showExportDropdown)} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '6px 12px' }}>
-                  <Download size={14} /> Export
-                </button>
-                {showExportDropdown && (
-                  <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '8px', zIndex: 1000, width: '240px', padding: '6px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <button className="btn" onClick={() => { exportLayout('json'); setShowExportDropdown(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', background: 'transparent', color: 'var(--text-primary)', fontSize: '0.8rem', cursor: 'pointer' }}>
-                      <FileJson size={14} /> Export Layout (JSON)
-                    </button>
-                    <button className="btn" onClick={() => { exportLayout('yaml'); setShowExportDropdown(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', background: 'transparent', color: 'var(--text-primary)', fontSize: '0.8rem', cursor: 'pointer' }}>
-                      <FileText size={14} /> Export Layout (YAML)
-                    </button>
-                    {workspace === 'eip' && (
-                      <button className="btn" onClick={() => { exportCamelRoute(); setShowExportDropdown(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', background: 'transparent', color: '#f59e0b', fontSize: '0.8rem', cursor: 'pointer' }}>
-                        <Workflow size={14} /> Export Camel Route (YAML)
-                      </button>
-                    )}
-                    <div style={{ height: '1px', background: 'var(--border-color)', margin: '4px 0' }}></div>
-                    <button className="btn" onClick={() => { exportAsPng(); setShowExportDropdown(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', background: 'transparent', color: 'var(--text-primary)', fontSize: '0.8rem', cursor: 'pointer' }}>
-                      <Image size={14} /> Export Image (PNG)
-                    </button>
-                    <button className="btn" onClick={() => { exportAsSvg(); setShowExportDropdown(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', background: 'transparent', color: 'var(--text-primary)', fontSize: '0.8rem', cursor: 'pointer' }}>
-                      <FileText size={14} /> Export Image (SVG)
-                    </button>
-                  </div>
+                  </>
                 )}
+                
+                <div style={{ width: '1px', height: '16px', background: 'var(--border-color)', margin: '0 4px' }}></div>
+                
+                {workspace !== 'dac' && (
+                  <button className="btn btn-icon-only" onClick={() => setShowJson(!showJson)} title="View Model Source (JSON/YAML)">
+                    <Code size={16} />
+                  </button>
+                )}
+                <button className="btn btn-icon-only" onClick={clearCanvas} title="Clear Everything (Reset Canvas)">
+                  <Eraser size={16} color="#ef4444" />
+                </button>
+                
+                <div style={{ width: '1px', height: '16px', background: 'var(--border-color)', margin: '0 4px' }}></div>
+                <ThemeToggle />
+                <div style={{ width: '1px', height: '16px', background: 'var(--border-color)', margin: '0 4px' }}></div>
+
+                <button className="btn btn-icon-only" onClick={() => setShowTextEditor(true)} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: theme === 'dark' ? '#fff' : 'var(--text-primary)' }} title="Import diagram from JSON/YAML text">
+                  <FilePlus size={16} />
+                </button>
+                <div style={{ width: '1px', height: '16px', background: 'var(--border-color)', margin: '0 4px' }}></div>
+                <button className="btn" onClick={() => fileInputRef.current?.click()} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '4px 8px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }} title="Load JSON/YAML diagram from disk">
+                  <Upload size={14} /> Import
+                </button>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImportFile}
+                  accept={workspace === 'dac' ? '.mermaid,text/plain' : '.json,.yaml,.yml'}
+                  style={{ display: 'none' }}
+                />
+                <input 
+                  type="file" 
+                  ref={imageInputRef} 
+                  onChange={handleImageImport} 
+                  accept="image/*" 
+                  style={{ display: 'none' }} 
+                />
+                
+                <div style={{ position: 'relative' }}>
+                  <button className="btn btn-primary" onClick={() => setShowExportDropdown(!showExportDropdown)} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '6px 12px' }}>
+                    <Download size={14} /> Export
+                  </button>
+                  {showExportDropdown && (
+                    <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '8px', zIndex: 1000, width: '240px', padding: '6px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {workspace === 'dac' ? (
+                        <button className="btn" onClick={() => {
+                          const blob = new Blob([dacCode], { type: 'text/plain' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = 'diagram.mermaid';
+                          a.click();
+                          setShowExportDropdown(false);
+                        }} style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', background: 'transparent', color: '#60a5fa', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer' }}>
+                          <Code size={14} /> Export Mermaid Code (.mermaid)
+                        </button>
+                      ) : (
+                        <>
+                          <button className="btn" onClick={() => { exportLayout('json'); setShowExportDropdown(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', background: 'transparent', color: 'var(--text-primary)', fontSize: '0.8rem', cursor: 'pointer' }}>
+                            <FileJson size={14} /> Export Layout (JSON)
+                          </button>
+                          <button className="btn" onClick={() => { exportLayout('yaml'); setShowExportDropdown(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', background: 'transparent', color: 'var(--text-primary)', fontSize: '0.8rem', cursor: 'pointer' }}>
+                            <FileText size={14} /> Export Layout (YAML)
+                          </button>
+                        </>
+                      )}
+                      {workspace === 'eip' && (
+                        <button className="btn" onClick={() => { exportCamelRoute(); setShowExportDropdown(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', background: 'transparent', color: '#f59e0b', fontSize: '0.8rem', cursor: 'pointer' }}>
+                          <Workflow size={14} /> Export Camel Route (YAML)
+                        </button>
+                      )}
+                      <div style={{ height: '1px', background: 'var(--border-color)', margin: '4px 0' }}></div>
+                      <button className="btn" onClick={() => { exportAsPng(); setShowExportDropdown(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', background: 'transparent', color: 'var(--text-primary)', fontSize: '0.8rem', cursor: 'pointer' }}>
+                        <Image size={14} /> Export Image (PNG)
+                      </button>
+                      <button className="btn" onClick={() => { exportAsSvg(); setShowExportDropdown(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', background: 'transparent', color: 'var(--text-primary)', fontSize: '0.8rem', cursor: 'pointer' }}>
+                        <FileText size={14} /> Export Image (SVG)
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </Panel>
@@ -3114,7 +3392,7 @@ function FlowCanvas() {
       )}
           {activeEdge && !activeNode && (
             <Panel position="top-right" style={{ top: '80px', right: '20px' }}>
-              <div className="json-viewer-overlay" style={{ width: '280px', padding: '20px', margin: 0, maxHeight: 'none' }}>
+              <div className="json-viewer-overlay" style={{ width: '280px', padding: '20px', margin: 0, maxHeight: 'calc(100vh - 100px)', overflowY: 'auto' }}>
                 <div className="json-viewer-header" style={{ marginBottom: '16px' }}>
                   <span>Edit Connector</span>
                   <button onClick={() => setSelectedEdgeId(null)} style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}>&times;</button>
@@ -3248,7 +3526,7 @@ function FlowCanvas() {
           )}
           {activeNode && (
             <Panel position="top-right" style={{ top: '80px', right: '20px' }}>
-              <div className="json-viewer-overlay" style={{ width: '280px', padding: '20px', margin: 0, maxHeight: 'none' }}>
+              <div className="json-viewer-overlay" style={{ width: '280px', padding: '20px', margin: 0, maxHeight: 'calc(100vh - 100px)', overflowY: 'auto' }}>
                 <div className="json-viewer-header" style={{ marginBottom: '16px' }}>
                   <span>Edit Properties</span>
                   <button onClick={() => setSelectedNodeId(null)} style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}>&times;</button>
@@ -3268,61 +3546,200 @@ function FlowCanvas() {
                     </div>
                   </div>
 
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>Typography</label>
-                    <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                      <select 
-                        value={activeNode.data.fontFamily || 'virgil'} 
-                        onChange={(e) => updateNodeData('fontFamily', e.target.value)}
-                        style={{ flex: 1, padding: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '4px', outline: 'none', fontSize: '0.8rem' }}
-                      >
-                        <option value="virgil">Handwriting</option>
-                        <option value="sans-serif">Sans-Serif</option>
-                        <option value="monospace">Monospace</option>
-                      </select>
-                      <input 
-                        type="number"
-                        value={parseInt(activeNode.data.fontSize) || 16}
-                        onChange={(e) => updateNodeData('fontSize', e.target.value + 'px')}
-                        style={{ width: '60px', padding: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '4px', outline: 'none', fontSize: '0.8rem' }}
-                        title="Font Size"
-                      />
+                  {/* Label / Text Content (Always show if shape allows text) */}
+                  {!['drawing', 'line', 'arrow'].includes(activeNode.data.shape) && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>Text Content</label>
+                      {activeNode.data.shape === 'note' || activeNode.data.shape === 'callout' ? (
+                        <textarea 
+                          value={activeNode.data.label || ''} 
+                          onChange={(e) => updateNodeData('label', e.target.value)} 
+                          rows={6}
+                          style={{ width: '100%', padding: '10px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '6px', fontSize: '0.9rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', lineHeight: '1.4' }}
+                        />
+                      ) : (
+                        <input 
+                          value={activeNode.data.label || ''} 
+                          onChange={(e) => updateNodeData('label', e.target.value)} 
+                          placeholder="Double-click node to edit directly"
+                          style={{ width: '100%', padding: '10px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '6px', fontSize: '0.9rem', outline: 'none' }}
+                        />
+                      )}
                     </div>
-                  </div>
+                  )}
 
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>Label / Text</label>
-                    {activeNode.data.shape === 'note' || activeNode.data.shape === 'callout' ? (
-                      <textarea 
-                        value={activeNode.data.label || ''} 
-                        onChange={(e) => updateNodeData('label', e.target.value)} 
-                        rows={6}
-                        style={{ width: '100%', padding: '10px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '6px', fontSize: '0.9rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', lineHeight: '1.4' }}
-                      />
-                    ) : (
-                      <input 
-                        value={activeNode.data.label || ''} 
-                        onChange={(e) => updateNodeData('label', e.target.value)} 
-                        style={{ width: '100%', padding: '10px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '6px', fontSize: '0.9rem', outline: 'none' }}
-                      />
-                    )}
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>Color</label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <input 
-                        type="color"
-                        value={activeNode.data.color || '#3b82f6'} 
-                        onChange={(e) => updateNodeData('color', e.target.value)} 
-                        style={{ width: '40px', height: '40px', padding: '0', background: 'none', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                      />
-                      <input 
-                        value={activeNode.data.color || '#3b82f6'} 
-                        onChange={(e) => updateNodeData('color', e.target.value)} 
-                        style={{ flex: 1, padding: '10px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '6px', fontSize: '0.9rem', outline: 'none' }}
-                      />
+                  {/* Draw Shape Styling */}
+                  {['rectangle', 'circle', 'diamond', 'triangle', 'cloud', 'arrow', 'line', 'drawing', 'oval'].includes(activeNode.data.shape) ? (
+                    <>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>Stroke Color</label>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <input 
+                            type="color"
+                            value={activeNode.data.color || '#3b82f6'} 
+                            onChange={(e) => updateNodeData('color', e.target.value)} 
+                            style={{ width: '40px', height: '40px', padding: '0', background: 'none', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                          />
+                          <input 
+                            value={activeNode.data.color || '#3b82f6'} 
+                            onChange={(e) => updateNodeData('color', e.target.value)} 
+                            style={{ flex: 1, padding: '10px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '6px', fontSize: '0.9rem', outline: 'none' }}
+                          />
+                        </div>
+                      </div>
+
+                      {!['line', 'arrow'].includes(activeNode.data.shape) && (
+                        <div>
+                          <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                            Fill Setting
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.7rem', color: 'var(--text-primary)', cursor: 'pointer' }}>
+                              <input 
+                                type="checkbox" 
+                                checked={!activeNode.data.hideFill} 
+                                onChange={(e) => updateNodeData('hideFill', !e.target.checked)} 
+                              />
+                              Enable Fill
+                            </label>
+                          </label>
+                          {!activeNode.data.hideFill && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              <select 
+                                value={activeNode.data.fillType || 'solid'} 
+                                onChange={(e) => updateNodeData('fillType', e.target.value)} 
+                                style={{ width: '100%', padding: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '4px', fontSize: '0.8rem', outline: 'none' }}
+                              >
+                                <option value="solid">Solid Color</option>
+                                <option value="gradient">Linear Gradient</option>
+                              </select>
+                              
+                              {(activeNode.data.fillType === 'gradient') ? (
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                  <input 
+                                    type="color"
+                                    value={activeNode.data.gradientColor1 || '#ffffff'} 
+                                    onChange={(e) => updateNodeData('gradientColor1', e.target.value)} 
+                                    style={{ width: '32px', height: '32px', padding: '0', background: 'none', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                                    title="Start Color"
+                                  />
+                                  <span style={{ color: 'var(--text-secondary)' }}>to</span>
+                                  <input 
+                                    type="color"
+                                    value={activeNode.data.gradientColor2 || '#3b82f6'} 
+                                    onChange={(e) => updateNodeData('gradientColor2', e.target.value)} 
+                                    style={{ width: '32px', height: '32px', padding: '0', background: 'none', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                                    title="End Color"
+                                  />
+                                  <input 
+                                    type="number"
+                                    value={activeNode.data.gradientAngle || 90}
+                                    onChange={(e) => updateNodeData('gradientAngle', parseInt(e.target.value))}
+                                    style={{ flex: 1, padding: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '4px', fontSize: '0.8rem', outline: 'none' }}
+                                    title="Gradient Angle (degrees)"
+                                    placeholder="Deg"
+                                  />
+                                </div>
+                              ) : (
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                  <input 
+                                    type="color"
+                                    value={activeNode.data.fillColor || '#ffffff'} 
+                                    onChange={(e) => updateNodeData('fillColor', e.target.value)} 
+                                    style={{ width: '40px', height: '40px', padding: '0', background: 'none', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                                  />
+                                  <input 
+                                    value={activeNode.data.fillColor || '#ffffff'} 
+                                    onChange={(e) => updateNodeData('fillColor', e.target.value)} 
+                                    style={{ flex: 1, padding: '10px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '6px', fontSize: '0.9rem', outline: 'none' }}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', gap: '16px' }}>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>Stroke Width</label>
+                          <input 
+                            type="number" 
+                            min="1" max="20"
+                            value={activeNode.data.strokeWidth || 2} 
+                            onChange={(e) => updateNodeData('strokeWidth', parseInt(e.target.value))} 
+                            style={{ width: '100%', padding: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '6px', fontSize: '0.9rem', outline: 'none' }}
+                          />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>Stroke Style</label>
+                          <select 
+                            value={activeNode.data.strokeStyle || 'solid'} 
+                            onChange={(e) => updateNodeData('strokeStyle', e.target.value)} 
+                            style={{ width: '100%', padding: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '6px', fontSize: '0.9rem', outline: 'none' }}
+                          >
+                            <option value="solid">Solid</option>
+                            <option value="dashed">Dashed</option>
+                            <option value="dotted">Dotted</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Opacity: {activeNode.data.opacity || 100}%</label>
+                        <input
+                          type="range"
+                          min="10" max="100"
+                          value={activeNode.data.opacity || 100}
+                          onChange={(e) => updateNodeData('opacity', parseInt(e.target.value))}
+                          style={{ width: '100%', accentColor: '#3b82f6' }}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Standard Node Color */}
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>Color</label>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <input 
+                            type="color"
+                            value={activeNode.data.color || '#3b82f6'} 
+                            onChange={(e) => updateNodeData('color', e.target.value)} 
+                            style={{ width: '40px', height: '40px', padding: '0', background: 'none', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                          />
+                          <input 
+                            value={activeNode.data.color || '#3b82f6'} 
+                            onChange={(e) => updateNodeData('color', e.target.value)} 
+                            style={{ flex: 1, padding: '10px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '6px', fontSize: '0.9rem', outline: 'none' }}
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Typography Settings (Always show for text or if it has text) */}
+                  {!['drawing', 'line', 'arrow'].includes(activeNode.data.shape) && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>Typography</label>
+                      <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                        <select
+                          value={activeNode.data.fontFamily || 'virgil'}
+                          onChange={(e) => updateNodeData('fontFamily', e.target.value)}
+                          style={{ flex: 1, padding: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '4px', outline: 'none', fontSize: '0.8rem' }}
+                        >
+                          <option value="virgil">Handwriting</option>
+                          <option value="sans-serif">Sans-Serif</option>
+                          <option value="monospace">Monospace</option>
+                        </select>
+                        <input
+                          type="number"
+                          value={parseInt(activeNode.data.fontSize) || 16}
+                          onChange={(e) => updateNodeData('fontSize', e.target.value + 'px')}
+                          style={{ width: '60px', padding: '6px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '4px', outline: 'none', fontSize: '0.8rem' }}
+                          title="Font Size"
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )}
                   <div>
                     <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>Icon Name (Lucide)</label>
                     <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
@@ -3701,15 +4118,49 @@ function FlowCanvas() {
                   )}
                 </>
               )}
+              {workspace === 'dac' && (
+                <div style={{ padding: '4px', minWidth: '210px' }}>
+                  <button className="btn" onClick={() => dacRenameNode(contextMenu.id)} style={{ textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Pencil size={15} /> Edit Label…
+                  </button>
+                  <div style={{ height: '1px', background: 'var(--border-color)', margin: '4px 0' }}></div>
+
+                  <div style={{ fontSize: '0.7rem', color: '#94a3b8', padding: '4px 4px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}><Shapes size={12} /> Change Shape</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '6px' }}>
+                    <button className="btn btn-icon-only" style={{ padding: '6px' }} title="Rectangle" onClick={() => dacUpdateNode(contextMenu.id, { shape: 'rectangle', rounded: false })}><Square size={16} /></button>
+                    <button className="btn btn-icon-only" style={{ padding: '6px' }} title="Rounded" onClick={() => dacUpdateNode(contextMenu.id, { shape: 'rectangle', rounded: true })}><Square size={16} style={{ borderRadius: 4 }} /></button>
+                    <button className="btn btn-icon-only" style={{ padding: '6px' }} title="Decision (diamond)" onClick={() => dacUpdateNode(contextMenu.id, { shape: 'diamond' })}><Diamond size={16} /></button>
+                    <button className="btn btn-icon-only" style={{ padding: '6px' }} title="Circle" onClick={() => dacUpdateNode(contextMenu.id, { shape: 'circle' })}><CircleIcon size={16} /></button>
+                    <button className="btn btn-icon-only" style={{ padding: '6px' }} title="Database (cylinder)" onClick={() => dacUpdateNode(contextMenu.id, { shape: 'cylinder' })}><Database size={16} /></button>
+                  </div>
+
+                  <div style={{ fontSize: '0.7rem', color: '#94a3b8', padding: '4px 4px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}><Plus size={12} /> Add Connected Node</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '6px' }}>
+                    <button className="btn btn-icon-only" style={{ padding: '6px' }} title="Rectangle" onClick={() => dacAddConnected(contextMenu.id, 'rectangle')}><Square size={16} /></button>
+                    <button className="btn btn-icon-only" style={{ padding: '6px' }} title="Rounded" onClick={() => dacAddConnected(contextMenu.id, 'rectangle', true)}><Square size={16} style={{ borderRadius: 4 }} /></button>
+                    <button className="btn btn-icon-only" style={{ padding: '6px' }} title="Decision" onClick={() => dacAddConnected(contextMenu.id, 'diamond')}><Diamond size={16} /></button>
+                    <button className="btn btn-icon-only" style={{ padding: '6px' }} title="Circle" onClick={() => dacAddConnected(contextMenu.id, 'circle')}><CircleIcon size={16} /></button>
+                    <button className="btn btn-icon-only" style={{ padding: '6px' }} title="Database" onClick={() => dacAddConnected(contextMenu.id, 'cylinder')}><Database size={16} /></button>
+                  </div>
+
+                  <div style={{ fontSize: '0.7rem', color: '#94a3b8', padding: '4px 4px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}><Palette size={12} /> Colour</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '4px', padding: '2px 4px' }}>
+                    {['#3b82f6', '#22c55e', '#ef4444', '#f59e0b', '#a855f7', '#06b6d4', '#64748b'].map(c => (
+                      <button key={c} onClick={() => dacUpdateNode(contextMenu.id, { color: c })} title={c} style={{ width: 18, height: 18, borderRadius: '50%', background: c, border: '2px solid var(--bg-secondary)', boxShadow: '0 0 0 1px var(--border-color)', cursor: 'pointer', padding: 0 }} />
+                    ))}
+                  </div>
+                </div>
+              )}
               <div style={{ height: '1px', background: 'var(--border-color)', margin: '4px 0' }}></div>
-              <button className="btn" onClick={deleteContextMenuNode} style={{ textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button className="btn" onClick={() => (workspace === 'dac' ? dacDeleteNode(contextMenu.id) : deleteContextMenuNode())} style={{ textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Trash2 size={16} /> Delete Node
               </button>
             </div>
           )}
         </ReactFlow>
+        </div>
 
-        {nodes.length === 0 && (
+        {nodes.length === 0 && !(workspace === 'dac' && dacKind === 'other') && (
           <div style={{
             position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
             pointerEvents: 'none', textAlign: 'center', color: 'var(--text-secondary)',
@@ -3721,8 +4172,9 @@ function FlowCanvas() {
               <p style={{ maxWidth: '300px', lineHeight: '1.5' }}>
                 {workspace === 'ddd' && "Drag and drop Domain Driven Design elements from the sidebar to begin building your bounded contexts and aggregates."}
                 {workspace === 'diagram' && "Drag and drop shapes from the sidebar to begin drawing your flowchart, UML, or system architecture."}
-                {workspace === 'draw' && "Drag and drop shapes, annotation widgets, or brand tech icons from the sidebar, or toggle Draw Mode to sketch freehand."}
+                {workspace === 'draw' && "Select a tool from the toolbar above to start drawing or sketching."}
                 {workspace === 'eip' && "Drag and drop Enterprise Camel Patterns from the sidebar to begin building your Camel route."}
+                {workspace === 'dac' && "Start typing in the code editor on the left to generate your diagram."}
               </p>
             </div>
           </div>
