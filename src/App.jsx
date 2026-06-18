@@ -1113,45 +1113,60 @@ function FlowCanvas() {
     return newId;
   };
 
+  // Given existing siblings (nodes already placed in a direction from source),
+  // compute the next position so new child sits beside them, not on top.
+  const siblingPosition = (src, siblings, direction, nw, nh) => {
+    const GAP = 24;
+    if (direction === 'down' || direction === 'up') {
+      // siblings arranged left-to-right; new one goes to the right of the rightmost
+      if (siblings.length === 0) {
+        return { x: src.position.x, y: src.position.y + (direction === 'down' ? parseInt(src.style?.height || 80, 10) + 80 : -(nh + 80)) };
+      }
+      const rightmost = Math.max(...siblings.map(n => n.position.x + parseInt(n.style?.width || nw, 10)));
+      const baseY = siblings[0].position.y;
+      return { x: rightmost + GAP, y: baseY };
+    } else {
+      // left/right: siblings arranged top-to-bottom; new one goes below the bottommost
+      if (siblings.length === 0) {
+        return { x: src.position.x + (direction === 'right' ? parseInt(src.style?.width || 160, 10) + 80 : -(nw + 80)), y: src.position.y };
+      }
+      const bottommost = Math.max(...siblings.map(n => n.position.y + parseInt(n.style?.height || nh, 10)));
+      const baseX = siblings[0].position.x;
+      return { x: baseX, y: bottommost + GAP };
+    }
+  };
+
   // Directional child creation via Ctrl+Arrow — uses refs to avoid stale closure in keyDown.
   const dacAddDirectional = useCallback((direction) => {
     const sourceId = selectedNodeIdRef.current;
     if (!sourceId) return;
     const currentNodes = dacNodesRef.current;
+    const currentEdges = dacEdgesRef.current;
     const src = currentNodes.find(n => n.id === sourceId);
     if (!src) return;
     const w = parseInt(src.style?.width || 160, 10);
     const h = parseInt(src.style?.height || 80, 10);
-    const offsets = {
-      right:  { x: w + 80, y: 0,        sh: 'right',  th: 'left'   },
-      left:   { x: -(w + 80), y: 0,     sh: 'left',   th: 'right'  },
-      down:   { x: 0, y: h + 80,        sh: 'bottom', th: 'top'    },
-      up:     { x: 0, y: -(h + 80),     sh: 'top',    th: 'bottom' },
-    };
-    const o = offsets[direction];
-    if (!o) return;
+    const shMap = { right: 'right', left: 'left', down: 'bottom', up: 'top' };
+    const thMap = { right: 'left', left: 'right', down: 'top', up: 'bottom' };
+    const sh = shMap[direction];
+    const th = thMap[direction];
+    // Find existing children from this source in this direction
+    const siblingIds = new Set(currentEdges.filter(e => e.source === sourceId && (e.sourceHandle === sh || (!e.sourceHandle && sh === 'right'))).map(e => e.target));
+    const siblings = currentNodes.filter(n => siblingIds.has(n.id));
     const newId = nextDacId(currentNodes);
     const newNode = {
       id: newId,
       type: 'custom',
-      position: { x: src.position.x + o.x, y: src.position.y + o.y },
+      position: siblingPosition(src, siblings, direction, w, h),
       parentId: src.parentId,
       data: { label: 'New Node', shape: src.data.shape, rounded: src.data.rounded, color: src.data.color || '#3b82f6', isEip: src.data.isEip || false, fontSize: src.data.fontSize || '0.82rem' },
     };
     const sz = estimateDacNodeSize(newNode);
     if (sz) { newNode.style = { width: sz.width, height: sz.height }; newNode.data.width = sz.width; newNode.data.height = sz.height; }
     const newEdge = {
-      id: uuidv4(),
-      source: sourceId,
-      target: newId,
-      label: '',
-      type: 'custom',
-      markerEnd: { type: MarkerType.ArrowClosed },
-      sourceHandle: o.sh,
-      targetHandle: o.th,
-      data: {},
+      id: uuidv4(), source: sourceId, target: newId, label: '', type: 'custom',
+      markerEnd: { type: MarkerType.ArrowClosed }, sourceHandle: sh, targetHandle: th, data: {},
     };
-    const currentEdges = dacEdgesRef.current;
     dacCommitRef.current?.([...currentNodes, newNode], [...currentEdges, newEdge]);
   }, []);
 
@@ -1162,40 +1177,28 @@ function FlowCanvas() {
     const sourceId = selectedNodeIdRef.current;
     if (!sourceId) return;
     const currentNodes = drawNodesRef.current;
+    const currentEdges = drawEdgesRef.current;
     const src = currentNodes.find(n => n.id === sourceId);
     if (!src) return;
     const w = parseInt(src.style?.width || 150, 10);
     const h = parseInt(src.style?.height || 80, 10);
-    const offsets = {
-      right:  { x: w + 80, y: 0,        sh: 'right',  th: 'left'   },
-      left:   { x: -(w + 80), y: 0,     sh: 'left',   th: 'right'  },
-      down:   { x: 0, y: h + 80,        sh: 'bottom', th: 'top'    },
-      up:     { x: 0, y: -(h + 80),     sh: 'top',    th: 'bottom' },
-    };
-    const o = offsets[direction];
-    if (!o) return;
+    const shMap = { right: 'right', left: 'left', down: 'bottom', up: 'top' };
+    const thMap = { right: 'left', left: 'right', down: 'top', up: 'bottom' };
+    const sh = shMap[direction];
+    const th = thMap[direction];
+    const siblingIds = new Set(currentEdges.filter(e => e.source === sourceId && (e.sourceHandle === sh || (!e.sourceHandle && sh === 'right'))).map(e => e.target));
+    const siblings = currentNodes.filter(n => siblingIds.has(n.id));
     const newId = uuidv4();
     const newNode = {
       id: newId,
       type: 'custom',
-      position: { x: src.position.x + o.x, y: src.position.y + o.y },
+      position: siblingPosition(src, siblings, direction, w, h),
       style: { width: w, height: h },
-      data: {
-        ...src.data,
-        label: '',
-        isGhost: false,
-        isNew: false,
-        width: w,
-        height: h,
-      },
+      data: { ...src.data, label: '', isGhost: false, isNew: false, width: w, height: h },
     };
     const newEdge = {
-      id: uuidv4(),
-      source: sourceId,
-      target: newId,
-      type: 'custom',
-      sourceHandle: o.sh,
-      targetHandle: o.th,
+      id: uuidv4(), source: sourceId, target: newId, type: 'custom',
+      sourceHandle: sh, targetHandle: th,
       markerEnd: { type: MarkerType.ArrowClosed },
       style: { strokeWidth: src.data.strokeWidth || 2, stroke: src.data.color || '#3b82f6' },
       data: {},
