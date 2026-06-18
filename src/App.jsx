@@ -1153,7 +1153,6 @@ function FlowCanvas() {
     };
     const currentEdges = dacEdgesRef.current;
     dacCommitRef.current?.([...currentNodes, newNode], [...currentEdges, newEdge]);
-    setSelectedNodeId(newId);
   }, []);
 
   useEffect(() => { dacAddDirectionalRef.current = dacAddDirectional; }, [dacAddDirectional]);
@@ -1203,7 +1202,6 @@ function FlowCanvas() {
     };
     setDrawNodes(nds => [...nds, newNode]);
     setDrawEdges(eds => [...eds, newEdge]);
-    setSelectedNodeId(newId);
   }, []);
   useEffect(() => { drawAddDirectionalRef.current = drawAddDirectional; }, [drawAddDirectional]);
 
