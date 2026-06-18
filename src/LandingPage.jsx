@@ -12,6 +12,12 @@ const GitHubIcon = ({ size = 20 }) => (
   </svg>
 );
 
+const LinkedInIcon = ({ size = 20 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+  </svg>
+);
+
 /* ── Mini SVG diagram mockups shown in the workspace cards ── */
 const DddMockup = () => (
   <svg viewBox="0 0 200 120" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
@@ -214,7 +220,10 @@ const LandingPage = ({ onLaunch }) => (
       <div className="nav-links">
         <a href="#workspaces">Workspaces</a>
         <a href="#features">Features</a>
-        <a href="https://github.com/geekpratyush/DDDModelStudio" target="_blank" rel="noopener noreferrer" className="github-link">
+        <a href="https://www.linkedin.com/in/leadtherightway" target="_blank" rel="noopener noreferrer" className="github-link" title="Pratyush Ranjan Mishra on LinkedIn">
+          <LinkedInIcon size={20} />
+        </a>
+        <a href="https://github.com/geekpratyush/ModelStudio" target="_blank" rel="noopener noreferrer" className="github-link">
           <GitHubIcon size={20} />
         </a>
         <button className="btn btn-primary nav-cta" onClick={onLaunch}>
@@ -326,7 +335,7 @@ const LandingPage = ({ onLaunch }) => (
             Launch Studio <ArrowRight size={20} />
           </button>
           <a
-            href="https://github.com/geekpratyush/DDDModelStudio"
+            href="https://github.com/geekpratyush/ModelStudio"
             target="_blank"
             rel="noopener noreferrer"
             className="btn btn-lg btn-outline"
@@ -344,8 +353,11 @@ const LandingPage = ({ onLaunch }) => (
           <MSLogo size={24} />
           <span>Model Studio</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <a href="https://github.com/geekpratyush/DDDModelStudio" target="_blank" rel="noopener noreferrer" className="github-link" style={{ color: 'var(--text-secondary)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <a href="https://www.linkedin.com/in/leadtherightway" target="_blank" rel="noopener noreferrer" className="github-link" style={{ color: 'var(--text-secondary)' }} title="LinkedIn">
+            <LinkedInIcon size={18} />
+          </a>
+          <a href="https://github.com/geekpratyush/ModelStudio" target="_blank" rel="noopener noreferrer" className="github-link" style={{ color: 'var(--text-secondary)' }} title="GitHub">
             <GitHubIcon size={18} />
           </a>
           <p>&copy; 2026 <strong style={{ color: 'var(--text-primary)' }}>Pratyush Ranjan Mishra</strong> &middot; Model Studio &middot; MIT License</p>
