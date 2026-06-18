@@ -550,10 +550,16 @@ function FlowCanvas() {
   const [diagramEdges, setDiagramEdges, onDiagramEdgesChange] = useEdgesState(loadState('diagramEdges', []));
   const [drawNodes, setDrawNodes, onDrawNodesChange] = useNodesState(loadState('drawNodes', []));
   const [drawEdges, setDrawEdges, onDrawEdgesChange] = useEdgesState(loadState('drawEdges', []));
+  const drawNodesRef = useRef(drawNodes);
+  const drawEdgesRef = useRef(drawEdges);
+  useEffect(() => { drawNodesRef.current = drawNodes; }, [drawNodes]);
+  useEffect(() => { drawEdgesRef.current = drawEdges; }, [drawEdges]);
   const [eipNodes, setEipNodes, onEipNodesChange] = useNodesState(loadState('eipNodes', []));
   const [eipEdges, setEipEdges, onEipEdgesChange] = useEdgesState(loadState('eipEdges', []));
 
   const [workspace, setWorkspace] = useState(localStorage.getItem('workspace') || 'diagram');
+  const workspaceRef = useRef(workspace);
+  useEffect(() => { workspaceRef.current = workspace; }, [workspace]);
   const [activeTool, setActiveTool] = useState('select'); 
   const [interactionMode, setInteractionMode] = useState('move'); 
   const [sectionsOpen, setSectionsOpen] = useState({ 
@@ -615,11 +621,15 @@ function FlowCanvas() {
         return;
       }
 
-      // Ctrl+Arrow: create child node in direction (works in dac and diagram workspaces)
+      // Ctrl+Arrow: create child node in direction
       if (e.ctrlKey && ['arrowright', 'arrowleft', 'arrowup', 'arrowdown'].includes(key)) {
         e.preventDefault();
         const dir = key === 'arrowright' ? 'right' : key === 'arrowleft' ? 'left' : key === 'arrowup' ? 'up' : 'down';
-        dacAddDirectionalRef.current?.(dir);
+        if (workspaceRef.current === 'draw') {
+          drawAddDirectionalRef.current?.(dir);
+        } else {
+          dacAddDirectionalRef.current?.(dir);
+        }
         return;
       }
 
@@ -1146,6 +1156,54 @@ function FlowCanvas() {
 
   useEffect(() => { dacAddDirectionalRef.current = dacAddDirectional; }, [dacAddDirectional]);
 
+  const drawAddDirectionalRef = useRef(null);
+  const drawAddDirectional = useCallback((direction) => {
+    const sourceId = selectedNodeIdRef.current;
+    if (!sourceId) return;
+    const currentNodes = drawNodesRef.current;
+    const src = currentNodes.find(n => n.id === sourceId);
+    if (!src) return;
+    const w = parseInt(src.style?.width || 150, 10);
+    const h = parseInt(src.style?.height || 80, 10);
+    const offsets = {
+      right:  { x: w + 80, y: 0,        sh: 'right',  th: 'left'   },
+      left:   { x: -(w + 80), y: 0,     sh: 'left',   th: 'right'  },
+      down:   { x: 0, y: h + 80,        sh: 'bottom', th: 'top'    },
+      up:     { x: 0, y: -(h + 80),     sh: 'top',    th: 'bottom' },
+    };
+    const o = offsets[direction];
+    if (!o) return;
+    const newId = uuidv4();
+    const newNode = {
+      id: newId,
+      type: 'custom',
+      position: { x: src.position.x + o.x, y: src.position.y + o.y },
+      style: { width: w, height: h },
+      data: {
+        ...src.data,
+        label: '',
+        isGhost: false,
+        isNew: false,
+        width: w,
+        height: h,
+      },
+    };
+    const newEdge = {
+      id: uuidv4(),
+      source: sourceId,
+      target: newId,
+      type: 'custom',
+      sourceHandle: o.sh,
+      targetHandle: o.th,
+      markerEnd: { type: MarkerType.ArrowClosed },
+      style: { strokeWidth: src.data.strokeWidth || 2, stroke: src.data.color || '#3b82f6' },
+      data: {},
+    };
+    setDrawNodes(nds => [...nds, newNode]);
+    setDrawEdges(eds => [...eds, newEdge]);
+    setSelectedNodeId(newId);
+  }, []);
+  useEffect(() => { drawAddDirectionalRef.current = drawAddDirectional; }, [drawAddDirectional]);
 
   const dacUpdateNode = (nodeId, patch) => {
     const newNodes = dacNodes.map(n => n.id === nodeId ? { ...n, data: { ...n.data, ...patch } } : n);
@@ -1481,6 +1539,7 @@ function FlowCanvas() {
         strokeStyle: drawStrokeStyle,
         opacity: drawOpacity,
         isGhost: true,
+        isDrawShape: true,
         fontFamily: 'virgil',
         ...( (activeTool === 'arrow' || activeTool === 'line') ? { arrowStart: { x: 0, y: 0 }, arrowEnd: { x: 0, y: 0 } } : {} )
       }
@@ -1590,8 +1649,10 @@ function FlowCanvas() {
         color: shapeType === 'text' ? 'var(--text-primary)' : (shapeType === 'note' ? '#fef08a' : '#3b82f6'),
         icon: shapeType === 'callout' ? 'Info' : undefined,
         isRough: workspace === 'draw' ? isRoughGlobal : false,
+        isDrawShape: workspace === 'draw',
         fontFamily: workspace === 'draw' ? 'virgil' : 'inherit',
         fillStyle: 'hachure',
+        ...(workspace === 'draw' ? { strokeWidth: drawingStrokeWidth, strokeStyle: drawStrokeStyle, fillColor: drawFillColor } : {}),
         isNew: true
       }
     };
@@ -1631,8 +1692,12 @@ function FlowCanvas() {
         icon,
         svgHtml,
         isRough: isRoughGlobal,
+        isDrawShape: true,
         fillStyle: 'hachure',
         color: colorOverride || drawingColor,
+        strokeWidth: drawingStrokeWidth,
+        strokeStyle: drawStrokeStyle,
+        fillColor: drawFillColor,
         fontFamily: 'virgil',
         fontSize: '16px'
       }
@@ -2105,7 +2170,7 @@ function FlowCanvas() {
         parentId,
         extent: parentId ? 'parent' : undefined,
         style: data.isContainer ? { width: 400, height: 300, zIndex: -1 } : (data.shape === 'note' ? { width: 160, height: 160 } : (data.shape === 'callout' ? { width: 200, height: 80 } : (data.shape === 'brand' ? { width: 80, height: 80 } : (data.isEip ? { width: 120, height: 60 } : undefined)))),
-        data: { ...data, isRough: workspace === 'draw' ? isRoughGlobal : false, isNew: (data.shape === 'text' || data.shape === 'note' || data.shape === 'callout') },
+        data: { ...data, isRough: workspace === 'draw' ? isRoughGlobal : false, isDrawShape: workspace === 'draw', ...(workspace === 'draw' ? { strokeWidth: drawingStrokeWidth, strokeStyle: drawStrokeStyle, fillColor: data.fillColor || drawFillColor, color: data.color || drawingColor } : {}), isNew: (data.shape === 'text' || data.shape === 'note' || data.shape === 'callout') },
       };
 
       setNodes((nds) => {
