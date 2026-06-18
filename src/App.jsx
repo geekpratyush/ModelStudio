@@ -3463,6 +3463,38 @@ function FlowCanvas() {
                   <button className={`btn btn-icon-only ${isDrawingMode ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('pencil'); setIsDrawingMode(true); }} title="Pencil (P)"><Pencil size={16} /></button>
                   <div style={{ width: '1px', height: '16px', background: 'var(--border-color)', margin: '0 4px' }}></div>
                   <button className={`btn btn-icon-only ${isRoughGlobal ? 'btn-primary' : ''}`} onClick={() => setIsRoughGlobal(!isRoughGlobal)} title="Toggle Hand-drawn Style"><Paintbrush size={16} /></button>
+                  <div style={{ width: '1px', height: '16px', background: 'var(--border-color)', margin: '0 4px' }}></div>
+                  {/* Stroke color */}
+                  <input
+                    type="color"
+                    value={drawingColor}
+                    onChange={(e) => setDrawingColor(e.target.value)}
+                    title="Stroke Color"
+                    style={{ width: 28, height: 28, padding: 0, border: '2px solid var(--border-color)', borderRadius: 6, cursor: 'pointer', background: 'none' }}
+                  />
+                  {/* Stroke width */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                    <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', lineHeight: 1 }}>{drawingStrokeWidth}px</span>
+                    <input
+                      type="range"
+                      min="1" max="20"
+                      value={drawingStrokeWidth}
+                      onChange={(e) => setDrawingStrokeWidth(parseInt(e.target.value, 10))}
+                      title={`Stroke Width: ${drawingStrokeWidth}px`}
+                      style={{ width: 64, accentColor: '#3b82f6', cursor: 'pointer' }}
+                    />
+                  </div>
+                  {/* Stroke style */}
+                  <select
+                    value={drawStrokeStyle}
+                    onChange={(e) => setDrawStrokeStyle(e.target.value)}
+                    title="Stroke Style"
+                    style={{ fontSize: '0.72rem', padding: '3px 4px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: 6, cursor: 'pointer' }}
+                  >
+                    <option value="solid">—— Solid</option>
+                    <option value="dashed">- - Dashed</option>
+                    <option value="dotted">··· Dotted</option>
+                  </select>
                 </div>
               )}
 
@@ -3876,13 +3908,13 @@ function FlowCanvas() {
 
                       <div style={{ display: 'flex', gap: '16px' }}>
                         <div style={{ flex: 1 }}>
-                          <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>Stroke Width</label>
-                          <input 
-                            type="number" 
+                          <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Stroke Width: {activeNode.data.strokeWidth || 2}px</label>
+                          <input
+                            type="range"
                             min="1" max="20"
-                            value={activeNode.data.strokeWidth || 2} 
-                            onChange={(e) => updateNodeData('strokeWidth', parseInt(e.target.value))} 
-                            style={{ width: '100%', padding: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '6px', fontSize: '0.9rem', outline: 'none' }}
+                            value={activeNode.data.strokeWidth || 2}
+                            onChange={(e) => updateNodeData('strokeWidth', parseInt(e.target.value))}
+                            style={{ width: '100%', accentColor: '#3b82f6' }}
                           />
                         </div>
                         <div style={{ flex: 1 }}>
