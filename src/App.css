@@ -145,7 +145,7 @@ body {
 
 /* Main Canvas Area */
 /* Code as Diagram Styles */
-.dac-editor-pane {
+.cad-editor-pane {
   display: flex;
   flex-direction: column;
   background: var(--bg-secondary);
@@ -156,9 +156,9 @@ body {
   min-width: 280px;
 }
 
-.dac-header h3 { text-transform: none !important; letter-spacing: 0 !important; font-size: 0.95rem !important; color: var(--text-primary) !important; }
+.cad-header h3 { text-transform: none !important; letter-spacing: 0 !important; font-size: 0.95rem !important; color: var(--text-primary) !important; }
 
-.dac-logo-mark {
+.cad-logo-mark {
   width: 32px; height: 32px;
   display: flex; align-items: center; justify-content: center;
   border-radius: 9px;
@@ -167,7 +167,7 @@ body {
 }
 
 /* live status bar */
-.dac-status {
+.cad-status {
   display: flex; align-items: center; gap: 8px;
   padding: 7px 16px;
   font-size: 0.72rem;
@@ -176,19 +176,19 @@ body {
   background: var(--bg-primary);
   flex-shrink: 0;
 }
-.dac-status.ok  { color: #22c55e; }
-.dac-status.err { color: #ef4444; }
-.dac-status-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; }
+.cad-status.ok  { color: #22c55e; }
+.cad-status.err { color: #ef4444; }
+.cad-status-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; }
 
 /* template gallery */
-.dac-gallery-overlay {
+.cad-gallery-overlay {
   position: fixed; inset: 0; z-index: 5000;
   background: rgba(2,6,23,0.62);
   backdrop-filter: blur(6px);
   display: flex; align-items: center; justify-content: center;
   padding: 32px;
 }
-.dac-gallery {
+.cad-gallery {
   width: min(960px, 92vw); max-height: 86vh;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
@@ -197,15 +197,15 @@ body {
   display: flex; flex-direction: column;
   overflow: hidden;
 }
-.dac-gallery-head {
+.cad-gallery-head {
   display: flex; justify-content: space-between; align-items: flex-start;
   padding: 22px 26px; border-bottom: 1px solid var(--border-color);
 }
-.dac-gallery-grid {
+.cad-gallery-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 14px; padding: 22px 26px; overflow-y: auto;
 }
-.dac-template-card {
+.cad-template-card {
   text-align: left; cursor: pointer;
   background: var(--bg-tertiary);
   border: 1px solid var(--border-color);
@@ -213,13 +213,13 @@ body {
   display: flex; flex-direction: column;
   transition: transform 0.15s, box-shadow 0.15s;
 }
-.dac-template-card:hover {
+.cad-template-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(0,0,0,0.28);
 }
-.dac-template-card-name { font-weight: 700; font-size: 0.86rem; color: var(--text-primary); margin-bottom: 4px; }
-.dac-template-card-desc { font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4; margin-bottom: 10px; }
-.dac-template-card-code {
+.cad-template-card-name { font-weight: 700; font-size: 0.86rem; color: var(--text-primary); margin-bottom: 4px; }
+.cad-template-card-desc { font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4; margin-bottom: 10px; }
+.cad-template-card-code {
   margin-top: auto; padding: 8px 10px;
   background: rgba(0,0,0,0.22); border-radius: 6px;
   font-family: 'JetBrains Mono', monospace; font-size: 0.6rem;
@@ -230,26 +230,28 @@ body {
 /* Template gallery category filter pill buttons are styled inline */
 
 /* Mermaid SVG preview (non-flowchart diagram types) */
-.mmd-preview-layer {
-  position: absolute; inset: 0; z-index: 4; /* above the flow canvas, below the toolbars (z>=5) */
-  background: transparent;
+/* MermaidPreview panel fills the ReactFlow canvas in CAD mode */
+.mmd-preview { width: 100%; height: 100%; position: relative; }
+
+.mmd-preview {
+  position: relative; width: 100%; height: 100%; overflow: hidden;
   pointer-events: none;
 }
-.mmd-preview { position: relative; width: 100%; height: 100%; overflow: hidden; pointer-events: none; }
 .mmd-scroll {
   width: 100%; height: 100%; overflow: hidden;
-  position: absolute; inset: 0;
+  position: relative;
   pointer-events: none;
 }
-.mmd-svg { transform-origin: 0 0; pointer-events: none; width: auto; height: auto; position: absolute; top: 0; left: 0; }
-.mmd-svg svg { max-width: none; height: auto; }
+.mmd-svg { transform-origin: 0 0; pointer-events: none; position: absolute; top: 0; left: 0; }
+.mmd-svg svg { max-width: none; display: block; }
+
 .mmd-empty { color: var(--text-secondary); font-size: 0.9rem; }
 .mmd-toolbar {
-  position: absolute; right: 18px; bottom: 18px; z-index: 5;
+  position: absolute; left: 68px; bottom: 15px; z-index: 5;
   display: flex; align-items: center; gap: 4px;
-  background: var(--bg-secondary); border: 1px solid var(--border-color);
-  border-radius: 12px; padding: 5px 8px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.25); backdrop-filter: blur(8px);
+  background: var(--bg-glass); border: 1px solid var(--border-color);
+  border-radius: 8px; padding: 5px 8px;
+  box-shadow: var(--shadow); backdrop-filter: blur(10px);
   pointer-events: auto;
 }
 .mmd-zoom { font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); min-width: 38px; text-align: center; }
@@ -273,7 +275,7 @@ body {
   .ms-topbar-right .toolbar { justify-content: flex-start !important; }
 }
 
-.dac-resizer {
+.cad-resizer {
   position: absolute;
   top: 0;
   right: -4px;
@@ -284,12 +286,12 @@ body {
   transition: background 0.2s;
 }
 
-.dac-resizer:hover {
+.cad-resizer:hover {
   background: var(--accent-blue);
   opacity: 0.5;
 }
 
-.dac-header {
+.cad-header {
   padding: 10px 16px;
   border-bottom: 1px solid var(--border-color);
   display: flex;
@@ -299,7 +301,7 @@ body {
   flex-shrink: 0;
 }
 
-.dac-header h3 {
+.cad-header h3 {
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--text-secondary);
@@ -323,14 +325,20 @@ body {
     cursor: crosshair !important;
 }
 
+/* Select tool: use default arrow cursor, not the ReactFlow grab hand */
+.canvas-area[data-tool="select"] .react-flow__pane {
+    cursor: default !important;
+}
+.canvas-area[data-tool="select"] .react-flow__pane:active {
+    cursor: default !important;
+}
+
 .canvas-area.theme-dark {
   background: radial-gradient(circle at center, #1a1c29 0%, #0f111a 100%);
 }
 
 .canvas-area.theme-light {
   background-color: var(--bg-primary);
-  background-image: radial-gradient(var(--border-color) 1px, transparent 1px);
-  background-size: 20px 20px;
 }
 
 .toolbar {
@@ -735,6 +743,26 @@ body {
   height: 10px;
   background: var(--accent-blue);
   border: 2px solid var(--bg-primary);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+/* Show handles when hovering the node */
+.react-flow__node:hover .react-flow__handle {
+  opacity: 1;
+}
+
+/* Keep handles visible when connecting (ReactFlow adds this class) */
+.react-flow__handle.connectingfrom,
+.react-flow__handle.connectingto,
+.react-flow__handle-connecting,
+.react-flow__handle-valid {
+  opacity: 1 !important;
+}
+
+/* When any connection is being dragged, show all handles as targets */
+.react-flow__renderer.connecting .react-flow__handle {
+  opacity: 1;
 }
 
 .react-flow__controls {
@@ -957,6 +985,48 @@ body {
   animation: fadeInPanel 0.2s ease;
 }
 
+/* C4 diagram contrast fixes for dark theme */
+[data-theme="dark"] .react-flow__node-custom svg .c4System rect,
+[data-theme="dark"] .react-flow__node-custom svg .c4Container rect,
+[data-theme="dark"] .react-flow__node-custom svg .c4Component rect,
+[data-theme="dark"] .react-flow__node-custom svg .c4Person rect,
+[data-theme="dark"] .react-flow__node-custom svg .c4Person circle,
+[data-theme="dark"] .react-flow__node-custom svg .c4Person ellipse {
+  stroke: #3b82f6 !important;
+}
+[data-theme="dark"] .react-flow__node-custom svg .c4SystemBoundary,
+[data-theme="dark"] .react-flow__node-custom svg .c4Boundary {
+  stroke: #64748b !important;
+  stroke-opacity: 0.9 !important;
+}
+[data-theme="dark"] .react-flow__node-custom svg .flowchart-link,
+[data-theme="dark"] .react-flow__node-custom svg .messageLine0,
+[data-theme="dark"] .react-flow__node-custom svg .messageLine1,
+[data-theme="dark"] .react-flow__node-custom svg path.er,
+[data-theme="dark"] .react-flow__node-custom svg line {
+  stroke: #94a3b8 !important;
+}
+[data-theme="dark"] .react-flow__node-custom svg .edgeLabel .label {
+  background: #1e293b !important;
+  color: #cbd5e1 !important;
+}
+[data-theme="dark"] .react-flow__node-custom svg .edgeLabel rect {
+  fill: #1e293b !important;
+  fill-opacity: 0.9 !important;
+}
+[data-theme="dark"] .react-flow__node-custom svg text {
+  fill: #e2e8f0;
+}
+/* Keep colored node labels readable — only override un-styled text */
+[data-theme="dark"] .react-flow__node-custom svg .cluster rect {
+  stroke: #3b82f6 !important;
+  fill: #1e293b !important;
+  fill-opacity: 0.5 !important;
+}
+[data-theme="dark"] .react-flow__node-custom svg .cluster text {
+  fill: #93c5fd !important;
+}
+
 @keyframes fadeInPanel {
   from {
     opacity: 0;
@@ -967,3 +1037,66 @@ body {
     transform: translateY(0);
   }
 }
+
+/* ── Cyberpunk theme glow ──────────────────────────────────────── */
+.mermaid-cyberpunk svg .node rect,
+.mermaid-cyberpunk svg .node circle,
+.mermaid-cyberpunk svg .node ellipse,
+.mermaid-cyberpunk svg .node polygon,
+.mermaid-cyberpunk svg .node path {
+  filter: drop-shadow(0 0 6px #ff00ff) drop-shadow(0 0 14px #ff00ff80);
+}
+.mermaid-cyberpunk svg .edgePath path,
+.mermaid-cyberpunk svg .flowchart-link {
+  filter: drop-shadow(0 0 4px #00ffff) drop-shadow(0 0 10px #00ffff80);
+  stroke: #00ffff !important;
+}
+.mermaid-cyberpunk svg text {
+  filter: drop-shadow(0 0 3px currentColor);
+}
+.mermaid-cyberpunk svg .cluster rect {
+  filter: drop-shadow(0 0 8px #ff00ff60);
+}
+.mermaid-cyberpunk svg .actor rect,
+.mermaid-cyberpunk svg .actor-line {
+  filter: drop-shadow(0 0 5px #ff00ff) drop-shadow(0 0 12px #ff00ff60);
+}
+.mermaid-cyberpunk svg .messageLine0,
+.mermaid-cyberpunk svg .messageLine1 {
+  stroke: #00ffff !important;
+  filter: drop-shadow(0 0 3px #00ffff);
+}
+
+/* ── Neon theme glow ───────────────────────────────────────────── */
+.mermaid-neon svg .node rect,
+.mermaid-neon svg .node circle,
+.mermaid-neon svg .node ellipse,
+.mermaid-neon svg .node polygon,
+.mermaid-neon svg .node path {
+  filter: drop-shadow(0 0 6px #00ff88) drop-shadow(0 0 14px #00ff8880);
+}
+.mermaid-neon svg .edgePath path,
+.mermaid-neon svg .flowchart-link {
+  filter: drop-shadow(0 0 4px #7700ff) drop-shadow(0 0 10px #7700ff80);
+  stroke: #7700ff !important;
+}
+.mermaid-neon svg text {
+  filter: drop-shadow(0 0 3px currentColor);
+}
+.mermaid-neon svg .cluster rect {
+  filter: drop-shadow(0 0 8px #00ff8860);
+}
+.mermaid-neon svg .actor rect,
+.mermaid-neon svg .actor-line {
+  filter: drop-shadow(0 0 5px #00ff88) drop-shadow(0 0 12px #00ff8860);
+}
+.mermaid-neon svg .messageLine0,
+.mermaid-neon svg .messageLine1 {
+  stroke: #7700ff !important;
+  filter: drop-shadow(0 0 3px #7700ff);
+}
+
+/* Apply theme class to the preview pane based on %%{init}%% in code */
+/* This is set via a data attribute on the preview container in the JSX */
+.mmd-theme-cyberpunk .mermaid-preview { }
+.mmd-theme-neon .mermaid-preview { }

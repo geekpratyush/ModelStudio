@@ -1,0 +1,392 @@
+[
+  {
+    "name": "Flowchart",
+    "type": "Flowchart",
+    "description": "Decision flow with branches and shapes (interactive canvas).",
+    "code": "flowchart TD\n  Start([\"Start\"]) --> Init[\"Initialize\"]\n  Init --> Cond{\"Valid input?\"}\n  Cond -->|Yes| Work[\"Process data\"]\n  Cond -->|No| Err[\"Log error\"]\n  Work --> Done([\"Finish\"])\n  Err --> Done\n\n  classDef good fill: #22c55e20,stroke: #15803d\n  classDef bad fill: #ef444420,stroke: #991b1b\n  class Done good\n  class Err bad"
+  },
+  {
+    "name": "Microservices",
+    "type": "Flowchart",
+    "description": "API gateway fanning out to services and stores.",
+    "code": "flowchart LR\n  Client([\"Client App\"]) --> GW[\"API Gateway\"]\n  subgraph svc [\"Services\"]\n    Auth[\"Auth Service\"]\n    Users[\"User Service\"]\n    Orders[\"Order Service\"]\n  end\n  GW --> Auth\n  GW --> Users\n  GW --> Orders\n  Users --> UDB[(\"User DB\")]\n  Orders --> ODB[(\"Order DB\")]\n  Orders -.->|events| Bus{{\"Event Bus\"}}\n  Bus -.-> Notify[\"Notification Service\"]\n\n  classDef store fill: #f59e0b20,stroke: #b45309\n  class UDB,ODB store"
+  },
+  {
+    "name": "CI/CD Pipeline",
+    "type": "Flowchart",
+    "description": "Build, test, and deploy with a failure branch.",
+    "code": "flowchart LR\n  Commit([\"Git Commit\"]) --> Build[\"Build Image\"]\n  Build --> Test{\"Tests pass?\"}\n  Test -->|Yes| Push[\"Push to Registry\"]\n  Test -->|No| Alert[\"Slack Alert\"]\n  Push --> Deploy[\"Deploy to K8s\"]\n  Deploy --> Done((\"Live\"))\n\n  classDef ok fill: #22c55e20,stroke: #15803d\n  classDef warn fill: #ef444420,stroke: #991b1b\n  class Done ok\n  class Alert warn"
+  },
+  {
+    "name": "Sequence Diagram",
+    "type": "Sequence",
+    "description": "Interaction between participants over time.",
+    "code": "sequenceDiagram\n  autonumber\n  participant U as User\n  participant A as API\n  participant DB as Database\n  U->>A: POST /login\n  A->>DB: SELECT user\n  DB-->>A: user row\n  A-->>U: 200 OK + token\n  Note over U,A: Session established"
+  },
+  {
+    "name": "Class Diagram",
+    "type": "Class",
+    "description": "Object-oriented structure with inheritance.",
+    "code": "classDiagram\n  class Animal {\n    +String name\n    +int age\n    +makeSound() void\n  }\n  class Dog {\n    +fetch() void\n  }\n  class Cat {\n    +scratch() void\n  }\n  Animal <|-- Dog\n  Animal <|-- Cat"
+  },
+  {
+    "name": "State Diagram",
+    "type": "State",
+    "description": "Lifecycle states and transitions.",
+    "code": "stateDiagram-v2\n  [*] --> Idle\n  Idle --> Loading: fetch\n  Loading --> Success: ok\n  Loading --> Error: fail\n  Success --> [*]\n  Error --> Idle: retry"
+  },
+  {
+    "name": "ER Diagram",
+    "type": "ER",
+    "description": "Entities and their relationships.",
+    "code": "erDiagram\n  CUSTOMER ||--o{ ORDER : places\n  ORDER ||--|{ LINE_ITEM : contains\n  CUSTOMER }|..|{ ADDRESS : uses\n  ORDER {\n    int id\n    date created\n  }"
+  },
+  {
+    "name": "User Journey",
+    "type": "Journey",
+    "description": "Experience and satisfaction across a task.",
+    "code": "journey\n  title My working day\n  section Go to work\n    Make tea: 5: Me\n    Drive to office: 3: Me\n  section At work\n    Do work: 1: Me, Cat\n    Lunch break: 5: Me"
+  },
+  {
+    "name": "Gantt Chart",
+    "type": "Gantt",
+    "description": "Project schedule with tasks and dependencies.",
+    "code": "gantt\n  title Project Schedule\n  dateFormat YYYY-MM-DD\n  section Design\n    Research      :done, des1, 2024-01-01, 7d\n    Wireframes    :active, des2, after des1, 5d\n  section Build\n    Development   :dev1, after des2, 14d\n    Testing       :dev2, after dev1, 7d"
+  },
+  {
+    "name": "Pie Chart",
+    "type": "Pie",
+    "description": "Proportional data as a pie.",
+    "code": "pie title Browser market share\n  \"Chrome\" : 64\n  \"Safari\" : 19\n  \"Edge\" : 5\n  \"Firefox\" : 3\n  \"Other\" : 9"
+  },
+  {
+    "name": "Requirement Diagram",
+    "type": "Requirement",
+    "description": "Requirements traced to design elements.",
+    "code": "requirementDiagram\n  requirement login_req {\n    id: 1\n    text: The system shall authenticate users.\n    risk: high\n    verifymethod: test\n  }\n  element auth_service {\n    type: simulation\n  }\n  auth_service - satisfies -> login_req"
+  },
+  {
+    "name": "Git Graph",
+    "type": "Git",
+    "description": "Branching and merge history.",
+    "code": "gitGraph\n  commit\n  branch develop\n  checkout develop\n  commit\n  commit\n  checkout main\n  merge develop\n  commit"
+  },
+  {
+    "name": "C4 Context",
+    "type": "C4",
+    "description": "System context: people and external systems.",
+    "code": "C4Context\n  title System Context — Internet Banking\n  Person(customer, \"Customer\", \"A bank customer\")\n  System(banking, \"Internet Banking\", \"Manage accounts online\")\n  System_Ext(email, \"E-mail System\", \"Sends notifications\")\n  Rel(customer, banking, \"Uses\")\n  Rel(banking, email, \"Sends e-mail using\")"
+  },
+  {
+    "name": "C4 Container",
+    "type": "C4",
+    "description": "Containers (apps, stores) inside a system.",
+    "code": "C4Container\n  title Container diagram — Internet Banking\n  Person(customer, \"Customer\", \"A bank customer\")\n  Container_Boundary(c1, \"Internet Banking\") {\n    Container(web, \"Web App\", \"React\", \"Delivers the UI\")\n    Container(api, \"API\", \"Java/Spring\", \"Business logic\")\n    ContainerDb(db, \"Database\", \"PostgreSQL\", \"Stores data\")\n  }\n  Rel(customer, web, \"Uses\", \"HTTPS\")\n  Rel(web, api, \"Calls\", \"JSON/HTTPS\")\n  Rel(api, db, \"Reads/Writes\", \"JDBC\")"
+  },
+  {
+    "name": "C4 Component",
+    "type": "C4",
+    "description": "Components within a single container.",
+    "code": "C4Component\n  title Component diagram — API\n  Container(spa, \"SPA\", \"React\")\n  Container_Boundary(api, \"API Application\") {\n    Component(sign, \"Sign In Controller\", \"Spring MVC\", \"Handles auth\")\n    Component(sec, \"Security Component\", \"Spring\", \"Validates credentials\")\n  }\n  Rel(spa, sign, \"Uses\", \"JSON/HTTPS\")\n  Rel(sign, sec, \"Uses\")"
+  },
+  {
+    "name": "C4 Dynamic",
+    "type": "C4",
+    "description": "Ordered runtime interactions.",
+    "code": "C4Dynamic\n  title Dynamic diagram — Sign In\n  Person(customer, \"Customer\")\n  Container(web, \"Web App\", \"React\")\n  Container(api, \"API\", \"Spring\")\n  ContainerDb(db, \"Database\", \"PostgreSQL\")\n  Rel(customer, web, \"Submits credentials\")\n  Rel(web, api, \"Validates\", \"JSON/HTTPS\")\n  Rel(api, db, \"Looks up user\", \"JDBC\")"
+  },
+  {
+    "name": "C4 Deployment",
+    "type": "C4",
+    "description": "How containers map to infrastructure.",
+    "code": "C4Deployment\n  title Deployment diagram — Internet Banking\n  Deployment_Node(aws, \"AWS\", \"Cloud\") {\n    Deployment_Node(ec2, \"EC2\", \"Ubuntu\") {\n      Container(api, \"API\", \"Spring Boot\")\n    }\n    Deployment_Node(rds, \"RDS\", \"Managed\") {\n      ContainerDb(db, \"Database\", \"PostgreSQL\")\n    }\n  }\n  Rel(api, db, \"Reads/Writes\", \"JDBC\")"
+  },
+  {
+    "name": "C4 System Landscape",
+    "type": "C4",
+    "description": "Enterprise-wide landscape: all systems, teams, and external dependencies at a glance.",
+    "code": "C4Context\n  title System Landscape — Enterprise Platform\n\n  Enterprise_Boundary(e0, \"Enterprise\") {\n    Person(devteam, \"Engineering Team\", \"Builds and operates all internal systems\")\n    Person(bizuser, \"Business User\", \"Finance, operations, and support staff\")\n\n    System(crm, \"CRM Platform\", \"Customer relationship management and sales pipeline\")\n    System(erp, \"ERP System\", \"Finance, HR, and supply chain management\")\n    System(iam, \"Identity Platform\", \"SSO, RBAC, and access management for all systems\")\n    System(data, \"Data Platform\", \"Centralised analytics, BI, and data warehouse\")\n    System(notif, \"Notification Service\", \"Unified email, SMS, and push delivery\")\n  }\n\n  Person_Ext(customer, \"Customer\", \"External end user accessing products\")\n  System_Ext(payment, \"Payment Provider\", \"Stripe — card processing and payouts\")\n  System_Ext(email, \"Email Provider\", \"SendGrid — transactional email delivery\")\n  System_Ext(sms, \"SMS Gateway\", \"Twilio — SMS and voice notifications\")\n  System_Ext(erp_ext, \"Legacy Mainframe\", \"On-prem GL and payroll system\")\n\n  Rel(customer, crm, \"Interacts with\", \"HTTPS\")\n  Rel(crm, iam, \"Authenticates via\", \"OIDC\")\n  Rel(erp, iam, \"Authenticates via\", \"OIDC\")\n  Rel(crm, payment, \"Processes payments\", \"REST\")\n  Rel(crm, notif, \"Triggers notifications\", \"async\")\n  Rel(erp, notif, \"Sends alerts\", \"async\")\n  Rel(notif, email, \"Delivers via\", \"SMTP\")\n  Rel(notif, sms, \"Delivers via\", \"REST\")\n  Rel(crm, data, \"Streams events to\", \"Kafka\")\n  Rel(erp, data, \"Feeds data to\", \"JDBC\")\n  Rel(erp, erp_ext, \"Syncs ledger\", \"MQ\")\n  Rel(devteam, crm, \"Operates\")\n  Rel(bizuser, erp, \"Uses\")\n  Rel(bizuser, data, \"Queries reports\")\n\n  UpdateLayoutConfig($c4ShapeInRow=\"4\", $c4BoundaryInRow=\"1\")"
+  },
+  {
+    "name": "C4 Code Level",
+    "type": "C4",
+    "description": "Level 4 — class structure of a single component (Order Service), showing dependencies and interfaces.",
+    "code": "classDiagram\n  direction TB\n\n  class OrderService {\n    -repo: OrderRepository\n    -payment: PaymentGateway\n    -events: EventBus\n    -inventory: InventoryClient\n    +createOrder(req: CreateOrderRequest) Order\n    +cancelOrder(id: UUID) void\n    +getOrder(id: UUID) Order\n    -validateStock(lines: List~OrderLine~) void\n  }\n\n  class Order {\n    +id: UUID\n    +customerId: UUID\n    +status: OrderStatus\n    +lines: List~OrderLine~\n    +total: Money\n    +place() void\n    +cancel() void\n    +addLine(line: OrderLine) void\n  }\n\n  class OrderLine {\n    +productId: UUID\n    +quantity: int\n    +unitPrice: Money\n    +lineTotal() Money\n  }\n\n  class OrderStatus {\n    <<enumeration>>\n    PENDING\n    CONFIRMED\n    SHIPPED\n    DELIVERED\n    CANCELLED\n  }\n\n  class OrderRepository {\n    <<interface>>\n    +save(order: Order) Order\n    +findById(id: UUID) Order\n    +findByCustomer(id: UUID) List~Order~\n  }\n\n  class PaymentGateway {\n    <<interface>>\n    +charge(orderId: UUID, amount: Money) PaymentResult\n    +refund(paymentId: UUID) void\n  }\n\n  class EventBus {\n    <<interface>>\n    +publish(event: DomainEvent) void\n  }\n\n  class InventoryClient {\n    <<interface>>\n    +reserve(productId: UUID, qty: int) boolean\n    +release(productId: UUID, qty: int) void\n  }\n\n  OrderService --> OrderRepository : uses\n  OrderService --> PaymentGateway : uses\n  OrderService --> EventBus : publishes to\n  OrderService --> InventoryClient : checks\n  OrderService ..> Order : creates\n  Order *-- OrderLine : contains\n  Order --> OrderStatus : has"
+  },
+  {
+    "name": "C4 Notation Reference",
+    "type": "C4",
+    "description": "Visual reference of all C4 notation elements: Person, System, Container, Component, Database, Queue, and boundary types.",
+    "code": "C4Component\n  title C4 Notation Reference — All Element Types\n\n  Person(person, \"Person\", \"An internal user or operator\")\n  Person_Ext(person_ext, \"Person (External)\", \"An external user or customer\")\n\n  System_Boundary(sb, \"System Boundary\") {\n    System(system, \"Software System\", \"An internal system you own\")\n    System_Db(system_db, \"System (Database)\", \"A database system you own\")\n    System_Queue(system_q, \"System (Queue)\", \"A message queue you own\")\n  }\n\n  System_Ext(system_ext, \"System (External)\", \"A third-party or legacy system\")\n  System_Ext_Db(system_ext_db, \"External Database\", \"A database you don't own\")\n  System_Ext_Queue(system_ext_q, \"External Queue\", \"A queue you don't own\")\n\n  Container_Boundary(cb, \"Container Boundary\") {\n    Container(container, \"Container\", \"Tech\", \"A deployable unit — app, service, or API\")\n    ContainerDb(container_db, \"Container (DB)\", \"PostgreSQL\", \"A database container\")\n    ContainerQueue(container_q, \"Container (Queue)\", \"Kafka\", \"A message queue container\")\n    Component(component, \"Component\", \"Spring\", \"A logical grouping of code within a container\")\n    ComponentDb(component_db, \"Component (DB)\", \"JDBC\", \"A DB-access component\")\n  }\n\n  Rel(person, system, \"Uses\", \"HTTPS\")\n  Rel(person_ext, system_ext, \"Uses\")\n  Rel(system, container, \"Delegates to\")\n  Rel(container, container_db, \"Reads/Writes\", \"SQL\")\n  Rel(container, container_q, \"Publishes\", \"AMQP\")\n  Rel(container, component, \"Routes to\")\n  Rel(component, component_db, \"Queries\")\n  BiRel(system, system_ext, \"Integrates with\")\n\n  UpdateLayoutConfig($c4ShapeInRow=\"3\", $c4BoundaryInRow=\"2\")"
+  },
+  {
+    "name": "Mindmap",
+    "type": "Mindmap",
+    "description": "Radial hierarchy of ideas.",
+    "code": "mindmap\n  root((Model Studio))\n    Diagrams\n      Flowchart\n      Sequence\n      Class\n    Editing\n      Drag & drop\n      Live code\n    Export\n      PNG\n      SVG"
+  },
+  {
+    "name": "Timeline",
+    "type": "Timeline",
+    "description": "Events along a chronological axis.",
+    "code": "timeline\n  title History of Social Media\n  2002 : LinkedIn\n  2004 : Facebook : Flickr\n  2005 : YouTube\n  2006 : Twitter"
+  },
+  {
+    "name": "Quadrant Chart",
+    "type": "Quadrant",
+    "description": "Items plotted across two axes.",
+    "code": "quadrantChart\n  title Reach vs Engagement\n  x-axis Low Reach --> High Reach\n  y-axis Low Engagement --> High Engagement\n  quadrant-1 Expand\n  quadrant-2 Promote\n  quadrant-3 Re-evaluate\n  quadrant-4 Improve\n  Campaign A: [0.3, 0.6]\n  Campaign B: [0.45, 0.23]\n  Campaign C: [0.57, 0.69]\n  Campaign D: [0.78, 0.34]"
+  },
+  {
+    "name": "XY Chart",
+    "type": "XY",
+    "description": "Bar and line series on x/y axes.",
+    "code": "xychart-beta\n  title \"Monthly Revenue\"\n  x-axis [jan, feb, mar, apr, may, jun]\n  y-axis \"Revenue ($)\" 0 --> 11000\n  bar [5000, 6000, 7500, 8200, 9500, 10500]\n  line [5000, 6000, 7500, 8200, 9500, 10500]"
+  },
+  {
+    "name": "Block Diagram",
+    "type": "Block",
+    "description": "Grid-aligned blocks and connections.",
+    "code": "block-beta\n  columns 3\n  Frontend[\"Frontend\"] API[\"API\"] DB[(\"Database\")]\n  Frontend --> API\n  API --> DB"
+  },
+  {
+    "name": "Packet Diagram",
+    "type": "Packet",
+    "description": "Byte/bit layout of a network packet.",
+    "code": "packet-beta\n  0-15: \"Source Port\"\n  16-31: \"Destination Port\"\n  32-63: \"Sequence Number\"\n  64-95: \"Acknowledgment Number\"\n  96-99: \"Data Offset\"\n  100-111: \"Flags\"\n  112-127: \"Window\""
+  },
+  {
+    "name": "Architecture Diagram",
+    "type": "Architecture",
+    "description": "Cloud services grouped and connected.",
+    "code": "architecture-beta\n  group api(cloud)[API]\n  service db(database)[Database] in api\n  service disk1(disk)[Storage] in api\n  service server(server)[Server] in api\n  db:L -- R:server\n  disk1:T -- B:server"
+  },
+  {
+    "name": "Sankey Diagram",
+    "type": "Sankey",
+    "description": "Flow magnitudes between nodes.",
+    "code": "sankey-beta\n  Revenue,Salaries,450\n  Revenue,Marketing,120\n  Revenue,Operations,200\n  Revenue,Profit,230\n  Marketing,Ads,80\n  Marketing,Events,40"
+  },
+  {
+    "name": "Kanban Board",
+    "type": "Kanban",
+    "description": "Work items across board columns.",
+    "code": "kanban\n  Todo\n    t1[Design new logo]\n    t2[Write documentation]\n  In Progress\n    t3[Build live preview]\n  Done\n    t4[Ship v1 release]"
+  },
+  {
+    "name": "Radar Chart",
+    "type": "Radar",
+    "description": "Multi-axis comparison of profiles.",
+    "code": "radar-beta\n  title Skill Comparison\n  axis speed[\"Speed\"], power[\"Power\"], range[\"Range\"], defense[\"Defense\"], magic[\"Magic\"]\n  curve hero[\"Hero\"]{80, 60, 70, 50, 40}\n  curve rival[\"Rival\"]{50, 90, 40, 80, 70}\n  max 100"
+  },
+  {
+    "name": "AWS Cloud Architecture",
+    "type": "Flowchart",
+    "description": "Multi-AZ AWS deployment with ALB, ECS, Aurora, ElastiCache, and CDN.",
+    "code": "flowchart LR\n  User([\"User Browser\"]) --> CDN[\"CloudFront CDN\"]\n  CDN --> ALB[\"Application\\nLoad Balancer\"]\n\n  subgraph vpc [\"VPC — us-east-1\"]\n    subgraph pub [\"Public Subnets\"]\n      ALB\n      NAT[\"NAT Gateway\"]\n    end\n    subgraph app [\"App Tier — Private\"]\n      ECS1[\"ECS Container A\"]\n      ECS2[\"ECS Container B\"]\n    end\n    subgraph data [\"Data Tier — Isolated\"]\n      RDS[(\"Aurora PostgreSQL Primary\")]\n      RDSr[(\"Aurora PostgreSQL Read Replica\")]\n      Cache[(\"ElastiCache Redis Cluster\")]\n    end\n  end\n\n  S3[(\"S3 Static Assets\")] --- CDN\n  ALB --> ECS1 & ECS2\n  ECS1 & ECS2 --> RDS & Cache\n  RDS --> RDSr\n  ECS1 & ECS2 --> NAT --> Internet([\"Internet\"])\n\n  classDef aws fill: #ff990020,stroke: #ff9900\n  classDef infra fill: #2563eb20,stroke: #2563eb\n  classDef datastore fill: #05996020,stroke: #059669\n  classDef user fill: #7c3aed20,stroke: #7c3aed\n  class CDN,ALB,NAT aws\n  class ECS1,ECS2 infra\n  class RDS,RDSr,Cache,S3 datastore\n  class User user"
+  },
+  {
+    "name": "Kubernetes Platform",
+    "type": "Flowchart",
+    "description": "End-to-end K8s setup: GitOps, namespaces, HPA, Ingress, Vault, and Prometheus.",
+    "code": "flowchart TD\n  Dev[\"Developer\"] -->|git push| Repo[\"Git Repository\"]\n  Repo -->|webhook| CI[\"CI Pipeline\\nGitHub Actions\"]\n  CI -->|build and scan| Registry[\"Container Registry\"]\n  CI -->|apply manifests| K8s\n\n  subgraph K8s [\"Kubernetes Cluster\"]\n    subgraph ns_app [\"namespace: app\"]\n      API[\"API Deployment\\n3 replicas\"]\n      Worker[\"Worker Deployment\\n2 replicas\"]\n      HPA[\"HorizontalPodAutoscaler\"]\n    end\n    subgraph ns_infra [\"namespace: infra\"]\n      Ingress[\"NGINX Ingress\"]\n      Vault[\"Vault Agent Injector\"]\n    end\n    subgraph ns_obs [\"namespace: observability\"]\n      Prom[\"Prometheus\"]\n      Grafana[\"Grafana\"]\n    end\n  end\n\n  Registry --> API & Worker\n  Ingress --> API\n  HPA --> API\n  API --> Worker\n  Prom --> Grafana\n  API & Worker --> Prom\n  Vault --> API & Worker\n\n  classDef ci fill: #2563eb20,stroke: #2563eb\n  classDef wl fill: #05996020,stroke: #059669\n  classDef infra fill: #7c3aed20,stroke: #7c3aed\n  classDef obs fill: #d9770620,stroke: #d97706\n  class CI,Registry ci\n  class API,Worker,HPA wl\n  class Ingress,Vault infra\n  class Prom,Grafana obs"
+  },
+  {
+    "name": "Event-Driven Microservices",
+    "type": "Flowchart",
+    "description": "Kafka-based async microservices with per-service databases and API gateway.",
+    "code": "flowchart LR\n  Client([\"Client\"]) --> GW[\"API Gateway\\n(Kong)\"]\n\n  subgraph services [\"Core Services\"]\n    Order[\"Order Service\"]\n    Inventory[\"Inventory Service\"]\n    Payment[\"Payment Service\"]\n    Notify[\"Notification Service\"]\n    Fulfil[\"Fulfillment Service\"]\n  end\n\n  subgraph bus [\"Event Bus — Apache Kafka\"]\n    T1{{\"order.created\"}}\n    T2{{\"payment.processed\"}}\n    T3{{\"inventory.reserved\"}}\n  end\n\n  subgraph stores [\"Data Stores\"]\n    ODB[(\"Order DB PostgreSQL\")]\n    IDB[(\"Inventory DB MySQL\")]\n    PDB[(\"Payment DB PostgreSQL\")]\n    RedisCache[(\"Cache Redis\")]\n  end\n\n  GW --> Order & Inventory & Payment\n  Order --> ODB\n  Payment --> PDB\n  Inventory --> IDB\n  GW --> RedisCache\n\n  Order -->|publish| T1\n  Payment -->|publish| T2\n  Inventory -->|publish| T3\n\n  T1 -->|consume| Payment & Inventory\n  T2 -->|consume| Fulfil & Notify\n  T3 -->|consume| Fulfil\n\n  classDef svc fill: #2563eb20,stroke: #2563eb\n  classDef topic fill: #7c3aed20,stroke: #7c3aed\n  classDef db fill: #05996020,stroke: #059669\n  class Order,Inventory,Payment,Notify,Fulfil svc\n  class T1,T2,T3 topic\n  class ODB,IDB,PDB,RedisCache db"
+  },
+  {
+    "name": "Zero Trust Security",
+    "type": "Flowchart",
+    "description": "Zero-trust network access with policy engine and continuous verification signals.",
+    "code": "flowchart LR\n  User[\"User\\n(Any device)\"] --> IdP[\"Identity Provider\\n(Okta / AzureAD)\"]\n  IdP -->|MFA verified| PEP[\"Policy Enforcement\\nPoint\"]\n  PEP -->|request context| PE[\"Policy Engine\\n(OPA)\"]\n  PE -->|trust score| PEP\n  PEP -->|allowed| AppA[\"Internal App A\"]\n  PEP -->|allowed| AppB[\"Internal App B\"]\n  PEP -->|denied| Block[\"Blocked\"]\n\n  subgraph signals [\"Continuous Verification\"]\n    DevPos[\"Device Posture\\n(EDR / MDM)\"]\n    NetCtx[\"Network Context\\n(IP Reputation)\"]\n    Beh[\"Behaviour Analytics\\n(UEBA)\"]\n  end\n\n  DevPos & NetCtx & Beh --> PE\n\n  AppA --> DB1[(\"Sensitive Data Store\")]\n  AppB --> DB2[(\"PII Database\")]\n  DB1 & DB2 --> DLP[\"DLP Scanner\"]\n\n  classDef auth fill: #2563eb20,stroke: #2563eb\n  classDef signal fill: #d9770620,stroke: #d97706\n  classDef appcls fill: #05996020,stroke: #059669\n  classDef deny fill: #dc262620,stroke: #dc2626\n  class IdP,PEP,PE auth\n  class DevPos,NetCtx,Beh signal\n  class AppA,AppB,DB1,DB2,DLP appcls\n  class Block deny"
+  },
+  {
+    "name": "DevSecOps Pipeline",
+    "type": "Flowchart",
+    "description": "Security-gated CI/CD: SAST, SCA, container scanning, signing, and GitOps deploy.",
+    "code": "flowchart LR\n  Dev[\"Developer\"] -->|commit| Repo[\"Git Repository\"]\n  Repo -->|PR trigger| Gates\n\n  subgraph Gates [\"Quality and Security Gates\"]\n    Lint[\"Lint + Format\"]\n    SAST[\"SAST\\n(Semgrep)\"]\n    Tests[\"Unit + Integration\\nTests\"]\n    SCA[\"Dependency Scan\\n(Snyk)\"]\n  end\n\n  Lint & SAST & Tests & SCA -->|all pass| Build[\"Container Build\\n(Buildkit)\"]\n  Build --> ImgScan[\"Image Scan\\n(Trivy)\"]\n  ImgScan -->|clean| Sign[\"Image Sign\\n(Cosign)\"]\n  Sign --> Registry[\"OCI Registry\\n(Harbor)\"]\n  Registry -->|GitOps| ArgoCD[\"ArgoCD Sync\"]\n  ArgoCD --> Staging[\"Staging Kubernetes\"]\n  Staging --> DAST[\"DAST\\n(OWASP ZAP)\"]\n  DAST -->|approved| Prod[\"Production Kubernetes\"]\n  Prod --> Monitor[\"Grafana Observability\"]\n\n  classDef dev fill: #2563eb20,stroke: #2563eb\n  classDef sec fill: #dc262620,stroke: #dc2626\n  classDef build fill: #05996020,stroke: #059669\n  classDef deploy fill: #d9770620,stroke: #d97706\n  class Dev,Repo dev\n  class Lint,SAST,Tests,SCA,ImgScan,Sign,DAST sec\n  class Build,Registry build\n  class ArgoCD,Staging,Prod,Monitor deploy"
+  },
+  {
+    "name": "Data Lakehouse",
+    "type": "Flowchart",
+    "description": "Bronze-Silver-Gold lakehouse with Spark, dbt, Snowflake, and BI serving.",
+    "code": "flowchart LR\n  subgraph sources [\"Data Sources\"]\n    OLTP[\"Operational DBs\\nPostgreSQL / MySQL\"]\n    Streams[\"Event Streams\\nKafka\"]\n    SaaS[\"SaaS APIs\\nSalesforce / Stripe\"]\n  end\n\n  subgraph ingestion [\"Ingestion\"]\n    CDC[\"Change Data Capture\\nDebezium\"]\n    Batch[\"Batch Ingestion\\nApache Spark\"]\n    APIConn[\"API Connectors\\nAirbyte\"]\n  end\n\n  subgraph lake [\"Data Lake — S3 / ADLS\"]\n    Bronze[\"Bronze Layer\\nRaw Parquet\"]\n    Silver[\"Silver Layer\\nCleansed Delta\"]\n    Gold[\"Gold Layer\\nAggregated Delta\"]\n  end\n\n  subgraph serve [\"Serving\"]\n    DWH[\"Data Warehouse\\nSnowflake\"]\n    Search[\"Search Index\\nOpenSearch\"]\n    ML[\"Feature Store\\nMLflow\"]\n  end\n\n  OLTP --> CDC --> Bronze\n  Streams --> Batch --> Bronze\n  SaaS --> APIConn --> Bronze\n  Bronze --> Batch --> Silver\n  Silver --> Gold\n  Gold --> DWH & Search & ML\n  DWH --> BI[\"BI Dashboards\\nLooker / Tableau\"]\n  ML --> DS[\"Data Scientists\"]\n\n  classDef src fill: #2563eb20,stroke: #2563eb\n  classDef ing fill: #d9770620,stroke: #d97706\n  classDef bronze fill: #7c3aed20,stroke: #7c3aed\n  classDef silver fill: #3b82f620,stroke: #3b82f6\n  classDef goldcls fill: #d9770620,stroke: #d97706\n  classDef svc fill: #05996020,stroke: #059669\n  class OLTP,Streams,SaaS src\n  class CDC,Batch,APIConn ing\n  class Bronze bronze\n  class Silver silver\n  class Gold goldcls\n  class DWH,Search,ML,BI,DS svc"
+  },
+  {
+    "name": "Real-Time Analytics Pipeline",
+    "type": "Flowchart",
+    "description": "Kafka to Flink / KStreams to Druid / ClickHouse to GraphQL API for live dashboards.",
+    "code": "flowchart LR\n  subgraph prod [\"Event Producers\"]\n    WebApp[\"Web Application\"]\n    MobileApp[\"Mobile App\"]\n    BackendSvc[\"Backend Services\"]\n  end\n\n  subgraph stream [\"Streaming Layer\"]\n    Kafka[\"Apache Kafka\"]\n    Schema[\"Schema Registry\\nAvro / Protobuf\"]\n  end\n\n  subgraph process [\"Stream Processing\"]\n    Flink[\"Apache Flink\\nCEP + Windowing\"]\n    KStreams[\"Kafka Streams\\nAggregations\"]\n  end\n\n  subgraph store [\"Analytical Stores\"]\n    Druid[\"Apache Druid\\nSub-second OLAP\"]\n    ClickHouse[\"ClickHouse\\nAnalytical Queries\"]\n  end\n\n  subgraph serving [\"Serving\"]\n    API[\"Query API GraphQL\"]\n    Dashboard[\"Real-Time Dashboards\"]\n    AlertEngine[\"Alert Engine\\nML Thresholds\"]\n  end\n\n  WebApp & MobileApp & BackendSvc --> Kafka\n  Kafka --> Schema --> Flink & KStreams\n  Flink --> Druid & AlertEngine\n  KStreams --> ClickHouse\n  Druid & ClickHouse --> API --> Dashboard\n\n  classDef producer fill: #2563eb20,stroke: #2563eb\n  classDef streaming fill: #7c3aed20,stroke: #7c3aed\n  classDef proc fill: #05996020,stroke: #059669\n  classDef storecls fill: #d9770620,stroke: #d97706\n  classDef svc fill: #be185d20,stroke: #be185d\n  class WebApp,MobileApp,BackendSvc producer\n  class Kafka,Schema streaming\n  class Flink,KStreams proc\n  class Druid,ClickHouse storecls\n  class API,Dashboard,AlertEngine svc"
+  },
+  {
+    "name": "Incident Response Runbook",
+    "type": "Flowchart",
+    "description": "SEV-1/2/3 triage, war room, investigation, fix verification, and PIR process.",
+    "code": "flowchart TD\n  Alert[\"Alert Fired\\nPagerDuty / OpsGenie\"] --> Ack[\"On-call Engineer\\nAcknowledges\"]\n  Ack --> Sev{\"Severity?\"}\n\n  Sev -->|SEV-1 Customer Impact| War[\"Open War Room\\nZoom + Slack\"]\n  Sev -->|SEV-2 Degraded| Inv[\"Investigate\"]\n  Sev -->|SEV-3 Minor| Ticket[\"Create Ticket\\n& Monitor\"]\n\n  War --> IC[\"Assign Incident Commander\"]\n  IC --> Diag[\"Diagnose\\nLogs + Traces + Metrics\"]\n  Inv --> Diag\n\n  Diag --> Root{\"Root Cause\\nFound?\"}\n  Root -->|Yes| Fix[\"Apply Fix / Rollback\\n/ Feature Flag Off\"]\n  Root -->|No| Esc[\"Escalate to\\nDomain Expert\"]\n  Esc --> Diag\n\n  Fix --> Verify[\"Verify Resolution\\nMonitor 10 min\"]\n  Verify --> OK{\"Resolved?\"}\n  OK -->|Yes| Comms[\"Post Resolution\\nCommunication\"]\n  OK -->|No| Diag\n\n  Comms --> PIR[\"Post-Incident Review\\nwithin 48h\"]\n  PIR --> Actions[\"Track Action Items\"]\n  Ticket --> Actions\n\n  classDef sev1 fill: #dc262620,stroke: #dc2626\n  classDef sev2 fill: #d9770620,stroke: #d97706\n  classDef process fill: #2563eb20,stroke: #2563eb\n  classDef good fill: #05996020,stroke: #059669\n  class Alert,War,IC sev1\n  class Sev,Root,OK sev2\n  class Ack,Inv,Diag,Fix,Esc,Verify,Comms process\n  class PIR,Actions,Ticket good"
+  },
+  {
+    "name": "OAuth 2.0 PKCE Flow",
+    "type": "Sequence",
+    "description": "Full PKCE authorization code flow: browser, auth server, resource server, token store.",
+    "code": "sequenceDiagram\n  autonumber\n  actor User\n  participant Browser\n  participant AS as Authorization Server\n  participant RS as Resource Server\n  participant TS as Token Store\n\n  User->>Browser: Click Sign In\n  Browser->>Browser: Generate code_verifier + code_challenge (S256)\n  Browser->>AS: GET /authorize?response_type=code&code_challenge=...&scope=openid profile\n  AS->>User: Render login + MFA prompt\n  User->>AS: Submit credentials + OTP\n  AS->>AS: Validate, create auth_code (TTL 60s)\n  AS->>Browser: 302 to callback?code=auth_code&state=...\n  Browser->>AS: POST /token {code, code_verifier, client_id}\n  AS->>AS: Verify code_challenge == S256(code_verifier)\n  AS->>TS: Store hashed refresh_token (TTL 90d)\n  AS->>Browser: access_token JWT (15min) + refresh_token\n  Browser->>RS: GET /api/resource Authorization: Bearer JWT\n  RS->>RS: Verify JWT signature + expiry locally\n  RS-->>Browser: 200 OK + data\n  Browser->>User: Render protected content\n\n  Note over Browser,AS: PKCE prevents authorization code injection attacks"
+  },
+  {
+    "name": "Payment Processing Flow",
+    "type": "Sequence",
+    "description": "End-to-end payment: customer, merchant, payment gateway, card network, bank.",
+    "code": "sequenceDiagram\n  autonumber\n  actor Customer\n  participant Merchant\n  participant Gateway as Payment Gateway\n  participant Network as Card Network\n  participant IssuerBank as Issuer Bank\n  participant Ledger\n\n  Customer->>Merchant: Submit payment (card + CVV)\n  Merchant->>Gateway: POST /charge {amount, currency, card_token}\n  Gateway->>Gateway: Tokenise PAN (PCI DSS)\n  Gateway->>Network: Authorization Request (ISO 8583)\n  Network->>IssuerBank: Forward auth request\n  IssuerBank->>IssuerBank: Check balance, fraud score, 3DS if needed\n  IssuerBank-->>Network: Auth response + approval_code\n  Network-->>Gateway: Forwarded response\n  Gateway-->>Merchant: {status: approved, auth_code}\n  Merchant-->>Customer: Order confirmed\n\n  Note over Gateway,Network: Settlement runs in batch T+1\n  Gateway->>Network: Batch settlement file\n  Network->>IssuerBank: Debit cardholder account\n  IssuerBank->>Ledger: Post transaction\n  Network-->>Gateway: Settlement confirmation\n  Gateway-->>Merchant: Funds deposited"
+  },
+  {
+    "name": "Digital Banking — C4 Context",
+    "type": "C4",
+    "description": "System context for a digital banking platform with external systems and personas.",
+    "code": "C4Context\n  title System Context — Digital Banking Platform\n\n  Person(retail, \"Retail Customer\", \"Individual banking customer using web and mobile apps\")\n  Person(corp, \"Corporate User\", \"Treasury and finance manager for business accounts\")\n  Person(ops, \"Operations Team\", \"Bank staff for case management and compliance\")\n\n  System(banking, \"Digital Banking Platform\", \"Core banking, payments, lending, and investment products\")\n\n  System_Ext(swift, \"SWIFT Network\", \"International wire transfer messaging (ISO 20022)\")\n  System_Ext(card, \"Card Networks\", \"Visa/Mastercard authorization and settlement (ISO 8583)\")\n  System_Ext(kyc, \"KYC Provider\", \"Identity verification and AML screening\")\n  System_Ext(open, \"Open Banking APIs\", \"PSD2 / FDX compliant third-party access\")\n  System_Ext(core, \"Core Banking System\", \"Legacy mainframe — account ledger\")\n  System_Ext(fraud, \"Fraud Detection Engine\", \"Real-time ML transaction scoring\")\n\n  Rel(retail, banking, \"Manages accounts, payments, cards\", \"HTTPS / Mobile SDK\")\n  Rel(corp, banking, \"Treasury management, bulk payments\", \"HTTPS / API\")\n  Rel(ops, banking, \"Case management, reporting\", \"Internal portal\")\n  Rel(banking, swift, \"International transfers\", \"ISO 20022\")\n  Rel(banking, card, \"Card authorisations\", \"ISO 8583\")\n  Rel(banking, kyc, \"Identity on-boarding\", \"REST\")\n  Rel(banking, open, \"Open finance data\", \"OAuth 2.0 / REST\")\n  Rel(banking, core, \"Ledger reads and posts\", \"MQ / JDBC\")\n  Rel(banking, fraud, \"Score every transaction\", \"gRPC\")"
+  },
+  {
+    "name": "SaaS Multi-Tenant — C4 Container",
+    "type": "C4",
+    "description": "Container diagram for a schema-per-tenant SaaS platform with BFF, identity, and async workers.",
+    "code": "C4Container\n  title Container Diagram — SaaS Multi-Tenant Platform\n\n  Person(admin, \"Tenant Admin\")\n  Person(user, \"End User\")\n\n  Container_Boundary(platform, \"SaaS Platform\") {\n    Container(web, \"Web Application\", \"React + TypeScript\", \"SPA served via CDN\")\n    Container(bff, \"BFF / API Gateway\", \"Node.js\", \"Per-tenant routing, rate limiting, auth\")\n    Container(identity, \"Identity Service\", \"Keycloak\", \"OIDC with tenant isolation\")\n    Container(core, \"Core Service\", \"Java / Spring Boot\", \"Business logic, multi-tenant aware\")\n    Container(analytics, \"Analytics Service\", \"Python / FastAPI\", \"Usage metrics, reporting\")\n    Container(worker, \"Background Worker\", \"Go\", \"Async jobs, email, webhooks\")\n    ContainerDb(pg, \"Tenant Database\", \"PostgreSQL (schema-per-tenant)\", \"Isolated data per tenant\")\n    ContainerDb(redis, \"Cache / Session\", \"Redis Cluster\", \"Session tokens, feature flags\")\n    ContainerDb(s3, \"Object Storage\", \"S3 / Minio\", \"Tenant file uploads\")\n  }\n\n  Rel(admin, web, \"Manages configuration\", \"HTTPS\")\n  Rel(user, web, \"Uses application\", \"HTTPS\")\n  Rel(web, identity, \"Authenticates\", \"OIDC\")\n  Rel(web, bff, \"API calls\", \"JSON / HTTPS\")\n  Rel(bff, core, \"Routes requests\", \"gRPC\")\n  Rel(bff, analytics, \"Analytics queries\", \"REST\")\n  Rel(core, pg, \"Reads/Writes\", \"JDBC\")\n  Rel(core, redis, \"Caches\", \"Redis protocol\")\n  Rel(core, worker, \"Enqueues jobs\", \"AMQP\")\n  Rel(worker, s3, \"Stores files\", \"S3 API\")"
+  },
+  {
+    "name": "E-Commerce Data Model",
+    "type": "ER",
+    "description": "Complete e-commerce ER schema: Customer, Order, Product, Payment, Category.",
+    "code": "erDiagram\n  CUSTOMER {\n    uuid id PK\n    string email UK\n    string full_name\n    string phone\n    timestamp created_at\n    timestamp deleted_at\n  }\n  ADDRESS {\n    uuid id PK\n    uuid customer_id FK\n    string line1\n    string city\n    string country_code\n    string postal_code\n    boolean is_default\n  }\n  CATEGORY {\n    uuid id PK\n    uuid parent_id FK\n    string name\n    string slug UK\n  }\n  PRODUCT {\n    uuid id PK\n    uuid category_id FK\n    string sku UK\n    string name\n    numeric price\n    int stock_qty\n    boolean is_active\n  }\n  ORDER {\n    uuid id PK\n    uuid customer_id FK\n    uuid shipping_address_id FK\n    string status\n    numeric total\n    timestamp placed_at\n    timestamp fulfilled_at\n  }\n  ORDER_LINE {\n    uuid id PK\n    uuid order_id FK\n    uuid product_id FK\n    int quantity\n    numeric unit_price\n    numeric line_total\n  }\n  PAYMENT {\n    uuid id PK\n    uuid order_id FK\n    string provider\n    string provider_ref UK\n    string status\n    numeric amount\n    string currency\n    timestamp paid_at\n  }\n\n  CUSTOMER ||--o{ ADDRESS : \"has\"\n  CUSTOMER ||--o{ ORDER : \"places\"\n  ORDER ||--|{ ORDER_LINE : \"contains\"\n  ORDER ||--|| ADDRESS : \"ships to\"\n  ORDER ||--o{ PAYMENT : \"paid via\"\n  ORDER_LINE }o--|| PRODUCT : \"references\"\n  PRODUCT }o--|| CATEGORY : \"belongs to\"\n  CATEGORY ||--o{ CATEGORY : \"parent of\""
+  },
+  {
+    "name": "Engineering Excellence",
+    "type": "Mindmap",
+    "description": "Comprehensive engineering excellence mindmap covering culture, architecture, delivery, and reliability.",
+    "code": "mindmap\n  root((\"Engineering\\nExcellence\"))\n    Culture\n      Psychological Safety\n      Blameless Post-Mortems\n      Developer Experience\n      Living Documentation\n    Architecture\n      Domain-Driven Design\n      Event-Driven Systems\n      API-First Design\n      Zero Trust Security\n    Delivery\n      CI/CD Automation\n      GitOps\n      Feature Flags\n      Canary Releases\n    Observability\n      Metrics\n      Logs\n      Distributed Traces\n      SLO Alerting\n    Reliability\n      SLA / SLO / SLI\n      Chaos Engineering\n      Runbooks\n      Disaster Recovery"
+  },
+  {
+    "name": "Technology Radar",
+    "type": "Quadrant",
+    "description": "Platform engineering technology radar: Adopt, Trial, Assess, Hold.",
+    "code": "quadrantChart\n  title Technology Radar — Platform Engineering Q4 2025\n  x-axis Risky --> Proven\n  y-axis Niche --> Mainstream\n  quadrant-1 Adopt\n  quadrant-2 Trial\n  quadrant-3 Assess\n  quadrant-4 Hold\n  Kubernetes: [0.88, 0.90]\n  Terraform: [0.82, 0.85]\n  OpenTelemetry: [0.68, 0.74]\n  GitOps: [0.72, 0.78]\n  Service Mesh: [0.56, 0.62]\n  AI Code Assistants: [0.62, 0.76]\n  Platform Engineering: [0.74, 0.68]\n  eBPF: [0.42, 0.50]\n  WASM Edge: [0.30, 0.36]\n  Rust for Services: [0.46, 0.56]\n  LLM Orchestration: [0.36, 0.42]\n  Homomorphic Encryption: [0.14, 0.18]"
+  },
+  {
+    "name": "Cloud Architecture — Architecture Beta",
+    "type": "Architecture",
+    "description": "Native architecture-beta diagram: API, database, disk, server, and cloud groups.",
+    "code": "architecture-beta\n  group api(cloud)[API Tier]\n  group data(cloud)[Data Tier]\n\n  service lb(internet)[Load Balancer]\n  service app1(server)[App Server A] in api\n  service app2(server)[App Server B] in api\n  service cache(server)[Redis Cache] in api\n  service db(database)[Primary DB] in data\n  service replica(database)[Read Replica] in data\n  service storage(disk)[Object Storage] in data\n\n  lb:R --> L:app1\n  lb:R --> L:app2\n  app1:R --> L:cache\n  app2:R --> L:cache\n  app1:B --> T:db\n  app2:B --> T:db\n  db:R --> L:replica\n  app1:B --> T:storage"
+  },
+  {
+    "name": "Product Feature Journey",
+    "type": "Story",
+    "description": "The full lifecycle story of a product feature — from spark of an idea to user feedback.",
+    "code": "flowchart TD\n    A([\"💡  Idea Spark\"]):::idea\n    B[\"👥  Stakeholder Workshop\"]:::stake\n    C{\"❓  Feasible?\"}:::decision\n    D[\"📐  UX Research & Wireframes\"]:::design\n    E[\"📄  PRD Approved\"]:::doc\n    F[\"🗂️  System Design Review\"]:::arch\n    G[\"💻  Sprint Planning\"]:::dev\n    H[\"⚙️  Development\"]:::dev\n    I[\"🐛  QA & Testing\"]:::test\n    J{\"✅  All Tests Pass?\"}:::decision\n    K[\"🚀  Production Deploy\"]:::deploy\n    L[\"📈  Metrics & Monitoring\"]:::monitor\n    M[\"💬  User Feedback\"]:::feedback\n    N([\"🏆  Feature Success\"]):::success\n    O([\"❌  Parking Lot\"]):::rejected\n\n    A --> B\n    B --> C\n    C -->|\"👍 Yes\"| D\n    C -->|\"👎 No\"| O\n    D --> E\n    E --> F\n    F --> G\n    G --> H\n    H --> I\n    I --> J\n    J -->|\"🔄 Fix & Retest\"| H\n    J -->|\"✓ Green\"| K\n    K --> L\n    L --> M\n    M -->|\"⬆️ Positive\"| N\n    M -->|\"🔄 Iterate\"| B\n\n    classDef idea fill: #7c3aed20,stroke: #7c3aed\n    classDef stake fill: #2563eb20,stroke: #2563eb\n    classDef decision fill: #f59e0b20,stroke: #b45309\n    classDef design fill: #10b98120,stroke: #059669\n    classDef doc fill: #3b82f620,stroke: #3b82f6\n    classDef arch fill: #7c3aed20,stroke: #7c3aed\n    classDef dev fill: #3b82f620,stroke: #60a5fa\n    classDef test fill: #ef444420,stroke: #ef4444\n    classDef deploy fill: #22c55e20,stroke: #22c55e\n    classDef monitor fill: #0ea5e920,stroke: #0ea5e9\n    classDef feedback fill: #a855f720,stroke: #a855f7\n    classDef success fill: #22c55e20,stroke: #4ade80\n    classDef rejected fill: #64748b20,stroke: #6b7280"
+  },
+  {
+    "name": "Requirements Collection Story",
+    "type": "Story",
+    "description": "How requirements flow from vision to verified backlog — a sequence diagram story.",
+    "code": "sequenceDiagram\n    actor CEO as 🏢 CEO / Sponsor\n    participant PM as 📋 Product Manager\n    participant UX as 🎨 UX Designer\n    participant BA as 📊 Business Analyst\n    participant Dev as 💻 Tech Lead\n    participant QA as 🔍 QA Engineer\n\n    Note over CEO,QA: Phase 1 — Vision & Discovery\n\n    CEO->>PM: Share business vision & OKRs\n    PM->>BA: Kick off requirements workshop\n    BA->>CEO: Conduct stakeholder interviews\n    CEO-->>BA: Pain points & success metrics\n\n    Note over PM,UX: Phase 2 — Research & Ideation\n\n    BA->>UX: Share raw requirements\n    UX->>UX: Competitive analysis & user research\n    UX-->>PM: User journey maps & personas\n    PM->>Dev: Technical feasibility check\n    Dev-->>PM: Constraints & complexity estimates\n\n    Note over BA,QA: Phase 3 — Specification\n\n    PM->>BA: Prioritise with MoSCoW method\n    BA->>BA: Write functional specifications\n    BA-->>Dev: Share system requirements\n    BA-->>QA: Share acceptance criteria\n    Dev->>Dev: Draft architecture decision records\n    QA->>QA: Draft test scenarios\n\n    Note over PM,QA: Phase 4 — Review & Sign-off\n\n    PM->>CEO: Present PRD for approval\n    CEO-->>PM: ✅ Sign off\n    PM->>Dev: Sprint backlog ready\n    PM->>QA: Test plan aligned\n    Dev-->>PM: Estimation complete\n    QA-->>PM: QA plan complete\n\n    Note over CEO,QA: Phase 5 — Build starts 🚀"
+  },
+  {
+    "name": "Agile Project Story",
+    "type": "Story",
+    "description": "The complete Agile project lifecycle from inception to retrospective — as a visual story.",
+    "code": "flowchart LR\n    subgraph I [\"🚩  Inception\"]\n        direction TB\n        I1[\"🎯  Vision Statement\"]\n        I2[\"👥  Core Team Assembled\"]\n        I3[\"🗺️  Roadmap Draft\"]\n        I1 --> I2 --> I3\n    end\n\n    subgraph S0 [\"📦  Sprint Zero\"]\n        direction TB\n        S01[\"🛠️  Dev Environment Setup\"]\n        S02[\"🗂️  Architecture Spike\"]\n        S03[\"📋  Backlog Populated\"]\n        S01 --> S02 --> S03\n    end\n\n    subgraph SP [\"🔄  Sprint Cycle x N\"]\n        direction TB\n        SP1[\"📅  Sprint Planning\"]\n        SP2[\"💻  Daily Build\"]\n        SP3[\"💬  Daily Standup\"]\n        SP4[\"☑️  Sprint Review\"]\n        SP5[\"📊  Retrospective\"]\n        SP1 --> SP2\n        SP2 --> SP3\n        SP3 --> SP2\n        SP2 --> SP4\n        SP4 --> SP5\n    end\n\n    subgraph REL [\"🚀  Release\"]\n        direction TB\n        R1[\"🧪  UAT / Staging\"]\n        R2[\"🛡️  Security Review\"]\n        R3[\"📤  Production Deploy\"]\n        R1 --> R2 --> R3\n    end\n\n    subgraph OPS [\"💗  Operate\"]\n        direction TB\n        O1[\"📈  Monitoring\"]\n        O2[\"🐛  Bug Triage\"]\n        O3[\"⭐  User Feedback\"]\n        O1 --> O2 --> O3\n    end\n\n    I --> S0 --> SP --> REL --> OPS\n    OPS -->|\"🔄  Next Cycle\"| SP\n\n    style I fill: #6366f120,stroke: #6366f1\n    style S0 fill: #3b82f620,stroke: #3b82f6\n    style SP fill: #22c55e20,stroke: #22c55e\n    style REL fill: #f9731620,stroke: #f97316\n    style OPS fill: #0ea5e920,stroke: #0ea5e9"
+  },
+  {
+    "name": "System Design Story",
+    "type": "Story",
+    "description": "A system design interview walkthrough — from requirements to final architecture, told as a story.",
+    "code": "flowchart TD\n    A([\"💬  Interviewer Prompt\"]):::start\n    B[\"❓  Clarify Requirements\n━━━━━━━━━━━━━━━━━━━━\n👥  DAU / MAU?\n💾  Data volume?\n🌐  Global or regional?\n⚡  Read vs Write ratio?\"]:::req\n\n    C[\"🧮  Capacity Estimation\n━━━━━━━━━━━━━━━━━━━━\n🗄️  Storage: 500TB/yr\n🌐  Bandwidth: 10Gbps\n🖥️  Servers: ~200 nodes\"]:::est\n\n    D[\"🗂️  High-Level Design\"]:::hld\n\n    subgraph Core [\"⚙️  Core Architecture\"]\n        direction LR\n        LB[\"⚖️  Load Balancer\"]\n        GW[\"🚪  API Gateway\"]\n        SVC[\"📦  Microservices\"]\n        CACHE[\"⚡  Redis Cache\"]\n        DB[(\"🗄️  Primary DB\")]\n        CDN[\"☁️  CDN\"]\n        MQ[\"✉️  Message Queue\"]\n        LB --> GW --> SVC\n        SVC --> CACHE\n        SVC --> DB\n        SVC --> MQ\n        CDN --> LB\n    end\n\n    E[\"🔍  Deep Dive\n━━━━━━━━━━━━━━━━━━━━\n🔒  Auth: JWT + OAuth2\n📋  Replication: leader-follower\n🛡️  Rate limiting: token bucket\n📊  Sharding: by user_id hash\"]:::deep\n\n    F[\"⚠️  Bottlenecks & Trade-offs\n━━━━━━━━━━━━━━━━━━━━\n🔄  Consistency vs Availability\n↔️  Vertical vs Horizontal scale\n↔️  Normalise vs Denormalise\"]:::tradeoff\n\n    G([\"🏆  Design Accepted\"]):::success\n\n    A --> B --> C --> D --> Core --> E --> F --> G\n\n    classDef start fill: #7c3aed20,stroke: #7c3aed\n    classDef req fill: #3b82f620,stroke: #3b82f6\n    classDef est fill: #10b98120,stroke: #059669\n    classDef hld fill: #64748b20,stroke: #60a5fa\n    classDef deep fill: #78716c20,stroke: #a8a29e\n    classDef tradeoff fill: #f9731620,stroke: #f97316\n    classDef success fill: #22c55e20,stroke: #4ade80\n    style Core fill: #64748b10,stroke: #334155"
+  },
+  {
+    "name": "Bug to Production Story",
+    "type": "Story",
+    "description": "The journey of a critical production bug — from alert to postmortem, told as a sequence.",
+    "code": "sequenceDiagram\n    actor Alert as 🚨 PagerDuty\n    participant SRE as 🔧 SRE On-Call\n    participant Slack as 💬 Incident Slack\n    participant Dev as 💻 Developer\n    participant DB as 🗄️ Database\n    participant CEO as 🏢 Leadership\n\n    Note over Alert,CEO: 🔴 Incident declared — P1 Production Outage\n\n    Alert->>SRE: 🔔 ALERT: Error rate 45% — checkout service\n    SRE->>Slack: 🔥 Create #incident-2024-042\n    SRE->>CEO: Executive notification sent\n\n    Note over SRE,Dev: 🔍 Triage & Investigation\n\n    SRE->>Dev: Page on-call developer\n    Dev->>DB: 🔍 Query slow_query_log\n    DB-->>Dev: 📊 N+1 query detected in OrderService\n    Dev->>Dev: 🌿 Checkout git blame\n    Dev-->>SRE: Root cause: missing index on orders.user_id\n\n    Note over SRE,DB: 🛠️ Mitigation\n\n    SRE->>DB: ⚡ Apply hotfix index CONCURRENTLY\n    DB-->>SRE: ✓ Index created — query: 2s → 12ms\n    SRE->>Slack: ⬆️ Error rate recovering: 45% → 2%\n\n    Note over SRE,Dev: ✅ Resolution\n\n    SRE->>CEO: ✅ Incident resolved — 38 min MTTR\n    Dev->>Dev: 📄 Write postmortem\n    Dev-->>Slack: 📅 Schedule blameless retro\n\n    Note over Alert,CEO: 📋 Action Items: add DB query budget alerts, migrate to ORM with N+1 detection"
+  },
+  {
+    "name": "Technology Company Org Chart",
+    "type": "OrgChart",
+    "description": "Full engineering org chart from CEO down to individual contributor teams, with department colour coding.",
+    "code": "flowchart TD\n    classDef exec fill: #3b82f620,stroke: #3b82f6\n    classDef vp fill: #22c55e20,stroke: #22c55e\n    classDef dir fill: #a855f720,stroke: #a855f7\n    classDef eng fill: #64748b20,stroke: #64748b\n    classDef product fill: #f59e0b20,stroke: #f59e0b\n    classDef design fill: #ec489920,stroke: #ec4899\n\n    CEO[\"👑 CEO\\nChief Executive Officer\"]\n    CTO[\"🔧 CTO\\nChief Technology Officer\"]\n    CPO[\"💡 CPO\\nChief Product Officer\"]\n    CFO[\"📈 CFO\\nChief Financial Officer\"]\n    CMO[\"📣 CMO\\nChief Marketing Officer\"]\n\n    CEO --> CTO\n    CEO --> CPO\n    CEO --> CFO\n    CEO --> CMO\n\n    VPE[\"💻 VP Engineering\"]\n    VPINFRA[\"🖥️ VP Infrastructure\"]\n    VPSEC[\"🛡️ VP Security\"]\n\n    CTO --> VPE\n    CTO --> VPINFRA\n    CTO --> VPSEC\n\n    DIRBE[\"🗂️ Dir — Backend Eng\"]\n    DIRFE[\"🖥️ Dir — Frontend Eng\"]\n    DIRML[\"🧠 Dir — ML & AI\"]\n    DIRMOB[\"📱 Dir — Mobile\"]\n\n    VPE --> DIRBE\n    VPE --> DIRFE\n    VPE --> DIRML\n    VPE --> DIRMOB\n\n    BE1[\"🗄️ Platform Team\"]\n    BE2[\"🔌 API Team\"]\n    BE3[\"⚙️ Core Services\"]\n    DIRBE --> BE1\n    DIRBE --> BE2\n    DIRBE --> BE3\n\n    FE1[\"🎨 Design System\"]\n    FE2[\"🖥️ Web App\"]\n    DIRFE --> FE1\n    DIRFE --> FE2\n\n    ML1[\"🤖 ML Platform\"]\n    ML2[\"🔍 Search & Ranking\"]\n    DIRML --> ML1\n    DIRML --> ML2\n\n    MOB1[\"🍎 iOS Team\"]\n    MOB2[\"🤖 Android Team\"]\n    DIRMOB --> MOB1\n    DIRMOB --> MOB2\n\n    DIRCLOUD[\"☁️ Dir — Cloud Ops\"]\n    DIRDATA[\"🗄️ Dir — Data Eng\"]\n    VPINFRA --> DIRCLOUD\n    VPINFRA --> DIRDATA\n\n    CLOUD1[\"☁️ AWS / GCP\"]\n    CLOUD2[\"🌐 SRE Team\"]\n    DIRCLOUD --> CLOUD1\n    DIRCLOUD --> CLOUD2\n\n    DIRSEC[\"🔒 Dir — AppSec\"]\n    DIRCOMP[\"📄 Dir — Compliance\"]\n    VPSEC --> DIRSEC\n    VPSEC --> DIRCOMP\n\n    VPP[\"🗺️ VP Product\"]\n    VPUX[\"📐 VP UX & Design\"]\n    CPO --> VPP\n    CPO --> VPUX\n\n    PM1[\"👥 Growth PM\"]\n    PM2[\"🚀 Platform PM\"]\n    PM3[\"⭐ Enterprise PM\"]\n    VPP --> PM1\n    VPP --> PM2\n    VPP --> PM3\n\n    UX1[\"👁️ UX Research\"]\n    UX2[\"✨ Visual Design\"]\n    UX3[\"🗺️ Content Design\"]\n    VPUX --> UX1\n    VPUX --> UX2\n    VPUX --> UX3\n\n    class CEO exec\n    class CTO,CPO,CFO,CMO exec\n    class VPE,VPINFRA,VPSEC,VPP,VPUX vp\n    class DIRBE,DIRFE,DIRML,DIRMOB,DIRCLOUD,DIRDATA,DIRSEC,DIRCOMP dir\n    class BE1,BE2,BE3,FE1,FE2,ML1,ML2,MOB1,MOB2,CLOUD1,CLOUD2 eng\n    class PM1,PM2,PM3 product\n    class UX1,UX2,UX3 design"
+  },
+  {
+    "name": "Startup Team Org Chart",
+    "type": "OrgChart",
+    "description": "Lean startup org chart — founders, small cross-functional teams, dual-role contributors.",
+    "code": "flowchart TD\n    classDef founder fill: #6366f120,stroke: #6366f1\n    classDef lead fill: #3b82f620,stroke: #3b82f6\n    classDef ic fill: #64748b20,stroke: #475569\n    classDef contractor fill: #ef444420,stroke: #ef4444,stroke-dasharray: 4 2\n\n    CEO[\"👑 Founder & CEO\"]\n    CTO[\"🔧 Co-Founder & CTO\"]\n    CPO[\"💡 Co-Founder & CPO\"]\n\n    CEO --> CTO\n    CEO --> CPO\n    CEO --> HEAD_SALES\n    CEO --> HEAD_OPS\n\n    HEAD_ENG[\"💻 Eng Lead\"]\n    HEAD_INFRA[\"🖥️ Infra Lead\"]\n    CTO --> HEAD_ENG\n    CTO --> HEAD_INFRA\n\n    FE[\"🖥️ Frontend Dev\"]\n    BE[\"🗄️ Backend Dev\"]\n    FULLSTACK[\"📦 Full-Stack Dev\"]\n    HEAD_ENG --> FE\n    HEAD_ENG --> BE\n    HEAD_ENG --> FULLSTACK\n\n    DEVOPS[\"☁️ DevOps Engineer\"]\n    HEAD_INFRA --> DEVOPS\n\n    PM[\"🗺️ Product Manager\"]\n    DESIGN[\"🎨 UX Designer\"]\n    CPO --> PM\n    CPO --> DESIGN\n\n    HEAD_SALES[\"🤝 Head of Sales\"]\n    AE1[\"👔 Account Exec\"]\n    AE2[\"👔 Account Exec\"]\n    HEAD_SALES --> AE1\n    HEAD_SALES --> AE2\n\n    HEAD_OPS[\"⚙️ Head of Ops\"]\n    FIN[\"📊 Finance (Contract)\"]\n    LEGAL[\"⚖️ Legal (Contract)\"]\n    HEAD_OPS --> FIN\n    HEAD_OPS --> LEGAL\n\n    class CEO,CTO,CPO founder\n    class HEAD_ENG,HEAD_INFRA,HEAD_SALES,HEAD_OPS lead\n    class FE,BE,FULLSTACK,DEVOPS,PM,DESIGN,AE1,AE2 ic\n    class FIN,LEGAL contractor"
+  },
+  {
+    "name": "Product Processor Integration Flow",
+    "type": "Sequence",
+    "description": "System A sends a request to a Product Processor which performs transactional calculations, calls downstream systems, and returns a computed response — including sync and async paths.",
+    "code": "sequenceDiagram\n  autonumber\n  actor Client as Client System A\n  participant GW as API Gateway\n  participant PP as Product Processor\n  participant RL as Rules Engine\n  participant ORA as Oracle DB\n  participant MQ as IBM MQ\n  participant EXT as External System C\n  participant KFK as Kafka\n  participant MDB as MongoDB (Audit)\n\n  Client->>GW: POST /process-request {payload}\n  GW->>GW: Authenticate & rate-limit\n  GW->>PP: Forward validated request\n\n  activate PP\n  PP->>ORA: SELECT product config, limits, rates\n  ORA-->>PP: Product rules + rate tables\n\n  PP->>RL: Evaluate eligibility rules(context)\n  activate RL\n  RL->>ORA: Fetch business rules v2.4\n  ORA-->>RL: Rule set\n  RL-->>PP: PASS / FAIL + reason codes\n  deactivate RL\n\n  PP->>PP: Calculate: fees, interest, tax, FX\n\n  PP->>MQ: Publish calc-request to CALC.QUEUE\n  activate EXT\n  MQ->>EXT: Deliver computation message\n  EXT->>EXT: Run actuarial / pricing model\n  EXT->>MQ: Reply to CALC.REPLY.QUEUE\n  MQ-->>PP: Computation result\n  deactivate EXT\n\n  PP->>PP: Merge external result + internal calc\n  PP->>ORA: INSERT transaction_ledger (ACID)\n  PP->>MDB: Append audit event (async)\n  PP->>KFK: Publish domain event: ProcessingComplete\n\n  PP-->>GW: 200 OK {result, txn_id, breakdown}\n  deactivate PP\n  GW-->>Client: Response with computed result\n\n  Note over KFK: Downstream consumers\n  Note over KFK: (Reporting, Notifications,\n  Note over KFK: Reconciliation) pick up event"
+  },
+  {
+    "name": "Enterprise Integration Architecture",
+    "type": "Flowchart",
+    "description": "Full enterprise integration landscape showing systems connected via Kafka, IBM MQ, Oracle, MongoDB, SFTP, and REST — with sync, async, and batch channels.",
+    "code": "flowchart TD\n  classDef system fill: #1e3a5f20,stroke: #3b82f6\n  classDef broker fill: #78350f20,stroke: #f59e0b\n  classDef store fill: #14532d20,stroke: #22c55e\n  classDef external fill: #3b076420,stroke: #8b5cf6\n  classDef batch fill: #64748b20,stroke: #94a3b8,stroke-dasharray: 5 3\n\n  subgraph ORIGINATOR[\"System A — Originating System\"]\n    ORI[\"Core Application\"]\n    ORI_DB[(\"Oracle DB\")]\n    ORI --> ORI_DB\n  end\n\n  subgraph PROCESSOR[\"Product Processor — Engine\"]\n    PP[\"Processing Engine\"]\n    RL[\"Rules & Calc Layer\"]\n    PP <--> RL\n    PP_DB[(\"Oracle — Ledger\")]\n    PP --> PP_DB\n    PP_AUD[(\"MongoDB — Audit\")]\n    PP --> PP_AUD\n  end\n\n  subgraph BROKER_LAYER[\"Messaging Backbone\"]\n    KFK[[\"Kafka Cluster\"]]\n    MQ[[\"IBM MQ\"]]\n  end\n\n  subgraph EXT_SYSTEMS[\"External / Third-Party Systems\"]\n    PRICING[\"Pricing Engine\"]\n    FRAUD[\"Fraud Detection\"]\n    NOTIF[\"Notification Hub\"]\n    REPORT[\"Reporting & BI\"]\n  end\n\n  subgraph FILE_LAYER[\"Batch & File Exchange\"]\n    SFTP[\"SFTP Server\"]\n    BATCH[\"Batch Processor\"]\n    ARCH[(\"Archive Store\")]\n  end\n\n  ORI -->|\"REST / HTTPS\nSync request\"| PP\n  PP -->|\"Response + txn_id\"| ORI\n\n  PP -->|\"Publish events\"| KFK\n  KFK -->|\"Domain events\"| PRICING\n  KFK -->|\"Fraud signals\"| FRAUD\n  KFK -->|\"Alerts\"| NOTIF\n  KFK -->|\"Analytics feed\"| REPORT\n\n  PP -->|\"Computation RPC\"| MQ\n  MQ -->|\"Async calc job\"| PRICING\n  PRICING -->|\"Result reply\"| MQ\n  MQ -->|\"Calc result\"| PP\n\n  SFTP -->|\"Daily file drop\n.csv / fixed-width\"| BATCH\n  BATCH -->|\"Bulk load\"| PP_DB\n  BATCH -->|\"Reconciliation\"| PP\n  PP -->|\"Settlement files\"| SFTP\n  SFTP --> ARCH\n\n  class ORI,PP,RL system\n  class KFK,MQ broker\n  class ORI_DB,PP_DB,PP_AUD,ARCH store\n  class PRICING,FRAUD,NOTIF,REPORT external\n  class SFTP,BATCH batch"
+  },
+  {
+    "name": "Periodic System Sync & Reconciliation",
+    "type": "Sequence",
+    "description": "Scheduled background sync process that keeps multiple systems consistent — rsync-style data refresh, delta reconciliation, conflict detection, and rollback.",
+    "code": "sequenceDiagram\n  autonumber\n  participant SCH as Scheduler / Cron\n  participant SYNC as Sync Orchestrator\n  participant SRC as Source System (A)\n  participant TGT as Target System (B)\n  participant ORA as Oracle — Master\n  participant MDB as MongoDB — Cache\n  participant KFK as Kafka — Events\n  participant MON as Monitoring\n\n  SCH->>SYNC: TRIGGER sync job (04:00 UTC daily)\n  activate SYNC\n\n  SYNC->>MON: Log: sync_started {job_id, timestamp}\n  SYNC->>ORA: SELECT MAX(last_sync_ts) FROM sync_registry\n  ORA-->>SYNC: last_sync_ts = T-24h\n\n  par Delta extraction\n    SYNC->>SRC: GET /delta?since=T-24h&page=1\n    SRC-->>SYNC: Records batch 1 (500 rows)\n    SYNC->>SRC: GET /delta?since=T-24h&page=2\n    SRC-->>SYNC: Records batch 2 (312 rows)\n  and Cache refresh\n    SYNC->>MDB: Drop stale entries (ttl < now)\n    MDB-->>SYNC: 1,240 docs purged\n  end\n\n  SYNC->>SYNC: Compute checksums & diff\n  SYNC->>TGT: POST /bulk-upsert {records, checksum}\n  activate TGT\n  TGT->>TGT: Validate + apply changes\n  TGT->>ORA: MERGE INTO tgt_table (upsert)\n  ORA-->>TGT: 812 rows affected\n  TGT-->>SYNC: 200 OK {applied:812, skipped:0, errors:0}\n  deactivate TGT\n\n  SYNC->>SYNC: Reconcile: compare src vs tgt counts\n  alt Counts match — clean sync\n    SYNC->>ORA: UPDATE sync_registry SET last_sync_ts=NOW()\n    SYNC->>KFK: Publish sync.completed {delta:812}\n    SYNC->>MON: Log: sync_success\n  else Mismatch detected\n    SYNC->>MON: ALERT: reconciliation_mismatch\n    SYNC->>KFK: Publish sync.failed {reason:'mismatch'}\n    SYNC->>TGT: POST /rollback {job_id}\n    TGT-->>SYNC: Rollback OK\n    SYNC->>ORA: INSERT sync_errors log\n  end\n\n  SYNC->>MDB: Refresh cache with fresh TGT snapshot\n  deactivate SYNC\n  MON->>MON: Dashboard updated"
+  },
+  {
+    "name": "Kafka Event-Driven Integration",
+    "type": "Sequence",
+    "description": "Producer publishes a domain event to Kafka; multiple downstream consumers process independently — with dead-letter handling and offset management.",
+    "code": "sequenceDiagram\n  autonumber\n  participant SVC as Originating Service\n  participant KFK as Kafka Broker\n  participant C1 as Consumer: Ledger Svc\n  participant C2 as Consumer: Fraud Engine\n  participant C3 as Consumer: Notification Svc\n  participant DLQ as Dead-Letter Topic\n  participant MON as Schema Registry\n\n  SVC->>MON: Validate event schema (Avro v3)\n  MON-->>SVC: Schema OK — fingerprint: ab2f\n  SVC->>KFK: Produce → topic: payment.processed\n    Note right of KFK: partition by account_id\n    Note right of KFK: retention: 7 days\n\n  par Consumer Group: ledger-grp\n    KFK-->>C1: Event (offset 14082)\n    C1->>C1: Parse + validate payload\n    C1->>C1: Post journal entries\n    C1->>KFK: Commit offset 14082\n  and Consumer Group: fraud-grp\n    KFK-->>C2: Event (offset 14082)\n    C2->>C2: Run ML fraud scoring\n    alt Score > threshold\n      C2->>KFK: Produce → topic: fraud.alerts\n    else Score OK\n      C2->>KFK: Commit offset 14082\n    end\n  and Consumer Group: notify-grp\n    KFK-->>C3: Event (offset 14082)\n    C3->>C3: Render template\n    alt Delivery fails (3 retries)\n      C3->>DLQ: Produce → topic: notify.dlq\n      Note right of DLQ: Manual review\n    else Delivery OK\n      C3->>KFK: Commit offset 14082\n    end\n  end\n\n  Note over KFK: Log compaction keeps\n  Note over KFK: latest state per key"
+  },
+  {
+    "name": "IBM MQ Request-Reply Pattern",
+    "type": "Sequence",
+    "description": "Classic IBM MQ request-reply pattern between two enterprise systems — correlation IDs, reply-to queues, timeout and poison message handling.",
+    "code": "sequenceDiagram\n  autonumber\n  participant APP_A as Requester (System A)\n  participant QM as IBM MQ Queue Manager\n  participant REQ_Q as REQUEST.QUEUE\n  participant REP_Q as REPLY.QUEUE\n  participant APP_B as Responder (System B)\n  participant DLQ as DEAD.LETTER.QUEUE\n\n  APP_A->>APP_A: Build MQ message\n    Note right of APP_A: MsgId: uuid-4a9f\n    Note right of APP_A: CorrelId: corr-8b1e\n    Note right of APP_A: ReplyToQ: REPLY.QUEUE\n    Note right of APP_A: Expiry: 30000ms\n\n  APP_A->>QM: MQPUT → REQUEST.QUEUE\n  QM->>REQ_Q: Persist message (persistent delivery)\n  REQ_Q-->>APP_A: MQPUT OK (msgId confirmed)\n\n  QM-->>APP_B: MQGET (blocking / wait)\n  activate APP_B\n  APP_B->>APP_B: Parse request + validate schema\n  APP_B->>APP_B: Execute business logic\n  APP_B->>APP_B: Build reply message\n    Note right of APP_B: CorrelId = original MsgId\n\n  APP_B->>QM: MQPUT → REPLY.QUEUE (CorrelId set)\n  deactivate APP_B\n  QM->>REP_Q: Persist reply\n\n  APP_A->>QM: MQGET(REPLY.QUEUE, CorrelId=uuid-4a9f)\n  alt Reply received in time\n    REP_Q-->>APP_A: Reply message\n    APP_A->>APP_A: Process result\n  else Expiry exceeded (30s)\n    QM->>DLQ: Move expired message\n    APP_A->>APP_A: Timeout → retry or escalate\n    Note over DLQ: Ops team notified\n  end\n\n  Note over QM: MQ channel encryption: TLS 1.2+\n  Note over QM: Channel auth: MQCSP / LDAP"
+  },
+  {
+    "name": "SFTP File Exchange & Processing",
+    "type": "Sequence",
+    "description": "End-to-end SFTP-based B2B file exchange — drop, detect, validate, process, archive, and acknowledgement flow including error quarantine.",
+    "code": "sequenceDiagram\n  autonumber\n  participant EXT as External Partner\n  participant SFTP as SFTP Server\n  participant WATCH as File Watcher / Poller\n  participant VAL as Validator Service\n  participant PROC as File Processor\n  participant ORA as Oracle DB\n  participant KFK as Kafka\n  participant ACK as Ack / Notifier\n  participant QUAR as Quarantine Store\n\n  EXT->>SFTP: sftp PUT /inbound/payments_20240615.csv\n  Note right of SFTP: File lands in /inbound/\n  Note right of SFTP: Permissions: 640, owner: svc-sftp\n\n  WATCH->>SFTP: Poll /inbound/ every 60s (or inotify)\n  SFTP-->>WATCH: New file detected: payments_20240615.csv\n  WATCH->>WATCH: Check file stable (size unchanged 5s)\n  WATCH->>SFTP: Move file → /inbound/processing/\n\n  WATCH->>VAL: Submit file path for validation\n  activate VAL\n  VAL->>VAL: Check: file size, encoding (UTF-8)\n  VAL->>VAL: Validate header row + column count\n  VAL->>VAL: Schema check: date, amount, IBAN formats\n  alt Validation PASS\n    VAL-->>PROC: File OK — begin processing\n  else Validation FAIL\n    VAL->>SFTP: Move → /inbound/quarantine/\n    VAL->>QUAR: Log error report\n    VAL->>ACK: Notify partner: REJECTED + reason\n    ACK->>EXT: Email / API: validation_failed.json\n  end\n  deactivate VAL\n\n  activate PROC\n  PROC->>PROC: Parse CSV → record objects (chunked)\n  loop Each batch of 1000 records\n    PROC->>ORA: BULK INSERT INTO staging_payments\n    PROC->>ORA: CALL sp_validate_and_post(batch_id)\n    ORA-->>PROC: {posted:998, rejected:2, errors:[...]}\n    PROC->>KFK: Publish payment.file.batch.processed\n  end\n  PROC->>SFTP: Move file → /inbound/archive/2024/06/\n  PROC->>SFTP: Write ack: payments_20240615.ack\n  deactivate PROC\n\n  ACK->>EXT: Deliver acknowledgement file via SFTP\n  Note over SFTP: Archive retained 90 days\n  Note over SFTP: GPG encryption optional"
+  },
+  {
+    "name": "Multi-System Transactional Computation",
+    "type": "Sequence",
+    "description": "Complex multi-hop computation: System A → Product Processor → delegates to N specialist systems → aggregates results → responds. Covers Oracle, MongoDB, Kafka, REST, and async callbacks.",
+    "code": "sequenceDiagram\n  autonumber\n  actor CLIENT as Client / Consumer\n  participant API as API Layer\n  participant PP as Product Processor\n  participant ORA as Oracle — Config & Ledger\n  participant PRICE as Pricing Engine\n  participant RISK as Risk Calculator\n  participant TAX as Tax Engine\n  participant FX as FX Rate Service\n  participant KFK as Kafka\n  participant MDB as MongoDB — Results Cache\n\n  CLIENT->>API: POST /calculate {product, amount, currency, params}\n  API->>PP: Validated request\n  activate PP\n\n  PP->>ORA: Fetch product config, fee schedule, limits\n  ORA-->>PP: Config snapshot v12.3\n\n  par Parallel specialist calculations\n    PP->>PRICE: RPC calcPrice(product, volume, tier)\n    activate PRICE\n    PRICE->>ORA: SELECT price_matrix WHERE product=?\n    ORA-->>PRICE: Price bands\n    PRICE-->>PP: base_price=142.50, discount=12.00\n    deactivate PRICE\n  and\n    PP->>RISK: RPC assessRisk(client_id, amount)\n    activate RISK\n    RISK->>MDB: Find client risk profile\n    MDB-->>RISK: score=720, tier=B\n    RISK-->>PP: risk_premium=4.25, approved=true\n    deactivate RISK\n  and\n    PP->>FX: GET /rate?from=USD&to=GBP\n    FX-->>PP: rate=0.7842, ts=now, source=ECB\n  end\n\n  PP->>TAX: calcTax(net=134.75, jurisdiction=GB)\n  activate TAX\n  TAX->>TAX: Apply VAT + withholding rules\n  TAX-->>PP: vat=26.95, total_tax=26.95\n  deactivate TAX\n\n  PP->>PP: Aggregate:\n    Note right of PP: gross     = 142.50\n    Note right of PP: discount  = -12.00\n    Note right of PP: risk_prem = +4.25\n    Note right of PP: fx_adj    = *0.7842\n    Note right of PP: tax       = +26.95\n    Note right of PP: net_total = 134.71 GBP\n\n  PP->>ORA: INSERT transaction (ACID, isolation=SERIALIZABLE)\n  PP->>MDB: Cache result {txn_id, breakdown} TTL=300s\n  PP->>KFK: Publish: calculation.completed {txn_id}\n\n  PP-->>API: 200 {txn_id, net_total:134.71, breakdown}\n  deactivate PP\n  API-->>CLIENT: Final computed response"
+  },
+  {
+    "name": "User Story: Payment Initiation",
+    "type": "Sequence",
+    "description": "User story → system design: 'As a customer I want to initiate a payment so that my beneficiary receives funds.' Full backend flow from UI to settlement.",
+    "code": "sequenceDiagram\n  autonumber\n  actor U as 👤 Customer\n  participant FE as Frontend App\n  participant GW as API Gateway\n  participant AUTH as Auth Service\n  participant PAY as Payment Service\n  participant PP as Product Processor\n  participant FRAUD as Fraud Engine\n  participant BANK as Core Banking\n  participant ORA as Oracle — Ledger\n  participant KFK as Kafka\n  participant NOTIF as Notification Svc\n\n  Note over U,NOTIF: User Story: Initiate Payment\n  Note over U,NOTIF: AC1 - Debits correct account\n  Note over U,NOTIF: AC2 - Fraud checked before processing\n  Note over U,NOTIF: AC3 - Customer notified on completion\n\n  U->>FE: Enter payee, amount, reference\n  FE->>GW: POST /payments {src_acct, dst_acct, amount, ccy}\n  GW->>AUTH: Validate JWT + scopes\n  AUTH-->>GW: Authorised: user_id=U123, scope=payments:write\n\n  GW->>PAY: Forward payment request\n  activate PAY\n  PAY->>ORA: Check balance + daily limit\n  ORA-->>PAY: balance=5420.00, limit_remaining=2000.00\n\n  PAY->>FRAUD: Assess(user_id, amount, payee)\n  FRAUD-->>PAY: risk_score=12, ALLOW\n\n  PAY->>PP: Process payment instruction\n  activate PP\n  PP->>PP: Validate IBAN, calculate charges\n  PP->>BANK: Debit src account, credit dst\n  BANK->>ORA: Ledger double-entry\n  ORA-->>BANK: Committed\n  BANK-->>PP: settlement_ref=TXN-8842\n  deactivate PP\n\n  PAY->>ORA: Persist payment record (status=SETTLED)\n  PAY->>KFK: Publish payment.settled {txn_id, amount}\n\n  KFK-->>NOTIF: Consume payment.settled\n  NOTIF->>U: Push + email: \"Payment of £250 sent ✓\"\n\n  PAY-->>GW: 201 Created {txn_id, status:SETTLED}\n  GW-->>FE: Response\n  deactivate PAY\n  FE->>U: ✅ Payment successful"
+  },
+  {
+    "name": "Requirements: Trade Settlement System",
+    "type": "Flowchart",
+    "description": "Requirements collection diagram mapping all functional flows for a trade settlement system — trade capture, enrichment, matching, netting, settlement, and reconciliation.",
+    "code": "flowchart TD\n  classDef req fill: #1e3a5f20,stroke: #3b82f6\n  classDef proc fill: #14532d20,stroke: #22c55e\n  classDef store fill: #78350f20,stroke: #f59e0b\n  classDef ext fill: #3b076420,stroke: #8b5cf6\n  classDef decision fill: #1c1917,stroke: #78716c\n\n  subgraph CAPTURE[\"📋 Trade Capture\"]\n    TC1[\"Receive trade from OMS\"]\n    TC2[\"Validate: symbol, qty, price, counterparty\"]\n    TC3{\"Valid?\"}\n    TC4[\"Reject → OMS with reason\"]\n    TC1 --> TC2 --> TC3\n    TC3 -->|No| TC4\n  end\n\n  subgraph ENRICH[\"🔍 Enrichment\"]\n    EN1[\"Lookup: SSI (settlement instructions)\"]\n    EN2[\"Lookup: counterparty BIC / LEI\"]\n    EN3[\"Apply corporate actions / adjustments\"]\n    EN4[\"Calculate settlement date (T+2 rule)\"]\n    EN1 --> EN2 --> EN3 --> EN4\n  end\n\n  subgraph MATCH[\"🤝 Matching & Affirmation\"]\n    MT1[\"Submit to central matching (DTCC/Euroclear)\"]\n    MT2{\"Match found?\"}\n    MT3[\"Mark: MATCHED\"]\n    MT4[\"Exception: unmatched queue\"]\n    MT5[\"Ops team manual resolution\"]\n    MT1 --> MT2\n    MT2 -->|Yes| MT3\n    MT2 -->|No| MT4 --> MT5 --> MT2\n  end\n\n  subgraph NET[\"⚖️ Netting\"]\n    NT1[\"Aggregate same-day same-ccy trades\"]\n    NT2[\"Calculate net positions per counterparty\"]\n    NT3[\"Generate net settlement instructions\"]\n  end\n\n  subgraph SETTLE[\"💰 Settlement\"]\n    ST1[\"Send to CSD / custodian via SWIFT MT54x\"]\n    ST2[\"Debit / credit securities accounts\"]\n    ST3[\"Cash settlement via RTGS\"]\n    ST4{\"Settled?\"}\n    ST5[\"Mark: SETTLED — update ledger\"]\n    ST6[\"Failed settlement → penalty process\"]\n    ST1 --> ST2 --> ST3 --> ST4\n    ST4 -->|Yes| ST5\n    ST4 -->|No| ST6\n  end\n\n  subgraph RECON[\"🔄 Reconciliation\"]\n    RC1[\"End-of-day: compare internal vs custodian positions\"]\n    RC2{\"Breaks found?\"}\n    RC3[\"Generate break report\"]\n    RC4[\"All matched → archive\"]\n    RC1 --> RC2\n    RC2 -->|Yes| RC3\n    RC2 -->|No| RC4\n  end\n\n  TC3 -->|Yes| EN1\n  EN4 --> MT1\n  MT3 --> NT1\n  NT3 --> ST1\n  ST5 --> RC1\n\n  class TC1,TC2,TC4 req\n  class EN1,EN2,EN3,EN4,MT1,MT3,NT1,NT2,NT3,ST1,ST2,ST3,ST5 proc\n  class MT4,MT5,ST6,RC3 req"
+  },
+  {
+    "name": "System Context: Integration Hub",
+    "type": "C4",
+    "description": "C4 System Context showing an Integration Hub at the centre connecting upstream originators and downstream processors via Kafka, IBM MQ, REST, SFTP, and Oracle.",
+    "code": "C4Context\n  title Integration Hub — System Context\n\n  Enterprise_Boundary(ent, \"Enterprise Boundary\") {\n    Person(ops, \"Operations Team\", \"Monitors integration health, resolves exceptions\")\n    Person(dev, \"Integration Developer\", \"Configures routes, mappings, transformations\")\n\n    System(HUB, \"Integration Hub\", \"Central ESB / middleware — routes, transforms and orchestrates messages between all enterprise systems\")\n\n    System(OMS, \"Order Management System\", \"Source of trade and order events\")\n    System(CORE, \"Core Banking / Product Processor\", \"Processes transactions, calculations, ledger updates\")\n    System(RISK, \"Risk & Compliance Platform\", \"Real-time risk scoring, regulatory reporting\")\n    System(DWH, \"Data Warehouse / BI\", \"Reporting, analytics, dashboards\")\n  }\n\n  System_Ext(SWIFT, \"SWIFT Network\", \"Interbank messaging — MT/MX messages\")\n  System_Ext(CSD, \"Central Securities Depository\", \"Settlement and custody\")\n  System_Ext(PARTNER, \"External Trading Partners\", \"Counterparties, brokers, custodians\")\n  System_Ext(SFTP_EXT, \"Partner SFTP Endpoints\", \"File-based B2B data exchange\")\n\n  Rel(ops, HUB, \"Monitors via dashboard\", \"HTTPS\")\n  Rel(dev, HUB, \"Configures routes\", \"Admin UI / API\")\n\n  Rel(OMS, HUB, \"Publishes trade events\", \"Kafka\")\n  Rel(HUB, CORE, \"Routes processing requests\", \"IBM MQ / REST\")\n  Rel(CORE, HUB, \"Returns computation results\", \"IBM MQ / REST\")\n  Rel(HUB, RISK, \"Streams risk data\", \"Kafka\")\n  Rel(HUB, DWH, \"Feeds analytics events\", \"Kafka\")\n\n  Rel(HUB, SWIFT, \"Sends interbank instructions\", \"SWIFT FIN/ISO 20022\")\n  Rel(HUB, CSD, \"Delivers settlement instructions\", \"REST / ISO 15022\")\n  Rel(PARTNER, HUB, \"Sends trade confirmations\", \"SFTP / HTTPS\")\n  Rel(HUB, SFTP_EXT, \"Distributes settlement files\", \"SFTP\")\n\n  UpdateLayoutConfig($c4ShapeInRow=\"4\", $c4BoundaryInRow=\"1\")"
+  },
+  {
+    "name": "Microservice Saga Pattern",
+    "type": "Sequence",
+    "description": "Distributed saga for a long-running transaction spanning multiple microservices — with compensating transactions on failure, Kafka choreography, and Oracle state tracking.",
+    "code": "sequenceDiagram\n  autonumber\n  participant CLI as Client\n  participant ORCH as Saga Orchestrator\n  participant KFK as Kafka\n  participant INV as Inventory Svc\n  participant PAY as Payment Svc\n  participant SHIP as Shipping Svc\n  participant ORA as Oracle — Saga State\n\n  CLI->>ORCH: POST /orders {items, payment_method}\n  ORCH->>ORA: INSERT saga_instance (status=STARTED)\n\n  Note over ORCH,ORA: Step 1 — Reserve Inventory\n  ORCH->>KFK: Publish → inventory.reserve.cmd\n  KFK-->>INV: Consume reserve command\n  INV->>INV: Check stock, place soft reserve\n  alt Stock available\n    INV->>KFK: Publish → inventory.reserved.evt\n    KFK-->>ORCH: inventory.reserved.evt\n    ORCH->>ORA: UPDATE saga: step1=DONE\n  else Out of stock\n    INV->>KFK: Publish → inventory.reserve.failed\n    KFK-->>ORCH: inventory.reserve.failed\n    ORCH->>ORA: UPDATE saga: FAILED at step1\n    ORCH-->>CLI: 409 Out of stock\n  end\n\n  Note over ORCH,ORA: Step 2 — Charge Payment\n  ORCH->>KFK: Publish → payment.charge.cmd\n  KFK-->>PAY: Consume charge command\n  PAY->>PAY: Authorise and capture payment\n  alt Payment success\n    PAY->>KFK: Publish → payment.charged.evt\n    KFK-->>ORCH: payment.charged.evt\n    ORCH->>ORA: UPDATE saga: step2=DONE\n  else Payment declined\n    PAY->>KFK: Publish → payment.failed\n    KFK-->>ORCH: payment.failed\n    ORCH->>KFK: Publish → inventory.release.cmd (COMPENSATE)\n    KFK-->>INV: Release reservation\n    ORCH->>ORA: UPDATE saga: COMPENSATED\n    ORCH-->>CLI: 402 Payment declined\n  end\n\n  Note over ORCH,ORA: Step 3 — Create Shipment\n  ORCH->>KFK: Publish → shipping.create.cmd\n  KFK-->>SHIP: Consume shipment command\n  SHIP->>SHIP: Allocate carrier, generate tracking\n  SHIP->>KFK: Publish → shipping.created.evt\n  KFK-->>ORCH: shipping.created.evt\n  ORCH->>ORA: UPDATE saga: status=COMPLETED\n  ORCH-->>CLI: 201 Order confirmed {order_id, tracking}"
+  },
+  {
+    "name": "Data Sync State Machine",
+    "type": "State",
+    "description": "State machine for a data synchronisation process — idle, extracting, validating, loading, reconciling, and error/rollback states.",
+    "code": "stateDiagram-v2\n  [*] --> Idle : System startup\n\n  Idle --> Extracting : Schedule trigger / manual start\n  note right of Idle\n    Waiting for next\n    sync window\n    (cron: 0 4 * * *)\n  end note\n\n  Extracting --> Validating : Delta records fetched\n  Extracting --> Error : Source unavailable / timeout\n\n  Validating --> Transforming : Schema & business rules passed\n  Validating --> Quarantine : Validation failures > threshold\n\n  Transforming --> Loading : Records mapped to target schema\n  Transforming --> Error : Transformation exception\n\n  Loading --> Reconciling : Bulk upsert complete\n  Loading --> RollingBack : DB constraint / deadlock\n\n  Reconciling --> Idle : Counts match — sync OK\n  Reconciling --> RollingBack : Count mismatch detected\n\n  RollingBack --> Idle : Rollback committed\n  RollingBack --> ManualIntervention : Rollback also failed\n\n  Quarantine --> ManualIntervention : Notify ops team\n  Error --> Retrying : Attempt ≤ 3\n  Error --> ManualIntervention : Attempt > 3\n\n  Retrying --> Extracting : Backoff delay elapsed\n  ManualIntervention --> Idle : Ops team resolved\n  ManualIntervention --> [*] : Abort sync job"
+  }
+]

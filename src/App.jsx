@@ -1,9 +1,8 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
-import { parseMermaid, serializeMermaid, serializePlantUML, serializeD2, validateMermaid, detectDiagramKind } from './utils/dacUtils';
-import MermaidPreview from './MermaidPreview';
+import { parseMermaid, serializeMermaid, serializePlantUML, serializeD2, validateMermaid, detectDiagramKind } from './utils/cadUtils';
 import { registerMermaidLanguage } from './utils/monacoMermaid';
-import dacTemplates from './templates/dacTemplates.json';
+import cadTemplates from './templates/cadTemplates.json';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -22,17 +21,86 @@ import '@xyflow/react/dist/style.css';
 import { toPng, toSvg } from 'html-to-image';
 import { v4 as uuidv4 } from 'uuid';
 import yaml from 'js-yaml';
-import { Download, Upload, FileJson, Image, PlayCircle, Box, Diamond, Server, Trash2, Database, Cloud, MousePointer2, Hand, Grid3X3, Code, ChevronLeft, ChevronRight, ChevronsDown, ChevronsUp, Filter, ListOrdered, FileText, Shield, ShieldCheck, MessageSquare, Send, Skull, Mail, Clock, GitMerge, GitBranch, Workflow, Network, ArrowRightLeft, Route, FilePlus, RefreshCw, Radio, Share2, ListChecks, Scale, Settings2, ArrowDownUp, TerminalSquare, CheckCircle2, PackageOpen, Package, FileArchive, MessageCircle, RadioTower, Webhook, Hexagon, Building2, CloudLightning, BoxSelect, Plug, Zap, Cpu, User, File, Type, Table, Building, Layers, Search, X, Target, Eraser, StickyNote, Info, Pencil, Paintbrush, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Triangle, ArrowUpRight, Minus, Circle as CircleIcon, Square, LayoutGrid, Copy, Plus, Palette, Shapes, Globe, Lock, Wifi, Monitor, Smartphone, Terminal, HardDrive, Users } from 'lucide-react';
+import { Download, Upload, FileJson, Image, PlayCircle, Box, Diamond, Server, Trash2, Database, Cloud, MousePointer2, Hand, Grid3X3, Code, ChevronLeft, ChevronRight, ChevronsDown, ChevronsUp, Filter, ListOrdered, FileText, Shield, ShieldCheck, MessageSquare, Send, Skull, Mail, Clock, GitMerge, GitBranch, Workflow, Network, ArrowRightLeft, Route, FilePlus, RefreshCw, Radio, Share2, ListChecks, Scale, Settings2, ArrowDownUp, TerminalSquare, CheckCircle2, PackageOpen, Package, FileArchive, MessageCircle, RadioTower, Webhook, Hexagon, Building2, CloudLightning, BoxSelect, Plug, Zap, Cpu, User, File, Type, Table, Building, Layers, Search, X, Target, Eraser, StickyNote, Info, Pencil, Paintbrush, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Triangle, ArrowUpRight, Minus, Circle as CircleIcon, Square, LayoutGrid, Copy, Columns, PanelTopOpen, PanelLeftClose, Plus, Palette, Shapes, Globe, Lock, Wifi, Monitor, Smartphone, Terminal, HardDrive, Users, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import ThemeToggle from './components/ThemeToggle';
 import MSLogo from './components/MSLogo';
 import { useTheme } from './contexts/ThemeContext';
 import * as AllIcons from 'lucide-react';
-
-const allIconNames = Object.keys(AllIcons).filter(k => k[0] === k[0].toUpperCase() && k !== 'LucideIcon' && k !== 'Icon');
 import CustomNode from './CustomNode';
 import CustomEdge from './CustomEdge';
 import LandingPage from './LandingPage';
+import HelpModal from './HelpModal';
 import './App.css';
+
+const allIconNames = Object.keys(AllIcons).filter(k => k[0] === k[0].toUpperCase() && k !== 'LucideIcon' && k !== 'Icon');
+
+// ── Mermaid rendering for CAD workspace ──────────────────────────────────────
+let _mmdModule = null, _mmdTheme = null;
+const getMMD = (theme) => {
+  const want = theme === 'dark' ? 'dark' : 'default';
+  const noMaxWidth = { useMaxWidth: false };
+  const cfg = {
+    startOnLoad: false, securityLevel: 'loose',
+    fontFamily: "'Inter', system-ui, sans-serif", theme: want,
+    // Dark theme: override variables for good contrast on all diagram types including C4
+    themeVariables: want === 'dark' ? {
+      primaryColor:        '#1e3a5f',
+      primaryTextColor:    '#e2e8f0',
+      primaryBorderColor:  '#3b82f6',
+      secondaryColor:      '#1e293b',
+      tertiaryColor:       '#0f172a',
+      background:          '#0f111a',
+      lineColor:           '#94a3b8',
+      edgeLabelBackground: '#1e293b',
+      clusterBkg:          '#1e293b',
+      clusterBorder:       '#3b82f6',
+      titleColor:          '#e2e8f0',
+      nodeBorder:          '#3b82f6',
+      nodeTextColor:       '#e2e8f0',
+      labelBackground:     '#1e293b',
+      labelTextColor:      '#e2e8f0',
+      relationColor:       '#94a3b8',
+      relationLabelColor:  '#cbd5e1',
+    } : undefined,
+    flowchart: { htmlLabels: true, useMaxWidth: false },
+    sequence: noMaxWidth, gantt: noMaxWidth, pie: noMaxWidth,
+    er: noMaxWidth, classDiagram: noMaxWidth, stateDiagram: noMaxWidth,
+    journey: noMaxWidth, gitGraph: noMaxWidth, sankey: noMaxWidth,
+    xychart: noMaxWidth, block: noMaxWidth, quadrantChart: noMaxWidth,
+    timeline: noMaxWidth, mindmap: noMaxWidth, kanban: noMaxWidth,
+  };
+  if (!_mmdModule) {
+    _mmdModule = import('mermaid').then(m => { const d = m.default||m; d.initialize(cfg); _mmdTheme=want; return d; });
+  } else if (_mmdTheme !== want) {
+    _mmdModule = _mmdModule.then(d => { d.initialize(cfg); _mmdTheme=want; return d; });
+  }
+  return _mmdModule;
+};
+const parseCadSvg = (raw) => {
+  let hintW = null;
+  const text = raw.replace(/(<svg\b[^>]*?\bstyle=["'])([^"']*)["']/i, (_, pre, inner) => {
+    const cleaned = inner.split(';').filter(s => {
+      const t = s.trim().toLowerCase();
+      if (t.startsWith('max-width')) { const v=parseFloat(t.split(':')[1]); if(v>0) hintW=v; return false; }
+      return true;
+    }).join(';');
+    return `${pre}${cleaned}"`;
+  });
+  let w=0, h=0;
+  try {
+    const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
+    const el  = doc.querySelector('svg');
+    if (el) {
+      const vb = el.getAttribute('viewBox');
+      if (vb) { const p=vb.trim().split(/[\s,]+/).map(Number); if(p.length>=4&&p[2]>0&&p[3]>0){w=p[2];h=p[3];} }
+      if (!w) { const wa=el.getAttribute('width')||'', ha=el.getAttribute('height')||'';
+        if(!wa.includes('%')&&!ha.includes('%')){w=parseFloat(wa)||0;h=parseFloat(ha)||0;} }
+      if (!w && hintW) { w=hintW; h=parseFloat(el.getAttribute('height'))||0; }
+    }
+  } catch {}
+  return { text, w: w||800, h: h||600 };
+};
+let _mmdSeq = 0;
 
 const BRAND_ICONS = [
   { 
@@ -477,7 +545,7 @@ const loadState = (key, defaultVal) => {
 
 // Component palette for the "Code as Diagram" gallery. `{{idN}}` placeholders are
 // replaced with fresh unique node ids when the snippet is inserted into the editor.
-const DAC_SHAPES = [
+const CAD_SHAPES = [
   { name: 'Rectangle',     hint: 'process / step',   snippet: '{{id1}}["Rectangle"]' },
   { name: 'Rounded',       hint: 'soft process',     snippet: '{{id1}}("Rounded")' },
   { name: 'Stadium',       hint: 'start / end',      snippet: '{{id1}}(["Stadium"])' },
@@ -490,7 +558,7 @@ const DAC_SHAPES = [
   { name: 'Flag',          hint: 'asymmetric',       snippet: '{{id1}}>"Flag"]' },
 ];
 
-const DAC_EDGES = [
+const CAD_EDGES = [
   { name: 'Arrow',          hint: 'A --> B',        snippet: '{{id1}} --> {{id2}}' },
   { name: 'Open link',      hint: 'A --- B',        snippet: '{{id1}} --- {{id2}}' },
   { name: 'Dotted',         hint: 'A -.-> B',       snippet: '{{id1}} -.-> {{id2}}' },
@@ -519,14 +587,14 @@ const estimateDacNodeSize = (node) => {
   return { width: w, height: h };
 };
 
-const DAC_STRUCTURES = [
+const CAD_STRUCTURES = [
   { name: 'Subgraph',  hint: 'group of nodes',     snippet: 'subgraph {{id1}} ["Group"]\n    {{id2}}["Child"]\n  end' },
   { name: 'Class def', hint: 'reusable colour',    snippet: 'classDef hot fill:#ef444422,stroke:#ef4444\n  class {{id1}} hot' },
   { name: 'Inline style', hint: 'colour one node', snippet: '{{id1}}["Styled"]\n  style {{id1}} fill:#22c55e22,stroke:#22c55e' },
   { name: 'Comment',   hint: 'note in source',     snippet: '%% your comment here' },
 ];
 
-function FlowCanvas() {
+function FlowCanvas({ onGoHome }) {
   const { theme } = useTheme();
   const reactFlowWrapper = useRef(null);
   const fileInputRef = useRef(null);
@@ -537,8 +605,15 @@ function FlowCanvas() {
   const [drawingColor, setDrawingColor] = useState('#3b82f6');
   const [drawFillColor, setDrawFillColor] = useState('transparent');
   const [drawOpacity, setDrawOpacity] = useState(100);
-  const [drawingStrokeWidth, setDrawingStrokeWidth] = useState(3);
+  const [drawFillOpacity, setDrawFillOpacity] = useState(100);
+  const [drawStrokeOpacity, setDrawStrokeOpacity] = useState(100);
+  const [drawingStrokeWidth, setDrawingStrokeWidth] = useState(1);
   const [drawStrokeStyle, setDrawStrokeStyle] = useState('solid'); // 'solid', 'dashed', 'dotted'
+  const [drawShadow, setDrawShadow] = useState(false);
+  const [drawShadowColor, setDrawShadowColor] = useState('#000000');
+  const [drawShadowOpacity, setDrawShadowOpacity] = useState(60);
+  const [drawShadowBlur, setDrawShadowBlur] = useState(8);
+  const [drawCornerRadius, setDrawCornerRadius] = useState(4);
   const [currentPath, setCurrentPath] = useState([]);
   const currentPathRef = useRef([]);
   const [brandSearch, setBrandSearch] = useState('');
@@ -556,12 +631,67 @@ function FlowCanvas() {
   const drawEdgesRef = useRef(drawEdges);
   useEffect(() => { drawNodesRef.current = drawNodes; }, [drawNodes]);
   useEffect(() => { drawEdgesRef.current = drawEdges; }, [drawEdges]);
+
+  // Draw history for undo/redo
+  const drawHistoryRef = useRef([{ nodes: loadState('drawNodes', []).map(n => ({ ...n, data: { ...n.data, isDrawShape: true } })), edges: loadState('drawEdges', []) }]);
+  const drawHistoryIndexRef = useRef(0);
+  const drawClipboardRef = useRef([]);
+  const [drawToolLock, setDrawToolLock] = useState(false);
+
+  const pushDrawHistory = useCallback((nodes, edges) => {
+    const history = drawHistoryRef.current.slice(0, drawHistoryIndexRef.current + 1);
+    history.push({ nodes: nodes.map(n => ({ ...n })), edges: edges.map(e => ({ ...e })) });
+    if (history.length > 60) history.shift();
+    drawHistoryRef.current = history;
+    drawHistoryIndexRef.current = history.length - 1;
+  }, []);
+
+  const undoDraw = useCallback(() => {
+    const idx = drawHistoryIndexRef.current;
+    if (idx <= 0) return;
+    drawHistoryIndexRef.current = idx - 1;
+    const { nodes, edges } = drawHistoryRef.current[idx - 1];
+    setDrawNodes(nodes);
+    setDrawEdges(edges);
+  }, [setDrawNodes, setDrawEdges]);
+
+  const redoDraw = useCallback(() => {
+    const idx = drawHistoryIndexRef.current;
+    const history = drawHistoryRef.current;
+    if (idx >= history.length - 1) return;
+    drawHistoryIndexRef.current = idx + 1;
+    const { nodes, edges } = history[idx + 1];
+    setDrawNodes(nodes);
+    setDrawEdges(edges);
+  }, [setDrawNodes, setDrawEdges]);
+
   const [eipNodes, setEipNodes, onEipNodesChange] = useNodesState(loadState('eipNodes', []));
   const [eipEdges, setEipEdges, onEipEdgesChange] = useEdgesState(loadState('eipEdges', []));
 
-  const [workspace, setWorkspace] = useState(localStorage.getItem('workspace') || 'diagram');
+  const [reactFlowInstance, setReactFlowInstance] = useState(null);
+  const reactFlowInstanceRef = useRef(null);
+
+  const [workspace, setWorkspace] = useState(localStorage.getItem('workspace') || 'cad');
   const workspaceRef = useRef(workspace);
-  useEffect(() => { workspaceRef.current = workspace; }, [workspace]);
+  useEffect(() => {
+    workspaceRef.current = workspace;
+    if (workspace === 'cad') {
+      // Re-fit when switching back to CAD tab
+      const t1 = setTimeout(() => reactFlowInstanceRef.current?.fitView({ padding: 0.05, duration: 400 }), 120);
+      const t2 = setTimeout(() => reactFlowInstanceRef.current?.fitView({ padding: 0.05, duration: 400 }), 450);
+      return () => { clearTimeout(t1); clearTimeout(t2); };
+    }
+  }, [workspace]);
+
+  // (CAD panel size tracking removed — ReactFlow fitView handles layout natively)
+
+  useEffect(() => {
+    const el = cadCanvasRef.current;
+    if (!el) return;
+    // No custom pan needed — ReactFlow handles pan/zoom natively in CAD mode
+    const noop = () => {};
+    return noop;
+  }, []);
   const [activeTool, setActiveTool] = useState('select'); 
   const [interactionMode, setInteractionMode] = useState('move'); 
   const [sectionsOpen, setSectionsOpen] = useState({ 
@@ -605,7 +735,19 @@ function FlowCanvas() {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        if (e.ctrlKey && e.shiftKey && (e.key === '>' || e.key === '<' || e.key === '.' || e.key === ',')) {
+          e.preventDefault();
+          const grow = e.key === '>' || e.key === '.';
+          setDrawNodes(nds => nds.map(n => {
+            if (!n.selected) return n;
+            const cur = parseInt(n.data.fontSize) || 16;
+            const next = Math.max(8, grow ? cur + 2 : cur - 2);
+            return { ...n, data: { ...n.data, fontSize: next + 'px' } };
+          }));
+        }
+        return;
+      }
       if (document.activeElement?.closest?.('.monaco-editor') || document.activeElement?.closest?.('.monaco-editor-container')) return;
 
       const key = e.key.toLowerCase();
@@ -613,6 +755,10 @@ function FlowCanvas() {
       // Global hotkeys
       if (key === 'v') { setActiveTool('select'); setIsDrawingMode(false); setInteractionMode('move'); return; }
       if (key === 'h') { setInteractionMode('pan'); return; }
+      if (key === 't' && workspaceRef.current !== 'draw') {
+        if (workspaceRef.current === 'cad') { setShowTemplateGallery(true); } else { setTemplateFocusIdx(0); setShowTemplatesModal(true); setShowTemplateGallery(false); }
+        return;
+      }
       if (key === 'escape') {
         setActiveTool('select');
         setIsDrawingMode(false);
@@ -630,9 +776,81 @@ function FlowCanvas() {
         if (workspaceRef.current === 'draw') {
           drawAddDirectionalRef.current?.(dir);
         } else {
-          dacAddDirectionalRef.current?.(dir);
+          cadAddDirectionalRef.current?.(dir);
         }
         return;
+      }
+
+      // Draw workspace: Ctrl+Z/Y, Ctrl+C/V/X/D/A
+      if (workspaceRef.current === 'draw') {
+        if (e.ctrlKey && e.shiftKey && (e.key === '>' || e.key === '<' || e.key === '.' || e.key === ',')) {
+          e.preventDefault();
+          const grow = e.key === '>' || e.key === '.';
+          setDrawNodes(nds => nds.map(n => {
+            if (!n.selected) return n;
+            const cur = parseInt(n.data.fontSize) || 16;
+            const next = Math.max(8, grow ? cur + 2 : cur - 2);
+            return { ...n, data: { ...n.data, fontSize: next + 'px' } };
+          }));
+          return;
+        }
+        if (e.ctrlKey && key === 'z' && !e.shiftKey) { e.preventDefault(); undoDraw(); return; }
+        if (e.ctrlKey && (key === 'y' || (key === 'z' && e.shiftKey))) { e.preventDefault(); redoDraw(); return; }
+        if (e.ctrlKey && key === 'c') {
+          e.preventDefault();
+          const selected = drawNodesRef.current.filter(n => n.selected);
+          if (selected.length > 0) drawClipboardRef.current = selected.map(n => ({ ...n, data: { ...n.data } }));
+          return;
+        }
+        if (e.ctrlKey && key === 'x') {
+          e.preventDefault();
+          const selected = drawNodesRef.current.filter(n => n.selected);
+          if (selected.length === 0) return;
+          drawClipboardRef.current = selected.map(n => ({ ...n, data: { ...n.data } }));
+          const ids = new Set(selected.map(n => n.id));
+          const newNodes = drawNodesRef.current.filter(n => !ids.has(n.id));
+          const newEdges = drawEdgesRef.current.filter(ed => !ids.has(ed.source) && !ids.has(ed.target));
+          setDrawNodes(newNodes);
+          setDrawEdges(newEdges);
+          pushDrawHistory(newNodes, newEdges);
+          return;
+        }
+        if (e.ctrlKey && key === 'v') {
+          e.preventDefault();
+          if (!drawClipboardRef.current.length) return;
+          const offset = 20;
+          const newNodes = drawClipboardRef.current.map(n => ({
+            ...n,
+            id: uuidv4(),
+            position: { x: n.position.x + offset, y: n.position.y + offset },
+            selected: true,
+            data: { ...n.data }
+          }));
+          drawClipboardRef.current = newNodes;
+          setDrawNodes(nds => [...nds.map(n => ({ ...n, selected: false })), ...newNodes]);
+          pushDrawHistory([...drawNodesRef.current.map(n => ({ ...n, selected: false })), ...newNodes], drawEdgesRef.current);
+          return;
+        }
+        if (e.ctrlKey && key === 'd') {
+          e.preventDefault();
+          const selected = drawNodesRef.current.filter(n => n.selected);
+          if (!selected.length) return;
+          const newNodes = selected.map(n => ({
+            ...n,
+            id: uuidv4(),
+            position: { x: n.position.x + 20, y: n.position.y + 20 },
+            selected: true,
+            data: { ...n.data }
+          }));
+          setDrawNodes(nds => [...nds.map(n => ({ ...n, selected: false })), ...newNodes]);
+          pushDrawHistory([...drawNodesRef.current.map(n => ({ ...n, selected: false })), ...newNodes], drawEdgesRef.current);
+          return;
+        }
+        if (e.ctrlKey && key === 'a') {
+          e.preventDefault();
+          setDrawNodes(nds => nds.map(n => ({ ...n, selected: true })));
+          return;
+        }
       }
 
       if (workspace !== 'draw') return;
@@ -640,111 +858,203 @@ function FlowCanvas() {
       switch (key) {
         case '1': setActiveTool('select'); setIsDrawingMode(false); setInteractionMode('move'); break;
         case '2': case 'r': setActiveTool('rectangle'); setIsDrawingMode(false); break;
-        case '3': case 'd': setActiveTool('diamond'); setIsDrawingMode(false); break;
+        case '3': case 'd': if (!e.ctrlKey) { setActiveTool('diamond'); setIsDrawingMode(false); } break;
         case '4': case 'o': setActiveTool('circle'); setIsDrawingMode(false); break;
         case '5': setActiveTool('arrow'); setIsDrawingMode(false); break;
         case '6': setActiveTool('line'); setIsDrawingMode(false); break;
         case '7': case 'p': setActiveTool('pencil'); setIsDrawingMode(true); break;
-        case '8': setActiveTool('text'); setIsDrawingMode(false); break;
+        case '8': case 't': setActiveTool('text'); setIsDrawingMode(false); break;
         case '9': setActiveTool('note'); setIsDrawingMode(false); break;
         case '0': setActiveTool('triangle'); setIsDrawingMode(false); break;
-        case 'c': setActiveTool('cloud'); setIsDrawingMode(false); break;
-        case 'l': setActiveTool('line'); setIsDrawingMode(false); break;
-        case 'a': setActiveTool('arrow'); setIsDrawingMode(false); break;
+        case 'c': if (!e.ctrlKey) { setActiveTool('cloud'); setIsDrawingMode(false); } break;
+        case 'l': if (!e.ctrlKey) { setActiveTool('line'); setIsDrawingMode(false); } break;
+        case 'a': if (!e.ctrlKey) { setActiveTool('arrow'); setIsDrawingMode(false); } break;
+        case 'e': setActiveTool('eraser'); setIsDrawingMode(false); break;
+        case 'n': addCanvasWidget('note'); setActiveTool('select'); setIsDrawingMode(false); break;
         case 'b': toggleSection('draw_brands'); break;
-        case 'x': clearCanvas(); break;
+        case 'x': if (!e.ctrlKey) clearCanvas(); break;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [workspace]);
+  }, [workspace, undoDraw, redoDraw, pushDrawHistory, setDrawNodes, setDrawEdges]);
 
+  const [showHelp, setShowHelp] = useState(false);
+  const [helpTab, setHelpTab] = useState('diagrams');
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
+  const [templateFocusIdx, setTemplateFocusIdx] = useState(0);
+  const templateFocusIdxRef = useRef(0);
+  useEffect(() => { templateFocusIdxRef.current = templateFocusIdx; }, [templateFocusIdx]);
+
+  const loadTemplateRef = useRef(null);
+  // Keyboard navigation for templates modal (non-CAD)
+  useEffect(() => {
+    if (!showTemplatesModal) return;
+    const list = templates[workspace] || [];
+    const handler = (e) => {
+      if (e.key === 'ArrowDown') { e.preventDefault(); setTemplateFocusIdx(i => Math.min(i + 1, list.length - 1)); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); setTemplateFocusIdx(i => Math.max(i - 1, 0)); }
+      else if (e.key === 'Enter') { e.preventDefault(); const tpl = list[templateFocusIdxRef.current]; if (tpl && loadTemplateRef.current) { loadTemplateRef.current(tpl); setShowTemplatesModal(false); } }
+      else if (e.key === 'Escape') { setShowTemplatesModal(false); }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [showTemplatesModal, workspace]);
+
   const [showTextEditor, setShowTextEditor] = useState(false);
   const [editorContent, setEditorContent] = useState('');
   const [autoArrangeOnImport, setAutoArrangeOnImport] = useState(true);
   const [showExportDropdown, setShowExportDropdown] = useState(false);
-  const [showDacEditor, setShowDacEditor] = useState(true);
+  const [showCadEditor, setShowCadEditor] = useState(true);
   const [splitWidth, setSplitWidth] = useState(450);
-  const [dacCode, setDacCode] = useState(() => localStorage.getItem('dacCode') || dacTemplates[0].code);
-  const [dacNodes, setDacNodes, onDacNodesChange] = useNodesState(loadState('dacNodes', []));
-  const [dacEdges, setDacEdges, onDacEdgesChange] = useEdgesState(loadState('dacEdges', []));
-  const dacNodesRef = useRef(dacNodes);
-  const dacEdgesRef = useRef(dacEdges);
-  useEffect(() => { dacNodesRef.current = dacNodes; }, [dacNodes]);
-  useEffect(() => { dacEdgesRef.current = dacEdges; }, [dacEdges]);
-  const [dacStatus, setDacStatus] = useState({ ok: true, message: '' });
-  const [showTemplateGallery, setShowTemplateGallery] = useState(false);
-  const [dacGalFilter, setDacGalFilter] = useState('All');
-  const dacSigRef = useRef(null);       // last structural signature applied to canvas
-  const dacSourceRef = useRef('code');  // 'code' | 'canvas' — who last changed dacCode
-  const dacDirRef = useRef('TB');       // last parsed flow direction (for serialise round-trip)
-  const dacIdRef = useRef(0);           // monotonic counter for generated node ids
-  const dacReadyRef = useRef(false);    // true once code has been applied to the canvas at least once
-  const dacEditorRef = useRef(null);    // monaco editor instance
-  const dacMonacoRef = useRef(null);    // monaco namespace
-  const dacKind = workspace === 'dac' ? detectDiagramKind(dacCode) : 'flowchart'; // 'flowchart' | 'other'
-  const [diagramTitle] = useState(() => {
+  const [cadCode, setCadCode] = useState(() => {
+    const cached = localStorage.getItem('cadCode') || localStorage.getItem('dacCode');
+    return (cached && cached.trim()) ? cached : cadTemplates[0].code;
+  });
+  const [cadNodes, setCadNodes, onCadNodesChange] = useNodesState(loadState('cadNodes', loadState('dacNodes', [])));
+  const [cadEdges, setCadEdges, onCadEdgesChange] = useEdgesState(loadState('cadEdges', loadState('dacEdges', [])));
+  const cadNodesRef = useRef(cadNodes);
+  const cadEdgesRef = useRef(cadEdges);
+  useEffect(() => { cadNodesRef.current = cadNodes; }, [cadNodes]);
+  useEffect(() => { cadEdgesRef.current = cadEdges; }, [cadEdges]);
+  const [cadStatus, setCadStatus] = useState({ ok: true, message: '' });
+const [showTemplateGallery, setShowTemplateGallery] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  // 'docked' | 'collapsed' | 'float'
+  const [editorMode, setEditorMode] = useState('docked');
+  const [editorOpacity, setEditorOpacity] = useState(90);
+  const [floatPos, setFloatPos] = useState({ x: 24, y: 60 });
+  const floatDragRef = useRef(null);
+  const [cadGalFilter, setCadGalFilter] = useState('All');
+  const cadSigRef = useRef(null);       // last structural signature applied to canvas
+  const cadSourceRef = useRef('code');  // 'code' | 'canvas' — who last changed cadCode
+  const cadDirRef = useRef('TB');       // last parsed flow direction (for serialise round-trip)
+  const cadIdRef = useRef(0);           // monotonic counter for generated node ids
+  const cadReadyRef = useRef(false);    // true once code has been applied to the canvas at least once
+  const cadEditorRef = useRef(null);    // monaco editor instance
+  const cadMonacoRef = useRef(null);    // monaco namespace
+  const cadCanvasRef   = useRef(null);   // diagram area div (right panel in CAD)
+  const cadPreviewRef  = useRef(null);   // inner preview area (kept for layout ref)
+  const cadKind = workspace === 'cad' ? detectDiagramKind(cadCode) : 'flowchart'; // 'flowchart' | 'other'
+  const [cadDiagramPos, setCadDiagramPos] = useState({ x: 0, y: 0 }); // position of the whole diagram in flow space
+  const [diagramTitle, setDiagramTitle] = useState(() => {
     return localStorage.getItem(`${workspace}-title`) || (
       workspace === 'ddd' ? 'Domain-Driven Design Blueprint' :
       workspace === 'diagram' ? 'System Architecture Topology' :
-      workspace === 'draw' ? 'Free-form Draw & Sketch' : 'Camel Route Pipeline'
+      workspace === 'draw' ? 'Free-form Sketch' : 'Camel Route Pipeline'
     );
   });
 
   useEffect(() => {
+    const saved = localStorage.getItem(`${workspace}-title`);
+    if (saved) {
+      setDiagramTitle(saved);
+    } else {
+      const def = workspace === 'ddd' ? 'Domain-Driven Design Blueprint' :
+                  workspace === 'diagram' ? 'System Architecture Topology' :
+                  workspace === 'draw' ? 'Free-form Sketch' :
+                  workspace === 'cad' ? 'Code as Diagram' : 'Camel Route Pipeline';
+      setDiagramTitle(def);
+    }
+  }, [workspace]);
+
+  const getSanitizedBaseName = () => {
+    return diagramTitle
+      .toLowerCase()
+      .replace(/&/g, 'and')
+      .replace(/[^a-z0-9\s-]/g, '')
+      .trim()
+      .replace(/\s+/g, '-');
+  };
+
+  useEffect(() => {
     localStorage.setItem('workspace', workspace);
-    if (workspace === 'dac') setShowDacEditor(true);
+    if (workspace === 'cad') setShowCadEditor(true);
   }, [workspace]);
 
   // Sync DaC Code -> Canvas (debounced). Preserves manual positions when the
   // graph structure is unchanged; re-lays-out cleanly when it changes.
   useEffect(() => {
-    if (workspace !== 'dac') return;
+    if (workspace !== 'cad') return;
 
     // Strict one-way code -> canvas compilation enabled.
     // If a canvas interaction tried to set the source, reset it to 'code' to prevent feedback loops.
-    if (dacSourceRef.current === 'canvas') {
-      dacSourceRef.current = 'code';
+    if (cadSourceRef.current === 'canvas') {
+      cadSourceRef.current = 'code';
     }
 
-    // For DAC workspace, React Flow always maintains a single dummy node.
-    // The actual Mermaid rendering is handled by MermaidPreview.
-    const activeDummy = dacNodes.find(n => n.id === 'mermaid-other-node');
-    if (!activeDummy || dacNodes.length > 1 || dacEdges.length > 0) {
-      setDacNodes([{
+    // For CAD workspace, React Flow maintains a dummy node (diagram drag-handle) plus sticky notes.
+    const stickyNotes = cadNodesRef.current.filter(n => n.data?.shape === 'note').map(n => ({ ...n, draggable: true, selectable: true, zIndex: 9999, style: { ...n.style, zIndex: 9999 } }));
+    const activeDummy = cadNodesRef.current.find(n => n.id === 'mermaid-other-node');
+    const nonNoteNonDummy = cadNodesRef.current.filter(n => n.data?.shape !== 'note' && n.id !== 'mermaid-other-node');
+    if (!activeDummy || nonNoteNonDummy.length > 0 || cadEdges.length > 0) {
+      const pos = activeDummy?.position || { x: 0, y: 0 };
+      setCadNodes([{
         id: 'mermaid-other-node',
         type: 'custom',
-        position: { x: 0, y: 0 },
+        position: pos,
+        draggable: true,
+        selectable: true,
         data: { label: '', shape: 'dummy', width: 800, height: 600 },
         style: { width: 800, height: 600 }
-      }]);
-      setDacEdges([]);
+      }, ...stickyNotes]);
+      setCadEdges([]);
     }
 
     // Validate Mermaid code for status display in the editor.
     const timeout = setTimeout(() => {
-      const status = validateMermaid(dacCode);
-      setDacStatus(status);
+      const status = validateMermaid(cadCode);
+      setCadStatus(status);
     }, 350);
     return () => clearTimeout(timeout);
-  }, [dacCode, workspace]);
+  }, [cadCode, workspace]);
+
+  // Render Mermaid code → SVG → update ReactFlow node → fitView (same mechanism as Diagram tab)
+  useEffect(() => {
+    if (workspace !== 'cad') return;
+    let cancelled = false;
+    const trimmed = (cadCode || '').trim();
+    if (!trimmed) {
+      setCadStatus({ ok: true, message: '' });
+      return;
+    }
+    const handle = setTimeout(async () => {
+      try {
+        const mmd = await getMMD(theme);
+        const id  = `ms-cad-${++_mmdSeq}`;
+        const { svg: raw } = await mmd.render(id, trimmed);
+        if (cancelled) return;
+        const { text: svgHtml, w, h } = parseCadSvg(raw);
+        setCadNodes(prev => prev.map(n => {
+          if (n.id !== 'mermaid-other-node') return n;
+          return { ...n, style: { width: w, height: h }, data: { ...n.data, shape: 'cadSvg', svgHtml, width: w, height: h } };
+        }));
+        setCadStatus({ ok: true, message: 'Rendered' });
+        setTimeout(() => reactFlowInstance?.fitView({ padding: 0.05, duration: 400 }), 60);
+      } catch (e) {
+        if (cancelled) return;
+        const msg = (e?.str || e?.message || 'Render error').split('\n').find(l => l.trim()) || 'Render error';
+        setCadStatus({ ok: false, message: msg });
+      }
+    }, 350);
+    return () => { cancelled = true; clearTimeout(handle); };
+  }, [cadCode, theme, workspace, reactFlowInstance]);
 
   // Canvas -> Code serialization removed for strict one-way code-to-diagram compilation.
 
   // VSCode-style error squiggles: surface parse/render errors as Monaco markers.
   useEffect(() => {
-    const editor = dacEditorRef.current;
-    const monaco = dacMonacoRef.current;
-    if (workspace !== 'dac' || !editor || !monaco) return;
+    const editor = cadEditorRef.current;
+    const monaco = cadMonacoRef.current;
+    if (workspace !== 'cad' || !editor || !monaco) return;
     const model = editor.getModel();
     if (!model) return;
-    if (dacStatus.ok) {
+    if (cadStatus.ok) {
       monaco.editor.setModelMarkers(model, 'mermaid', []);
       return;
     }
-    const msg = dacStatus.message || 'Syntax error';
+    const msg = cadStatus.message || 'Syntax error';
     const lineMatch = /line[s]?\s*[:#]?\s*(\d+)/i.exec(msg);
     const total = model.getLineCount();
     const line = Math.min(total, Math.max(1, lineMatch ? parseInt(lineMatch[1], 10) : 1));
@@ -756,24 +1066,15 @@ function FlowCanvas() {
       endLineNumber: line,
       endColumn: model.getLineMaxColumn(line),
     }]);
-  }, [dacStatus, workspace, dacCode]);
+  }, [cadStatus, workspace, cadCode]);
 
   const [isRoughGlobal, setIsRoughGlobal] = useState(loadState('isRoughGlobal', false));
 
   useEffect(() => {
     localStorage.setItem('isRoughGlobal', JSON.stringify(isRoughGlobal));
-    // Apply global rough mode ONLY when the setting is toggled, and only to Draw nodes
-    if (workspace === 'draw') {
-      setDrawNodes(nds => nds.map(n => ({
-        ...n,
-        data: { ...n.data, isRough: isRoughGlobal }
-      })));
-    }
   }, [isRoughGlobal]);
 
-  useEffect(() => {
-    localStorage.setItem(`${workspace}-title`, diagramTitle);
-  }, [diagramTitle, workspace]);
+
   useEffect(() => {
     localStorage.setItem('dddNodes', JSON.stringify(dddNodes));
     localStorage.setItem('dddEdges', JSON.stringify(dddEdges));
@@ -795,20 +1096,24 @@ function FlowCanvas() {
   }, [eipNodes, eipEdges]);
 
   useEffect(() => {
-    localStorage.setItem('dacNodes', JSON.stringify(dacNodes));
-    localStorage.setItem('dacEdges', JSON.stringify(dacEdges));
-  }, [dacNodes, dacEdges]);
+    localStorage.setItem('cadNodes', JSON.stringify(cadNodes));
+    localStorage.setItem('cadEdges', JSON.stringify(cadEdges));
+  }, [cadNodes, cadEdges]);
+
+  useEffect(() => {
+    localStorage.setItem('cadCode', cadCode);
+  }, [cadCode]);
 
   const nodes = workspace === 'ddd' ? dddNodes : (workspace === 'diagram' ? diagramNodes : (workspace === 'draw' ? drawNodes : eipNodes));
   const edges = workspace === 'ddd' ? dddEdges : (workspace === 'diagram' ? diagramEdges : (workspace === 'draw' ? drawEdges : eipEdges));
 
-  // In dac workspace, we always explicitly pass only the dummy node to ReactFlow
-  const reactFlowNodes = workspace === 'dac' ? dacNodes : nodes;
-  const reactFlowEdges = workspace === 'dac' ? dacEdges : edges;
-  const setNodes = workspace === 'ddd' ? setDddNodes : (workspace === 'diagram' ? setDiagramNodes : (workspace === 'draw' ? setDrawNodes : (workspace === 'dac' ? setDacNodes : setEipNodes)));
-  const setEdges = workspace === 'ddd' ? setDddEdges : (workspace === 'diagram' ? setDiagramEdges : (workspace === 'draw' ? setDrawEdges : (workspace === 'dac' ? setDacEdges : setEipEdges)));
-  const onNodesChange = workspace === 'ddd' ? onDddNodesChange : (workspace === 'diagram' ? onDiagramNodesChange : (workspace === 'draw' ? onDrawNodesChange : (workspace === 'dac' ? onDacNodesChange : onEipNodesChange)));
-  const onEdgesChange = workspace === 'ddd' ? onDddEdgesChange : (workspace === 'diagram' ? onDiagramEdgesChange : (workspace === 'draw' ? onDrawEdgesChange : (workspace === 'dac' ? onDacEdgesChange : onEipEdgesChange)));
+  // In cad workspace, we always explicitly pass only the dummy node to ReactFlow
+  const reactFlowNodes = workspace === 'cad' ? cadNodes : nodes;
+  const reactFlowEdges = workspace === 'cad' ? cadEdges : edges;
+  const setNodes = workspace === 'ddd' ? setDddNodes : (workspace === 'diagram' ? setDiagramNodes : (workspace === 'draw' ? setDrawNodes : (workspace === 'cad' ? setCadNodes : setEipNodes)));
+  const setEdges = workspace === 'ddd' ? setDddEdges : (workspace === 'diagram' ? setDiagramEdges : (workspace === 'draw' ? setDrawEdges : (workspace === 'cad' ? setCadEdges : setEipEdges)));
+  const onNodesChange = workspace === 'ddd' ? onDddNodesChange : (workspace === 'diagram' ? onDiagramNodesChange : (workspace === 'draw' ? onDrawNodesChange : (workspace === 'cad' ? onCadNodesChange : onEipNodesChange)));
+  const onEdgesChange = workspace === 'ddd' ? onDddEdgesChange : (workspace === 'diagram' ? onDiagramEdgesChange : (workspace === 'draw' ? onDrawEdgesChange : (workspace === 'cad' ? onCadEdgesChange : onEipEdgesChange)));
 
   const handleNodesChange = useCallback((changes) => {
     const removeChanges = changes.filter(c => c.type === 'remove');
@@ -890,8 +1195,6 @@ function FlowCanvas() {
   
   const { x, y, zoom } = useViewport();
 
-  const [reactFlowInstance, setReactFlowInstance] = useState(null);
-
   const [isResizing, setIsResizing] = useState(false);
 
   const startResizing = useCallback((e) => {
@@ -923,10 +1226,38 @@ function FlowCanvas() {
     localStorage.setItem('flow-viewport', JSON.stringify(viewport));
   }, []);
 
+  // Load shared state from URL hash on mount
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash) return;
+    const wsMap = {
+      '#draw=': ['draw', setDrawNodes, setDrawEdges],
+      '#diagram=': ['diagram', setDiagramNodes, setDiagramEdges],
+      '#ddd=': ['ddd', setDddNodes, setDddEdges],
+      '#eip=': ['eip', setEipNodes, setEipEdges],
+      '#cad=': ['cad', setCadNodes, setCadEdges],
+    };
+    for (const [prefix, [ws, setN, setE]] of Object.entries(wsMap)) {
+      if (hash.startsWith(prefix)) {
+        try {
+          const json = JSON.parse(atob(hash.slice(prefix.length)));
+          if (json.nodes && json.edges) {
+            setN(json.nodes);
+            setE(json.edges);
+            setWorkspace(ws);
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+          }
+        } catch { /* ignore malformed hash */ }
+        break;
+      }
+    }
+  }, []);
+
   const initialViewport = loadState('flow-viewport', { x: 0, y: 0, zoom: 1 });
 
   const [bgVariant, setBgVariant] = useState('dots'); // 'dots' or 'plain'
   const [showJson, setShowJson] = useState(false);
+  const [jsonIncludeNotes, setJsonIncludeNotes] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const onConnect = useCallback((params) => setEdges((eds) => addEdge({ ...params, type: 'custom', animated: true, style: { strokeWidth: 3, stroke: '#94a3b8' } }, eds)), [setEdges]);
@@ -1034,31 +1365,34 @@ function FlowCanvas() {
 
   /* ----------------------------------------------------------------------- */
   /*  Code-as-Diagram canvas mutations. Code is the source of truth, so every */
-  /*  edit re-serialises back into the editor (dacSourceRef = 'canvas' keeps   */
+  /*  edit re-serialises back into the editor (cadSourceRef = 'canvas' keeps   */
   /*  the sync effect from clobbering the layout).                            */
   /* ----------------------------------------------------------------------- */
-  const dacCommit = (newNodes, newEdges) => {
-    setDacNodes(newNodes);
-    setDacEdges(newEdges);
-    dacSourceRef.current = 'canvas';
-    setDacCode(serializeMermaid(newNodes, newEdges, dacDirRef.current || 'TB'));
+  const cadCommit = (newNodes, newEdges) => {
+    // Keep sticky notes on top and out of the mermaid serialization
+    const diagramNodes = newNodes.filter(n => n.data?.shape !== 'note');
+    const noteNodes = newNodes.filter(n => n.data?.shape === 'note').map(n => ({ ...n, draggable: true, selectable: true, zIndex: 9999, style: { ...n.style, zIndex: 9999 } }));
+    setCadNodes([...diagramNodes, ...noteNodes]);
+    setCadEdges(newEdges);
+    cadSourceRef.current = 'canvas';
+    setCadCode(serializeMermaid(diagramNodes, newEdges, cadDirRef.current || 'TB'));
   };
-  useEffect(() => { dacCommitRef.current = dacCommit; });
+  useEffect(() => { cadCommitRef.current = cadCommit; });
 
   // Allocate a fresh, unused node id of the form n1, n2, …
-  const nextDacId = (existingNodes) => {
+  const nextCadId = (existingNodes) => {
     const ids = new Set(existingNodes.map(n => n.id));
-    let i = Math.max(1, dacIdRef.current + 1);
+    let i = Math.max(1, cadIdRef.current + 1);
     while (ids.has(`n${i}`)) i++;
-    dacIdRef.current = i;
+    cadIdRef.current = i;
     return `n${i}`;
   };
 
   // Append a palette snippet to the code; placeholders become unique ids.
-  const dacInsertSnippet = (rawSnippet) => {
-    const ids = new Set(dacNodes.map(n => n.id));
+  const cadInsertSnippet = (rawSnippet) => {
+    const ids = new Set(cadNodes.map(n => n.id));
     const map = {};
-    let i = dacIdRef.current;
+    let i = cadIdRef.current;
     const snippet = rawSnippet.replace(/\{\{(id\d+)\}\}/g, (_, key) => {
       if (!map[key]) {
         do { i++; } while (ids.has(`n${i}`));
@@ -1067,24 +1401,24 @@ function FlowCanvas() {
       }
       return map[key];
     });
-    dacIdRef.current = i;
-    dacSourceRef.current = 'code';
-    dacSigRef.current = null;
-    setDacCode(prev => {
+    cadIdRef.current = i;
+    cadSourceRef.current = 'code';
+    cadSigRef.current = null;
+    setCadCode(prev => {
       const trimmed = (prev || '').replace(/\s+$/, '');
       const base = trimmed || 'flowchart TB';
       return `${base}\n  ${snippet}\n`;
     });
   };
 
-  const dacCommitRef = useRef(null);
-  const dacAddDirectionalRef = useRef(null);
+  const cadCommitRef = useRef(null);
+  const cadAddDirectionalRef = useRef(null);
 
   // Add a new node connected from the right-clicked node.
-  const dacAddConnected = (sourceId, shape, rounded = false) => {
-    const src = dacNodes.find(n => n.id === sourceId);
-    const newId = nextDacId(dacNodes);
-    const horizontal = dacDirRef.current === 'LR' || dacDirRef.current === 'RL';
+  const cadAddConnected = (sourceId, shape, rounded = false) => {
+    const src = cadNodes.find(n => n.id === sourceId);
+    const newId = nextCadId(cadNodes);
+    const horizontal = cadDirRef.current === 'LR' || cadDirRef.current === 'RL';
     const pos = src
       ? { x: src.position.x + (horizontal ? 240 : 40), y: src.position.y + (horizontal ? 30 : 160) }
       : { x: 120, y: 120 };
@@ -1108,40 +1442,59 @@ function FlowCanvas() {
       targetHandle: horizontal ? 'left' : 'top',
       data: {},
     };
-    dacCommit([...dacNodes, newNode], [...dacEdges, newEdge]);
+    cadCommit([...cadNodes, newNode], [...cadEdges, newEdge]);
     setContextMenu(null);
     return newId;
   };
 
-  // Given existing siblings (nodes already placed in a direction from source),
-  // compute the next position so new child sits beside them, not on top.
-  const siblingPosition = (src, siblings, direction, nw, nh) => {
-    const GAP = 24;
+  // Compute centered, evenly-spaced positions for all siblings (existing + new node).
+  // Returns { newPos, updatedSiblings: [{id, position}] } so caller can reposition everyone.
+  const computeSiblingLayout = (src, existingSiblings, newNodeId, newNW, newNH, direction) => {
+    const GAP = 40;
+    const srcW = parseInt(src.style?.width || src.data?.width || 150, 10);
+    const srcH = parseInt(src.style?.height || src.data?.height || 80, 10);
+    const srcCX = src.position.x + srcW / 2;
+    const srcCY = src.position.y + srcH / 2;
+
+    // Build full list: existing siblings + placeholder for new node
+    const allItems = [
+      ...existingSiblings.map(n => ({ id: n.id, w: parseInt(n.style?.width || n.data?.width || newNW, 10), h: parseInt(n.style?.height || n.data?.height || newNH, 10) })),
+      { id: newNodeId, w: newNW, h: newNH },
+    ];
+
     if (direction === 'down' || direction === 'up') {
-      // siblings arranged left-to-right; new one goes to the right of the rightmost
-      if (siblings.length === 0) {
-        return { x: src.position.x, y: src.position.y + (direction === 'down' ? parseInt(src.style?.height || 80, 10) + 80 : -(nh + 80)) };
-      }
-      const rightmost = Math.max(...siblings.map(n => n.position.x + parseInt(n.style?.width || nw, 10)));
-      const baseY = siblings[0].position.y;
-      return { x: rightmost + GAP, y: baseY };
+      const totalW = allItems.reduce((s, n) => s + n.w, 0) + GAP * (allItems.length - 1);
+      let curX = srcCX - totalW / 2;
+      const baseY = direction === 'down' ? src.position.y + srcH + 80 : src.position.y - newNH - 80;
+      const positions = allItems.map(item => {
+        const pos = { x: curX, y: baseY };
+        curX += item.w + GAP;
+        return { id: item.id, position: pos };
+      });
+      const newPos = positions.find(p => p.id === newNodeId).position;
+      const updatedSiblings = positions.filter(p => p.id !== newNodeId);
+      return { newPos, updatedSiblings };
     } else {
-      // left/right: siblings arranged top-to-bottom; new one goes below the bottommost
-      if (siblings.length === 0) {
-        return { x: src.position.x + (direction === 'right' ? parseInt(src.style?.width || 160, 10) + 80 : -(nw + 80)), y: src.position.y };
-      }
-      const bottommost = Math.max(...siblings.map(n => n.position.y + parseInt(n.style?.height || nh, 10)));
-      const baseX = siblings[0].position.x;
-      return { x: baseX, y: bottommost + GAP };
+      const totalH = allItems.reduce((s, n) => s + n.h, 0) + GAP * (allItems.length - 1);
+      let curY = srcCY - totalH / 2;
+      const baseX = direction === 'right' ? src.position.x + srcW + 80 : src.position.x - newNW - 80;
+      const positions = allItems.map(item => {
+        const pos = { x: baseX, y: curY };
+        curY += item.h + GAP;
+        return { id: item.id, position: pos };
+      });
+      const newPos = positions.find(p => p.id === newNodeId).position;
+      const updatedSiblings = positions.filter(p => p.id !== newNodeId);
+      return { newPos, updatedSiblings };
     }
   };
 
   // Directional child creation via Ctrl+Arrow — uses refs to avoid stale closure in keyDown.
-  const dacAddDirectional = useCallback((direction) => {
+  const cadAddDirectional = useCallback((direction) => {
     const sourceId = selectedNodeIdRef.current;
     if (!sourceId) return;
-    const currentNodes = dacNodesRef.current;
-    const currentEdges = dacEdgesRef.current;
+    const currentNodes = cadNodesRef.current;
+    const currentEdges = cadEdgesRef.current;
     const src = currentNodes.find(n => n.id === sourceId);
     if (!src) return;
     const w = parseInt(src.style?.width || 160, 10);
@@ -1159,23 +1512,29 @@ function FlowCanvas() {
         .map(e => reversed ? e.source : e.target)
     );
     const siblings = currentNodes.filter(n => siblingIds.has(n.id));
-    const newId = nextDacId(currentNodes);
+    const newId = nextCadId(currentNodes);
     const newNode = {
       id: newId,
       type: 'custom',
-      position: siblingPosition(src, siblings, direction, w, h),
+      position: { x: 0, y: 0 },
       parentId: src.parentId,
       data: { label: 'New Node', shape: src.data.shape, rounded: src.data.rounded, color: src.data.color || '#3b82f6', isEip: src.data.isEip || false, fontSize: src.data.fontSize || '0.82rem' },
     };
     const sz = estimateDacNodeSize(newNode);
     if (sz) { newNode.style = { width: sz.width, height: sz.height }; newNode.data.width = sz.width; newNode.data.height = sz.height; }
+    const nw = sz?.width ?? w;
+    const nh = sz?.height ?? h;
+    const { newPos, updatedSiblings } = computeSiblingLayout(src, siblings, newId, nw, nh, direction);
+    newNode.position = newPos;
     const newEdge = reversed
       ? { id: uuidv4(), source: newId, target: sourceId, label: '', type: 'custom', markerEnd: { type: MarkerType.ArrowClosed }, sourceHandle: th, targetHandle: sh, data: {} }
       : { id: uuidv4(), source: sourceId, target: newId, label: '', type: 'custom', markerEnd: { type: MarkerType.ArrowClosed }, sourceHandle: sh, targetHandle: th, data: {} };
-    dacCommitRef.current?.([...currentNodes, newNode], [...currentEdges, newEdge]);
+    const sibPosMap = new Map(updatedSiblings.map(s => [s.id, s.position]));
+    const updatedNodes = currentNodes.map(n => sibPosMap.has(n.id) ? { ...n, position: sibPosMap.get(n.id) } : n);
+    cadCommitRef.current?.([...updatedNodes, newNode], [...currentEdges, newEdge]);
   }, []);
 
-  useEffect(() => { dacAddDirectionalRef.current = dacAddDirectional; }, [dacAddDirectional]);
+  useEffect(() => { cadAddDirectionalRef.current = cadAddDirectional; }, [cadAddDirectional]);
 
   const drawAddDirectionalRef = useRef(null);
   const drawAddDirectional = useCallback((direction) => {
@@ -1199,10 +1558,11 @@ function FlowCanvas() {
     );
     const siblings = currentNodes.filter(n => siblingIds.has(n.id));
     const newId = uuidv4();
+    const { newPos, updatedSiblings } = computeSiblingLayout(src, siblings, newId, w, h, direction);
     const newNode = {
       id: newId,
       type: 'custom',
-      position: siblingPosition(src, siblings, direction, w, h),
+      position: newPos,
       style: { width: w, height: h },
       data: { ...src.data, label: '', isGhost: false, isNew: false, width: w, height: h },
     };
@@ -1210,18 +1570,19 @@ function FlowCanvas() {
     const newEdge = reversed
       ? { id: uuidv4(), source: newId, target: sourceId, type: 'custom', sourceHandle: th, targetHandle: sh, markerEnd: { type: MarkerType.ArrowClosed }, style: edgeStyle, data: {} }
       : { id: uuidv4(), source: sourceId, target: newId, type: 'custom', sourceHandle: sh, targetHandle: th, markerEnd: { type: MarkerType.ArrowClosed }, style: edgeStyle, data: {} };
-    setDrawNodes(nds => [...nds, newNode]);
+    const sibPosMap = new Map(updatedSiblings.map(s => [s.id, s.position]));
+    setDrawNodes(nds => [...nds.map(n => sibPosMap.has(n.id) ? { ...n, position: sibPosMap.get(n.id) } : n), newNode]);
     setDrawEdges(eds => [...eds, newEdge]);
   }, []);
   useEffect(() => { drawAddDirectionalRef.current = drawAddDirectional; }, [drawAddDirectional]);
 
   const dacUpdateNode = (nodeId, patch) => {
-    const newNodes = dacNodes.map(n => n.id === nodeId ? { ...n, data: { ...n.data, ...patch } } : n);
-    dacCommit(newNodes, dacEdges);
+    const newNodes = cadNodes.map(n => n.id === nodeId ? { ...n, data: { ...n.data, ...patch } } : n);
+    cadCommit(newNodes, cadEdges);
   };
 
   const dacRenameNode = (nodeId) => {
-    const node = dacNodes.find(n => n.id === nodeId);
+    const node = cadNodes.find(n => n.id === nodeId);
     const next = window.prompt('Node label:', node?.data?.label || '');
     if (next == null) return;
     dacUpdateNode(nodeId, { label: next });
@@ -1233,16 +1594,16 @@ function FlowCanvas() {
     const queue = [nodeId];
     while (queue.length > 0) {
       const currentId = queue.shift();
-      dacNodes.forEach(node => {
+      cadNodes.forEach(node => {
         if (node.parentId === currentId && !idsSet.has(node.id)) {
           idsSet.add(node.id);
           queue.push(node.id);
         }
       });
     }
-    const newNodes = dacNodes.filter(n => !idsSet.has(n.id));
-    const newEdges = dacEdges.filter(e => !idsSet.has(e.source) && !idsSet.has(e.target));
-    dacCommit(newNodes, newEdges);
+    const newNodes = cadNodes.filter(n => !idsSet.has(n.id));
+    const newEdges = cadEdges.filter(e => !idsSet.has(e.source) && !idsSet.has(e.target));
+    cadCommit(newNodes, newEdges);
     if (selectedNodeId && idsSet.has(selectedNodeId)) setSelectedNodeId(null);
     setContextMenu(null);
   };
@@ -1452,7 +1813,7 @@ function FlowCanvas() {
     let currentOffset = 100;
     const maxDepth = Math.max(-1, ...topLevelNodes.map(n => depths[n.id]));
     
-    const gapOffset = workspace === 'eip' ? 20 : (workspace === 'dac' ? 60 : 150);
+    const gapOffset = workspace === 'eip' ? 20 : (workspace === 'cad' ? 60 : 150);
     
     for (let i = 0; i <= maxDepth; i++) {
       depthOffset[i] = currentOffset;
@@ -1513,24 +1874,26 @@ function FlowCanvas() {
   const isDraggingRef = useRef(false);
 
   const handlePaneMouseDown = useCallback((e) => {
-    if (workspace !== 'draw' || activeTool === 'select' || activeTool === 'pencil' || isDrawingMode) return;
+    if (workspace !== 'draw' || activeTool === 'select' || activeTool === 'pencil' || activeTool === 'eraser' || isDrawingMode) return;
 
     // Avoid starting drawing if clicking on a node or UI element
     if (e.target.closest('.react-flow__node') || e.target.closest('.toolbar') || e.target.closest('.sidebar') || e.target.closest('.btn')) return;
 
+    // Middle mouse button → pan (handled by ReactFlow)
+    if (e.button === 1) return;
+
     const wrapperEl = reactFlowWrapper.current;
     if (!wrapperEl || !reactFlowInstance) return;
 
-    // Use nativeEvent for most reliable coordinates
-    const clientX = e.clientX || e.nativeEvent.clientX;
-    const clientY = e.clientY || e.nativeEvent.clientY;
+    const clientX = e.clientX || e.nativeEvent?.clientX;
+    const clientY = e.clientY || e.nativeEvent?.clientY;
+    const shiftConstrain = e.shiftKey || e.nativeEvent?.shiftKey;
 
     const flowPos = reactFlowInstance.screenToFlowPosition({ x: clientX, y: clientY });
     const startPos = flowPos;
     const ghostId = `ghost-${uuidv4()}`;
     isDraggingRef.current = true;
 
-    // Create the initial ghost node
     const newGhost = {
       id: ghostId,
       type: 'custom',
@@ -1548,6 +1911,13 @@ function FlowCanvas() {
         strokeWidth: drawingStrokeWidth,
         strokeStyle: drawStrokeStyle,
         opacity: drawOpacity,
+        fillOpacity: drawFillOpacity,
+        strokeOpacity: drawStrokeOpacity,
+        shadow: drawShadow,
+        shadowColor: drawShadowColor,
+        shadowOpacity: drawShadowOpacity,
+        shadowBlur: drawShadowBlur,
+        cornerRadius: drawCornerRadius,
         isGhost: true,
         isDrawShape: true,
         fontFamily: 'virgil',
@@ -1561,35 +1931,44 @@ function FlowCanvas() {
     const handleMove = (ev) => {
       if (!isDraggingRef.current || !reactFlowInstance) return;
       const currentPos = reactFlowInstance.screenToFlowPosition({ x: ev.clientX, y: ev.clientY });
-      
+      const constrain = ev.shiftKey;
+
       setDrawNodes(nds => nds.map(n => {
         if (n.id === ghostId) {
+          let rawW = Math.abs(currentPos.x - startPos.x);
+          let rawH = Math.abs(currentPos.y - startPos.y);
+          // Shift: constrain to square (or 45°-constrained line for arrow/line)
+          if (constrain) {
+            if (activeTool === 'arrow' || activeTool === 'line') {
+              // snap to 45° angles
+              const angle = Math.atan2(currentPos.y - startPos.y, currentPos.x - startPos.x);
+              const snapAngle = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4);
+              const dist = Math.sqrt(rawW * rawW + rawH * rawH);
+              const snappedEnd = {
+                x: startPos.x + Math.cos(snapAngle) * dist,
+                y: startPos.y + Math.sin(snapAngle) * dist
+              };
+              const x = Math.min(snappedEnd.x, startPos.x);
+              const y = Math.min(snappedEnd.y, startPos.y);
+              const width = Math.max(Math.abs(snappedEnd.x - startPos.x), 1);
+              const height = Math.max(Math.abs(snappedEnd.y - startPos.y), 1);
+              return { ...n, position: { x, y }, style: { ...n.style, width, height },
+                data: { ...n.data, width, height, arrowStart: { x: startPos.x - x, y: startPos.y - y }, arrowEnd: { x: snappedEnd.x - x, y: snappedEnd.y - y } } };
+            } else {
+              const side = Math.max(rawW, rawH);
+              rawW = side; rawH = side;
+            }
+          }
+          const width = Math.max(rawW, 1);
+          const height = Math.max(rawH, 1);
           const x = Math.min(currentPos.x, startPos.x);
           const y = Math.min(currentPos.y, startPos.y);
-          const width = Math.max(Math.abs(currentPos.x - startPos.x), 1);
-          const height = Math.max(Math.abs(currentPos.y - startPos.y), 1);
 
           if (activeTool === 'arrow' || activeTool === 'line') {
-            return {
-              ...n,
-              position: { x, y },
-              style: { ...n.style, width, height },
-              data: {
-                ...n.data,
-                width,
-                height,
-                arrowStart: { x: startPos.x - x, y: startPos.y - y },
-                arrowEnd: { x: currentPos.x - x, y: currentPos.y - y }
-              }
-            };
-          } else {
-            return {
-              ...n,
-              position: { x, y },
-              style: { ...n.style, width, height },
-              data: { ...n.data, width, height }
-            };
+            return { ...n, position: { x, y }, style: { ...n.style, width, height },
+              data: { ...n.data, width, height, arrowStart: { x: startPos.x - x, y: startPos.y - y }, arrowEnd: { x: currentPos.x - x, y: currentPos.y - y } } };
           }
+          return { ...n, position: { x, y }, style: { ...n.style, width, height }, data: { ...n.data, width, height } };
         }
         return n;
       }));
@@ -1599,41 +1978,57 @@ function FlowCanvas() {
       isDraggingRef.current = false;
       window.removeEventListener('pointermove', handleMove);
       window.removeEventListener('pointerup', handleUp);
-      
-      setDrawNodes(nds => nds.map(n => {
-        if (n.id === ghostId) {
+
+      setDrawNodes(nds => {
+        const finalNodes = nds.map(n => {
+          if (n.id !== ghostId) return n;
           let w = n.style?.width || 0;
           let h = n.style?.height || 0;
-          
+
           if (w < 5 && h < 5 && activeTool !== 'arrow' && activeTool !== 'line') {
             w = activeTool === 'note' ? 160 : 150;
             h = activeTool === 'note' ? 160 : 80;
           } else if (w < 10 && h < 10 && activeTool !== 'arrow' && activeTool !== 'line') {
             return null;
           }
-
-          return { 
-            ...n, 
+          return {
+            ...n,
             data: { ...n.data, width: Math.max(w, 20), height: Math.max(h, 20), isGhost: false, isNew: (activeTool === 'text' || activeTool === 'note' || activeTool === 'callout') },
-            style: { 
-              ...n.style, 
-              width: Math.max(w, 20), 
-              height: Math.max(h, 20) 
-            }
+            style: { ...n.style, width: Math.max(w, 20), height: Math.max(h, 20) }
           };
-        }
-        return n;
-      }).filter(Boolean));
+        }).filter(Boolean);
+        pushDrawHistory(finalNodes, drawEdgesRef.current);
+        return finalNodes;
+      });
 
       setGhostNode(null);
-      // Auto-switch back to select tool for better UX, but optional
-      setActiveTool('select');
-      setInteractionMode('move');
+      if (!drawToolLock) {
+        setActiveTool('select');
+        setInteractionMode('move');
+      }
     };
 
     window.addEventListener('pointermove', handleMove);
     window.addEventListener('pointerup', handleUp);
-  }, [workspace, activeTool, isDrawingMode, isRoughGlobal, drawingColor, drawFillColor, drawingStrokeWidth, drawStrokeStyle, drawOpacity, reactFlowInstance, setDrawNodes]);
+  }, [workspace, activeTool, isDrawingMode, isRoughGlobal, drawingColor, drawFillColor, drawingStrokeWidth, drawStrokeStyle, drawOpacity, drawFillOpacity, drawStrokeOpacity, drawShadow, drawShadowColor, drawShadowOpacity, drawShadowBlur, reactFlowInstance, setDrawNodes, pushDrawHistory, drawToolLock]);
+
+  const eraseAtPoint = (clientX, clientY) => {
+    if (!reactFlowInstance) return;
+    const flowPos = reactFlowInstance.screenToFlowPosition({ x: clientX, y: clientY });
+    const hitNode = drawNodesRef.current.find(n => {
+      const w = n.style?.width || n.data?.width || 150;
+      const h = n.style?.height || n.data?.height || 80;
+      return flowPos.x >= n.position.x && flowPos.x <= n.position.x + w &&
+             flowPos.y >= n.position.y && flowPos.y <= n.position.y + h;
+    });
+    if (hitNode) {
+      const updatedNodes = drawNodesRef.current.filter(n => n.id !== hitNode.id);
+      const updatedEdges = drawEdgesRef.current.filter(ed => ed.source !== hitNode.id && ed.target !== hitNode.id);
+      setDrawNodes(updatedNodes);
+      setDrawEdges(updatedEdges);
+      pushDrawHistory(updatedNodes, updatedEdges);
+    }
+  };
 
   const addCanvasWidget = (shapeType) => {
     let x = 250;
@@ -1669,6 +2064,9 @@ function FlowCanvas() {
 
     if (shapeType === 'note') {
       newNode.style = { width: 160, height: 160 };
+      newNode.zIndex = 9999;
+      newNode.draggable = true;
+      newNode.selectable = true;
     } else if (shapeType === 'callout') {
       newNode.style = { width: 200, height: 80 };
     }
@@ -1708,6 +2106,12 @@ function FlowCanvas() {
         strokeWidth: drawingStrokeWidth,
         strokeStyle: drawStrokeStyle,
         fillColor: drawFillColor,
+        fillOpacity: drawFillOpacity,
+        strokeOpacity: drawStrokeOpacity,
+        shadow: drawShadow,
+        shadowColor: drawShadowColor,
+        shadowOpacity: drawShadowOpacity,
+        shadowBlur: drawShadowBlur,
         fontFamily: 'virgil',
         fontSize: '16px'
       }
@@ -1721,17 +2125,50 @@ function FlowCanvas() {
     setSelectedNodeId(id);
   };
 
+  // Smooth a path using Catmull-Rom → cubic bezier conversion for the live SVG preview
+  const buildSmoothSvgPath = (pts) => {
+    if (pts.length < 2) return '';
+    if (pts.length === 2) return `M ${pts[0].screenX} ${pts[0].screenY} L ${pts[1].screenX} ${pts[1].screenY}`;
+    let d = `M ${pts[0].screenX} ${pts[0].screenY}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[Math.max(0, i - 1)];
+      const p1 = pts[i];
+      const p2 = pts[i + 1];
+      const p3 = pts[Math.min(pts.length - 1, i + 2)];
+      const cp1x = p1.screenX + (p2.screenX - p0.screenX) / 6;
+      const cp1y = p1.screenY + (p2.screenY - p0.screenY) / 6;
+      const cp2x = p2.screenX - (p3.screenX - p1.screenX) / 6;
+      const cp2y = p2.screenY - (p3.screenY - p1.screenY) / 6;
+      d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.screenX} ${p2.screenY}`;
+    }
+    return d;
+  };
+
+  // Build smooth local-space path data (for stored drawing nodes)
+  const buildSmoothLocalPath = (pts) => {
+    if (pts.length < 2) return pts;
+    // Subsample to reduce point count while preserving shape (Douglas-Peucker simplified)
+    const simplified = [pts[0]];
+    const epsilon = 1.5;
+    for (let i = 1; i < pts.length - 1; i++) {
+      const prev = simplified[simplified.length - 1];
+      if (Math.hypot(pts[i][0] - prev[0], pts[i][1] - prev[1]) > epsilon) {
+        simplified.push(pts[i]);
+      }
+    }
+    simplified.push(pts[pts.length - 1]);
+    return simplified;
+  };
+
   const handleDrawingStart = useCallback((e) => {
-    // Avoid starting drawing if clicking on a node or UI element
     if (e.target.closest('.react-flow__node') || e.target.closest('.toolbar') || e.target.closest('.sidebar') || e.target.closest('.btn')) return;
 
     const wrapperEl = reactFlowWrapper.current;
     if (!wrapperEl || !reactFlowInstance) return;
     const rect = wrapperEl.getBoundingClientRect();
-    
-    // Use nativeEvent for reliability
-    const clientX = e.clientX || e.nativeEvent.clientX;
-    const clientY = e.clientY || e.nativeEvent.clientY;
+
+    const clientX = e.clientX || e.nativeEvent?.clientX;
+    const clientY = e.clientY || e.nativeEvent?.clientY;
 
     const screenX = clientX - rect.left;
     const screenY = clientY - rect.top;
@@ -1749,29 +2186,27 @@ function FlowCanvas() {
       const sX = ev.clientX - rect2.left;
       const sY = ev.clientY - rect2.top;
       const fPos = reactFlowInstance.screenToFlowPosition({ x: ev.clientX, y: ev.clientY });
-      
+
       const prev = currentPathRef.current;
       const last = prev[prev.length - 1];
-      // Use higher sensitivity for smoother lines
-      if (last && Math.abs(last.flowX - fPos.x) < 0.1 && Math.abs(last.flowY - fPos.y) < 0.1) return;
-      
-      const newPoint = { screenX: sX, screenY: sY, flowX: fPos.x, flowY: fPos.y };
-      currentPathRef.current = [...prev, newPoint];
+      if (last && Math.abs(last.flowX - fPos.x) < 0.5 && Math.abs(last.flowY - fPos.y) < 0.5) return;
+
+      currentPathRef.current = [...prev, { screenX: sX, screenY: sY, flowX: fPos.x, flowY: fPos.y }];
       setCurrentPath(currentPathRef.current);
     };
 
     const handleUp = () => {
       window.removeEventListener('pointermove', handleMove);
       window.removeEventListener('pointerup', handleUp);
-      
+
       if (!isDraggingRef.current) return;
       setIsDrawing(false);
       isDraggingRef.current = false;
-      
+
       const finalPath = currentPathRef.current;
       setCurrentPath([]);
       currentPathRef.current = [];
-      
+
       if (finalPath.length < 2) return;
 
       const flowPoints = finalPath.map(p => ({ x: p.flowX, y: p.flowY }));
@@ -1779,43 +2214,46 @@ function FlowCanvas() {
       const maxX = Math.max(...flowPoints.map(p => p.x));
       const minY = Math.min(...flowPoints.map(p => p.y));
       const maxY = Math.max(...flowPoints.map(p => p.y));
-      
-      const width = Math.max(maxX - minX, 10);
-      const height = Math.max(maxY - minY, 10);
-      
-      const localPoints = flowPoints.map(p => [
-        p.x - minX,
-        p.y - minY
-      ]);
+
+      const pad = 4;
+      const width = Math.max(maxX - minX + pad * 2, 10);
+      const height = Math.max(maxY - minY + pad * 2, 10);
+
+      const rawPoints = flowPoints.map(p => [p.x - minX + pad, p.y - minY + pad]);
+      const localPoints = buildSmoothLocalPath(rawPoints);
 
       const newNode = {
         id: `drawing-${uuidv4()}`,
         type: 'custom',
-        position: { x: minX, y: minY },
+        position: { x: minX - pad, y: minY - pad },
         style: { width, height, zIndex: 1000, overflow: 'visible' },
         data: {
           shape: 'drawing',
           points: localPoints,
           color: drawingColor || '#3b82f6',
           strokeWidth: drawingStrokeWidth || 3,
+          strokeStyle: drawStrokeStyle || 'solid',
           label: '',
           isRough: isRoughGlobal,
           fillStyle: 'hachure',
           fontFamily: 'virgil'
         }
       };
-      
-      setDrawNodes((nds) => [...nds, newNode]);
-      
-      // Auto-switch back to select tool
-      setActiveTool('select');
-      setIsDrawingMode(false);
-      setInteractionMode('move');
+
+      const updated = [...drawNodesRef.current, newNode];
+      setDrawNodes(updated);
+      pushDrawHistory(updated, drawEdgesRef.current);
+
+      if (!drawToolLock) {
+        setActiveTool('select');
+        setIsDrawingMode(false);
+        setInteractionMode('move');
+      }
     };
-    
+
     window.addEventListener('pointermove', handleMove);
     window.addEventListener('pointerup', handleUp);
-  }, [reactFlowInstance, drawingColor, drawingStrokeWidth, isRoughGlobal, setDrawNodes]);
+  }, [reactFlowInstance, drawingColor, drawingStrokeWidth, drawStrokeStyle, isRoughGlobal, setDrawNodes, pushDrawHistory, drawToolLock]);
 
   const handleImageImport = (e) => {
     const file = e.target.files?.[0];
@@ -2180,7 +2618,7 @@ function FlowCanvas() {
         parentId,
         extent: parentId ? 'parent' : undefined,
         style: data.isContainer ? { width: 400, height: 300, zIndex: -1 } : (data.shape === 'note' ? { width: 160, height: 160 } : (data.shape === 'callout' ? { width: 200, height: 80 } : (data.shape === 'brand' ? { width: 80, height: 80 } : (data.isEip ? { width: 120, height: 60 } : undefined)))),
-        data: { ...data, isRough: workspace === 'draw' ? isRoughGlobal : false, isDrawShape: workspace === 'draw', ...(workspace === 'draw' ? { strokeWidth: drawingStrokeWidth, strokeStyle: drawStrokeStyle, fillColor: data.fillColor || drawFillColor, color: data.color || drawingColor } : {}), isNew: (data.shape === 'text' || data.shape === 'note' || data.shape === 'callout') },
+        data: { ...data, isRough: workspace === 'draw' ? isRoughGlobal : false, isDrawShape: workspace === 'draw', ...(workspace === 'draw' ? { strokeWidth: drawingStrokeWidth, strokeStyle: drawStrokeStyle, fillColor: data.fillColor || drawFillColor, color: data.color || drawingColor, hideBorder: data.shape === 'brand' || data.shape === 'image', shadow: drawShadow, shadowColor: drawShadowColor, shadowOpacity: drawShadowOpacity, shadowBlur: drawShadowBlur } : {}), isNew: (data.shape === 'text' || data.shape === 'note' || data.shape === 'callout') },
       };
 
       setNodes((nds) => {
@@ -2224,6 +2662,17 @@ function FlowCanvas() {
   );
 
   const onNodeDragStop = useCallback((event, node) => {
+    // Push history for draw workspace moves
+    if (workspaceRef.current === 'draw') {
+      pushDrawHistory(drawNodesRef.current, drawEdgesRef.current);
+    }
+    // Persist sticky note and diagram position in CAD workspace
+    if (workspaceRef.current === 'cad') {
+      if (node.id === 'mermaid-other-node') {
+        setCadDiagramPos(node.position);
+      }
+      setCadNodes(nds => nds.map(n => n.id === node.id ? { ...n, position: node.position } : n));
+    }
     if (node.parentId) {
       const parentId = node.parentId;
       setNodes(nds => {
@@ -2259,7 +2708,7 @@ function FlowCanvas() {
         });
       });
     }
-  }, [setNodes]);
+  }, [setNodes, pushDrawHistory]);
 
   const generateYaml = () => {
     const roots = nodes.filter(n => n.data.isEip && n.data.shape !== 'text' && n.data.shape !== 'note' && !edges.some(e => e.target === n.id));
@@ -2388,8 +2837,8 @@ function FlowCanvas() {
 
   const resetZoom = () => {
     if (reactFlowInstance) {
-      if (workspace === 'dac') {
-        window.dispatchEvent(new Event('dac-fit-preview'));
+      if (workspace === 'cad') {
+        reactFlowInstance.fitView({ padding: 0.05, duration: 400 });
       } else {
         reactFlowInstance.zoomTo(1, { duration: 300 });
       }
@@ -2402,7 +2851,7 @@ function FlowCanvas() {
     let mimeType;
     let filename;
 
-    const baseName = diagramTitle.toLowerCase().replace(/\s+/g, '-');
+    const baseName = getSanitizedBaseName();
 
     if (format === 'json') {
       payloadStr = JSON.stringify(data, null, 2);
@@ -2414,31 +2863,25 @@ function FlowCanvas() {
       filename = `${baseName}-layout.yaml`;
     }
 
-    const blob = new Blob([payloadStr], { type: mimeType });
-    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
+    a.href = `data:${mimeType};charset=utf-8,` + encodeURIComponent(payloadStr);
     a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
 
   const exportCamelRoute = () => {
     const payloadStr = generateYaml();
-    const baseName = diagramTitle.toLowerCase().replace(/\s+/g, '-');
+    const baseName = getSanitizedBaseName();
     const filename = `${baseName}-routes.yaml`;
 
-    const blob = new Blob([payloadStr], { type: 'text/yaml' });
-    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
+    a.href = 'data:text/yaml;charset=utf-8,' + encodeURIComponent(payloadStr);
     a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
 
   const applyTextImport = () => {
@@ -2488,9 +2931,9 @@ function FlowCanvas() {
       const text = e.target?.result;
       if (typeof text !== 'string') return;
 
-      if (workspace === 'dac') {
+      if (workspace === 'cad') {
         // Direct .mermaid code file loading into the panel
-        setDacCode(text);
+        setCadCode(text);
         return;
       }
 
@@ -2544,11 +2987,12 @@ function FlowCanvas() {
     setNodes(newNodes);
     setEdges(newEdges);
     setShowTemplatesModal(false);
-    
+
     setTimeout(() => {
       if (reactFlowInstance) reactFlowInstance.fitView({ padding: 0.2, duration: 800 });
     }, 200);
   };
+  loadTemplateRef.current = loadTemplate;
 
   const exportBgColor = theme === 'dark' ? '#0f111a' : '#ffffff';
 
@@ -2603,99 +3047,152 @@ function FlowCanvas() {
      the correct CSS background), then restoring the viewport.
      This avoids the bounds-computation / transform-juggling approach that
      clips rough strokes, shadows and text overflow. */
-  const captureCanvasAsPng = async (filename) => {
+  const getDiagramBoundingBox = (rendererEl) => {
+    const rendererRect = rendererEl.getBoundingClientRect();
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    
+    const elements = rendererEl.querySelectorAll('.react-flow__node, .react-flow__edge-path');
+    
+    elements.forEach(el => {
+      const rect = el.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+      minX = Math.min(minX, rect.left - rendererRect.left);
+      minY = Math.min(minY, rect.top - rendererRect.top);
+      maxX = Math.max(maxX, rect.right - rendererRect.left);
+      maxY = Math.max(maxY, rect.bottom - rendererRect.top);
+    });
+
+    if (minX === Infinity || minY === Infinity || maxX === -Infinity || maxY === -Infinity) {
+      return {
+        x: 0,
+        y: 0,
+        width: rendererRect.width,
+        height: rendererRect.height
+      };
+    }
+
+    const padding = 20;
+    const x = Math.max(0, minX - padding);
+    const y = Math.max(0, minY - padding);
+    const width = Math.min(rendererRect.width - x, (maxX - minX) + padding * 2);
+    const height = Math.min(rendererRect.height - y, (maxY - minY) + padding * 2);
+
+    return { x, y, width, height };
+  };
+
+  const captureCanvasAsPng = async (filename, options = {}) => {
     const rendererEl = document.querySelector('.react-flow__renderer');
     if (!rendererEl) return;
     const savedVp = reactFlowInstance.getViewport();
-    reactFlowInstance.fitView({ padding: 0.08, duration: 0 });
-    // Two animation frames so React has committed the new viewport
+    reactFlowInstance.fitView({ padding: 0.12, duration: 0 });
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     try {
-      const dataUrl = await toPng(rendererEl, { pixelRatio: 2 });
-      // Stamp background (renderer may be transparent in html-to-image)
-      const { width, height } = rendererEl.getBoundingClientRect();
-      const stamped = await stampBackground(dataUrl, width, height, exportBgColor);
+      const bounds = getDiagramBoundingBox(rendererEl);
+      const dataUrl = await toPng(rendererEl, { pixelRatio: 2, skipFonts: true });
+      
+      const img = new window.Image();
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = dataUrl;
+      });
+
+      const canvas = document.createElement('canvas');
+      const scale = 2;
+      canvas.width = bounds.width * scale;
+      canvas.height = bounds.height * scale;
+      const ctx = canvas.getContext('2d');
+
+      if (!options.transparent) {
+        ctx.fillStyle = exportBgColor;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      ctx.drawImage(
+        img,
+        bounds.x * scale,
+        bounds.y * scale,
+        bounds.width * scale,
+        bounds.height * scale,
+        0,
+        0,
+        bounds.width * scale,
+        bounds.height * scale
+      );
+
+      const pngDataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
-      link.download = filename; link.href = stamped; link.click();
+      link.download = filename;
+      link.href = pngDataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } catch (err) { console.error('PNG export error:', err); }
     finally { reactFlowInstance.setViewport(savedVp, { duration: 300 }); }
   };
 
-  const captureCanvasAsSvg = async (filename) => {
+  const captureCanvasAsSvg = async (filename, options = {}) => {
     const rendererEl = document.querySelector('.react-flow__renderer');
     if (!rendererEl) return;
     const savedVp = reactFlowInstance.getViewport();
-    reactFlowInstance.fitView({ padding: 0.08, duration: 0 });
+    reactFlowInstance.fitView({ padding: 0.12, duration: 0 });
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     try {
-      const { width, height } = rendererEl.getBoundingClientRect();
-      const dataUri = await toSvg(rendererEl);
-      const blobUrl = injectSvgBackground(dataUri, width, height, exportBgColor);
+      const bounds = getDiagramBoundingBox(rendererEl);
+      const dataUri = await toSvg(rendererEl, { skipFonts: true });
+      const svgText = svgDataUriToText(dataUri);
+      
+      const rect = rendererEl.getBoundingClientRect();
+      const origWidth = rect.width;
+      const origHeight = rect.height;
+
+      let openingTag = svgText.match(/<svg([^>]*)>/s)?.[0];
+      if (!openingTag) throw new Error("Could not find root SVG tag");
+
+      let attrs = openingTag;
+      attrs = attrs.replace(/\bwidth\s*=\s*"[^"]*"/gi, '');
+      attrs = attrs.replace(/\bheight\s*=\s*"[^"]*"/gi, '');
+      attrs = attrs.replace(/\bviewBox\s*=\s*"[^"]*"/gi, '');
+
+      const newAttrs = ` width="${bounds.width}" height="${bounds.height}" viewBox="${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}"`;
+      const newOpeningTag = attrs.replace(/<svg/i, `<svg${newAttrs}`);
+
+      let result = svgText.replace(/<svg[^>]*>/s, newOpeningTag);
+
+      let foreignObjectTag = result.match(/<foreignObject([^>]*)>/i)?.[0];
+      if (foreignObjectTag) {
+        let newForeignObjectTag = foreignObjectTag;
+        newForeignObjectTag = newForeignObjectTag.replace(/\bwidth\s*=\s*"[^"]*"/gi, `width="${origWidth}"`);
+        newForeignObjectTag = newForeignObjectTag.replace(/\bheight\s*=\s*"[^"]*"/gi, `height="${origHeight}"`);
+        result = result.replace(foreignObjectTag, newForeignObjectTag);
+      }
+
+      if (!options.transparent) {
+        const bgRect = `<rect x="${bounds.x}" y="${bounds.y}" width="${bounds.width}" height="${bounds.height}" fill="${exportBgColor}"/>`;
+        result = result.replace(/(<svg[^>]*>)/s, `$1${bgRect}`);
+      }
+
+      const dataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(result);
       const link = document.createElement('a');
-      link.download = filename; link.href = blobUrl; link.click();
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+      link.download = filename;
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } catch (err) { console.error('SVG export error:', err); }
     finally { reactFlowInstance.setViewport(savedVp, { duration: 300 }); }
   };
 
-  const exportAsPng = () => {
-    const filename = `${diagramTitle.toLowerCase().replace(/\s+/g, '-')}.png`;
-
-    if (workspace === 'dac') {
-      const svgEl = document.querySelector('.mmd-scroll svg');
-      if (!svgEl) return;
-      const svgData = new XMLSerializer().serializeToString(svgEl);
-      const url = URL.createObjectURL(new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' }));
-      const img = new window.Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const scale = 2;
-        canvas.width = img.width * scale;
-        canvas.height = img.height * scale;
-        const ctx = canvas.getContext('2d');
-        ctx.scale(scale, scale);
-        ctx.fillStyle = exportBgColor;
-        ctx.fillRect(0, 0, img.width, img.height);
-        ctx.drawImage(img, 0, 0);
-        URL.revokeObjectURL(url);
-        canvas.toBlob((blob) => {
-          const link = document.createElement('a');
-          link.download = filename;
-          link.href = URL.createObjectURL(blob);
-          link.click();
-        }, 'image/png');
-      };
-      img.src = url;
-      return;
-    }
-
-    if (nodes.length === 0) return;
-    captureCanvasAsPng(filename);
+  const exportAsPng = (options = {}) => {
+    const filename = `${getSanitizedBaseName()}.png`;
+    if (reactFlowNodes.length === 0) return;
+    captureCanvasAsPng(filename, options);
   };
 
-  const exportAsSvg = () => {
-    const filename = `${diagramTitle.toLowerCase().replace(/\s+/g, '-')}.svg`;
-
-    if (workspace === 'dac') {
-      const svgEl = document.querySelector('.mmd-scroll svg');
-      if (!svgEl) return;
-      // Clone and inject background rect so the SVG file carries the theme colour
-      const clone = svgEl.cloneNode(true);
-      const vb = svgEl.viewBox?.baseVal;
-      const w = vb?.width || parseFloat(svgEl.getAttribute('width')) || 800;
-      const h = vb?.height || parseFloat(svgEl.getAttribute('height')) || 600;
-      const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      bgRect.setAttribute('width', w); bgRect.setAttribute('height', h);
-      bgRect.setAttribute('fill', exportBgColor);
-      clone.insertBefore(bgRect, clone.firstChild);
-      const blob = new Blob([new XMLSerializer().serializeToString(clone)], { type: 'image/svg+xml;charset=utf-8' });
-      const link = document.createElement('a');
-      link.download = filename; link.href = URL.createObjectURL(blob); link.click();
-      return;
-    }
-
-    if (nodes.length === 0) return;
-    captureCanvasAsSvg(filename);
+  const exportAsSvg = (options = {}) => {
+    const filename = `${getSanitizedBaseName()}.svg`;
+    if (reactFlowNodes.length === 0) return;
+    captureCanvasAsSvg(filename, options);
   };
 
   const ctxNode = contextMenu ? nodes.find(n => n.id === contextMenu.id) : null;
@@ -2785,9 +3282,196 @@ function FlowCanvas() {
   };
 
   return (
-    <div className="app-container">
-      {workspace !== 'dac' && workspace !== 'draw' && (
-        <aside className={`sidebar ${!isSidebarOpen ? 'collapsed' : ''}`}>
+    <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', overflow: 'hidden' }}>
+      {/* Unified top bar — all workspaces */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 10px', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', flexShrink: 0, zIndex: 1001, gap: '8px', width: '100%' }}>
+        {/* Left: logo + workspace tabs */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+          <div onClick={onGoHome} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }} title="Go to home page">
+            <MSLogo size={22} />
+            <span style={{ fontWeight: 'bold', fontSize: '0.82rem', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>Model Studio</span>
+          </div>
+          <div style={{ width: '1px', height: '14px', background: 'var(--border-color)', margin: '0 4px' }} />
+          <input
+            type="text"
+            value={diagramTitle}
+            onChange={(e) => {
+              setDiagramTitle(e.target.value);
+              localStorage.setItem(`${workspace}-title`, e.target.value);
+            }}
+            style={{
+              background: 'transparent',
+              border: '1px solid transparent',
+              borderRadius: '4px',
+              color: 'var(--text-primary)',
+              fontSize: '0.8rem',
+              fontWeight: 500,
+              padding: '2px 6px',
+              width: '180px',
+              outline: 'none',
+              transition: 'all 0.2s',
+            }}
+            onFocus={(e) => {
+              e.target.style.background = 'var(--bg-tertiary)';
+              e.target.style.borderColor = 'var(--accent-blue)';
+            }}
+            onBlur={(e) => {
+              e.target.style.background = 'transparent';
+              e.target.style.borderColor = 'transparent';
+            }}
+            title="Click to rename document"
+          />
+          <div style={{ width: '1px', height: '14px', background: 'var(--border-color)', margin: '0 4px' }} />
+          <div style={{ display: 'flex', gap: '2px' }}>
+            {['cad', 'diagram', 'draw', 'eip', 'ddd'].map((ws) => (
+              <button key={ws} onClick={() => {
+                setWorkspace(ws); setActiveTool('select'); setIsDrawingMode(false); setInteractionMode('move');
+                if (ws === 'draw') setBgVariant('dots');
+                if (ws === 'cad') {
+                  setShowCadEditor(true);
+                  [100, 300, 600].forEach(d => setTimeout(() => reactFlowInstance?.fitView({ padding: 0.05, duration: 300 }), d));
+                } else {
+                  setTimeout(() => reactFlowInstance?.fitView({ padding: 0.15, duration: 600 }), 80);
+                }
+              }} className={`btn ${workspace === ws ? 'btn-primary' : ''}`} style={{ fontSize: '0.72rem', padding: '3px 8px', textTransform: 'none', background: workspace === ws ? undefined : 'transparent', border: workspace === ws ? undefined : 'none', whiteSpace: 'nowrap' }}>
+                {ws === 'ddd' ? 'Domain Driven Design' : ws === 'eip' ? 'Camel' : ws === 'diagram' ? 'Diagrams' : ws === 'cad' ? 'Code as Diagram' : 'Draw'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Center: Draw tools (only for Draw workspace) */}
+        {workspace === 'draw' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+            <button className="btn btn-icon-only" onClick={undoDraw} title="Undo (Ctrl+Z)" style={{ opacity: drawHistoryRef.current.length > 1 && drawHistoryIndexRef.current > 0 ? 1 : 0.35 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"/></svg>
+            </button>
+            <button className="btn btn-icon-only" onClick={redoDraw} title="Redo (Ctrl+Shift+Z)" style={{ opacity: drawHistoryIndexRef.current < drawHistoryRef.current.length - 1 ? 1 : 0.35 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 019-9 9 9 0 016 2.3L21 13"/></svg>
+            </button>
+            <div style={{ width: '1px', height: '14px', background: 'var(--border-color)', margin: '0 2px' }} />
+            <button className={`btn btn-icon-only ${activeTool === 'select' && !isDrawingMode ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('select'); setIsDrawingMode(false); setInteractionMode('move'); }} title="Select / Move (V)"><MousePointer2 size={14} /></button>
+            <div style={{ width: '1px', height: '14px', background: 'var(--border-color)', margin: '0 2px' }} />
+            <button className={`btn btn-icon-only ${activeTool === 'rectangle' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('rectangle'); setIsDrawingMode(false); }} title="Rectangle (R)"><Square size={14} /></button>
+            <button className={`btn btn-icon-only ${activeTool === 'circle' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('circle'); setIsDrawingMode(false); }} title="Circle (O)"><CircleIcon size={14} /></button>
+            <button className={`btn btn-icon-only ${activeTool === 'diamond' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('diamond'); setIsDrawingMode(false); }} title="Diamond (D)"><Diamond size={14} /></button>
+            <button className={`btn btn-icon-only ${activeTool === 'triangle' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('triangle'); setIsDrawingMode(false); }} title="Triangle"><Triangle size={14} /></button>
+            <button className={`btn btn-icon-only ${activeTool === 'cloud' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('cloud'); setIsDrawingMode(false); }} title="Cloud (C)"><Cloud size={14} /></button>
+            <button className={`btn btn-icon-only ${activeTool === 'arrow' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('arrow'); setIsDrawingMode(false); }} title="Arrow (A)"><ArrowUpRight size={14} /></button>
+            <button className={`btn btn-icon-only ${activeTool === 'line' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('line'); setIsDrawingMode(false); }} title="Line (L)"><Minus size={14} /></button>
+            <button className={`btn btn-icon-only ${activeTool === 'text' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('text'); setIsDrawingMode(false); }} title="Text"><Type size={14} /></button>
+            <button className={`btn btn-icon-only ${isDrawingMode ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('pencil'); setIsDrawingMode(true); }} title="Pencil (P)"><Pencil size={14} /></button>
+            <button className={`btn btn-icon-only ${activeTool === 'eraser' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('eraser'); setIsDrawingMode(false); }} title="Eraser (E)"><Eraser size={14} /></button>
+            <button className="btn btn-icon-only" onClick={() => { addCanvasWidget('note'); setActiveTool('select'); setIsDrawingMode(false); }} title="Sticky Note (N)" style={{ color: '#ca8a04' }}><StickyNote size={14} /></button>
+            <div style={{ width: '1px', height: '14px', background: 'var(--border-color)', margin: '0 2px' }} />
+            <button className={`btn btn-icon-only ${isRoughGlobal ? 'btn-primary' : ''}`} onClick={() => setIsRoughGlobal(!isRoughGlobal)} title="Hand-drawn Style"><Paintbrush size={14} /></button>
+            <button className={`btn btn-icon-only ${drawToolLock ? 'btn-primary' : ''}`} onClick={() => setDrawToolLock(v => !v)} title={drawToolLock ? 'Tool locked' : 'Tool unlocked'}>
+              {drawToolLock ? <Lock size={14} /> : <Lock size={14} style={{ opacity: 0.4 }} />}
+            </button>
+          </div>
+        )}
+
+        {/* Right: action buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+          {workspace !== 'draw' && (
+            <>
+              <button className={`btn btn-icon-only ${interactionMode === 'move' ? 'btn-primary' : ''}`} onClick={() => setInteractionMode('move')} title="Select & Move (V)"><MousePointer2 size={14} /></button>
+              <button className={`btn btn-icon-only ${interactionMode === 'pan' ? 'btn-primary' : ''}`} onClick={() => setInteractionMode('pan')} title="Pan Canvas (H)"><Hand size={14} /></button>
+              {workspace !== 'cad' && (
+                <>
+                  <button className="btn btn-icon-only" onClick={() => autoLayout('LR')} title="Auto Layout Left→Right"><ArrowRightLeft size={14} /></button>
+                  <button className="btn btn-icon-only" onClick={() => autoLayout('TB')} title="Auto Layout Top→Bottom"><ArrowDownUp size={14} /></button>
+                </>
+              )}
+              <div style={{ width: '1px', height: '14px', background: 'var(--border-color)', margin: '0 2px' }} />
+            </>
+          )}
+          {workspace !== 'draw' && (
+            <button className="btn" onClick={() => workspace === 'cad' ? setShowTemplateGallery(true) : setShowTemplatesModal(true)} style={{ fontSize: '0.72rem', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: '4px', border: '1px solid var(--accent-blue)', background: 'rgba(59,130,246,0.1)', color: '#60a5fa', whiteSpace: 'nowrap' }}><Layers size={13} /> Templates</button>
+          )}
+          {workspace !== 'draw' && workspace !== 'cad' && (
+            <>
+              <div style={{ width: '1px', height: '14px', background: 'var(--border-color)', margin: '0 2px' }} />
+              {workspace !== 'eip' && (
+                <button className="btn btn-icon-only" onClick={() => addCanvasWidget('text')} style={{ border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)' }} title="Insert Title / Text Header"><Type size={14} /></button>
+              )}
+              <button className="btn btn-icon-only" onClick={() => addCanvasWidget('note')} style={{ border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: '#ca8a04' }} title="Insert Sticky Note"><StickyNote size={14} /></button>
+            </>
+          )}
+          <div style={{ width: '1px', height: '14px', background: 'var(--border-color)', margin: '0 2px' }} />
+          {workspace !== 'cad' && (
+            <button className="btn btn-icon-only" onClick={() => setShowJson(!showJson)} title="View Model Source (JSON/YAML)"><Code size={14} /></button>
+          )}
+          <button className="btn btn-icon-only" title="Share (copy link)" onClick={() => {
+            try {
+              const n = workspace === 'draw' ? drawNodes : workspace === 'diagram' ? diagramNodes : workspace === 'ddd' ? dddNodes : workspace === 'eip' ? eipNodes : cadNodes;
+              const e = workspace === 'draw' ? drawEdges : workspace === 'diagram' ? diagramEdges : workspace === 'ddd' ? dddEdges : workspace === 'eip' ? eipEdges : cadEdges;
+              const payload = btoa(JSON.stringify({ nodes: n, edges: e }));
+              const url = `${window.location.origin}${window.location.pathname}#${workspace}=${payload}`;
+              navigator.clipboard.writeText(url).then(() => alert('Share link copied to clipboard!')).catch(() => prompt('Copy this share link:', url));
+            } catch { alert('Canvas too large to share via URL.'); }
+          }}><Share2 size={14} /></button>
+          <button className="btn btn-icon-only" onClick={clearCanvas} title="Clear Everything"><Eraser size={14} color="#ef4444" /></button>
+          <button
+            className="btn"
+            onClick={() => {
+              if (window.confirm("Reset Studio?\n\nThis will permanently clear all cached diagrams, code, and settings from your browser, then reload the studio with default settings.")) {
+                localStorage.clear();
+                sessionStorage.clear();
+                window.location.href = window.location.origin + window.location.pathname;
+              }
+            }}
+            style={{
+              fontSize: '0.72rem',
+              padding: '3px 8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              border: '1px solid #ef4444',
+              background: 'rgba(239,68,68,0.1)',
+              color: '#f87171',
+              whiteSpace: 'nowrap'
+            }}
+            title="Reset Studio — clear all cache & reload with defaults"
+          >
+            <RefreshCw size={13} /> Reset Studio
+          </button>
+          <div style={{ width: '1px', height: '14px', background: 'var(--border-color)', margin: '0 2px' }} />
+          <button className={`btn btn-icon-only ${bgVariant === 'dots' ? 'btn-primary' : ''}`} onClick={() => setBgVariant(v => v === 'dots' ? 'plain' : 'dots')} title={bgVariant === 'dots' ? 'Hide canvas grid' : 'Show canvas grid'}><Grid3X3 size={14} /></button>
+          <ThemeToggle />
+          <button className="btn btn-icon-only" onClick={() => { setHelpTab(workspace === 'eip' ? 'eip' : workspace === 'cad' ? 'cad' : workspace); setShowHelp(true); }} title="Help & Reference (?)"><Info size={14} /></button>
+          <div style={{ width: '1px', height: '14px', background: 'var(--border-color)', margin: '0 2px' }} />
+          <button className="btn btn-icon-only" onClick={() => setShowTextEditor(true)} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)' }} title="Import diagram from text"><FilePlus size={14} /></button>
+          <button className="btn" onClick={() => fileInputRef.current?.click()} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', padding: '3px 8px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', whiteSpace: 'nowrap' }} title="Import from file"><Upload size={13} /> Import</button>
+          <div style={{ position: 'relative' }}>
+            <button className="btn btn-primary" onClick={() => setShowExportDropdown(!showExportDropdown)} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', padding: '3px 8px', whiteSpace: 'nowrap' }}><Download size={13} /> Export</button>
+            {showExportDropdown && (
+              <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '4px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '8px', zIndex: 2000, width: '240px', padding: '6px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {workspace === 'cad' ? (
+                  <button className="btn" onClick={() => { const a = document.createElement('a'); a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(cadCode); a.download = `${getSanitizedBaseName()}.mmd`; document.body.appendChild(a); a.click(); document.body.removeChild(a); setShowExportDropdown(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', background: 'transparent', color: '#60a5fa', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer' }}><Code size={14} /> Export Mermaid Code (.mmd)</button>
+                ) : (
+                  <>
+                    <button className="btn" onClick={() => { exportLayout('json'); setShowExportDropdown(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', background: 'transparent', color: 'var(--text-primary)', fontSize: '0.8rem', cursor: 'pointer' }}><FileJson size={14} /> Export Layout (JSON)</button>
+                    <button className="btn" onClick={() => { exportLayout('yaml'); setShowExportDropdown(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', background: 'transparent', color: 'var(--text-primary)', fontSize: '0.8rem', cursor: 'pointer' }}><FileText size={14} /> Export Layout (YAML)</button>
+                  </>
+                )}
+                {workspace === 'eip' && (
+                  <button className="btn" onClick={() => { exportCamelRoute(); setShowExportDropdown(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', background: 'transparent', color: '#f59e0b', fontSize: '0.8rem', cursor: 'pointer' }}><Workflow size={14} /> Export Camel Route (YAML)</button>
+                )}
+                <div style={{ height: '1px', background: 'var(--border-color)', margin: '4px 0' }} />
+                <button className="btn" onClick={() => { exportAsPng({ transparent: false }); setShowExportDropdown(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', background: 'transparent', color: 'var(--text-primary)', fontSize: '0.8rem', cursor: 'pointer' }}><Image size={14} /> Export PNG (with bg)</button>
+                <button className="btn" onClick={() => { exportAsPng({ transparent: true }); setShowExportDropdown(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', background: 'transparent', color: 'var(--text-primary)', fontSize: '0.8rem', cursor: 'pointer' }}><Image size={14} /> Export PNG (transparent)</button>
+                <button className="btn" onClick={() => { exportAsSvg({ transparent: false }); setShowExportDropdown(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', background: 'transparent', color: 'var(--text-primary)', fontSize: '0.8rem', cursor: 'pointer' }}><FileText size={14} /> Export SVG (with bg)</button>
+                <button className="btn" onClick={() => { exportAsSvg({ transparent: true }); setShowExportDropdown(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', background: 'transparent', color: 'var(--text-primary)', fontSize: '0.8rem', cursor: 'pointer' }}><FileText size={14} /> Export SVG (transparent)</button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'row', flex: 1, overflow: 'hidden', width: '100%', position: 'relative' }}>
+        {workspace !== 'cad' && workspace !== 'draw' && (
+          <aside className={`sidebar ${!isSidebarOpen ? 'collapsed' : ''}`}>
         <button 
           className="sidebar-toggle-btn" 
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -3002,8 +3686,9 @@ function FlowCanvas() {
       <main
         className={`canvas-area ${theme === 'dark' ? 'theme-dark' : 'theme-light'}`}
         data-drawing-active={isDrawingMode || (workspace === 'draw' && activeTool !== 'select') ? 'true' : 'false'}
+        data-tool={activeTool}
         ref={reactFlowWrapper}
-        style={{ display: 'flex', flexDirection: 'row' }}
+        style={{ display: 'flex', flexDirection: 'row', flex: 1, height: '100%' }}
       >
         {workspace === 'draw' && (
           <div
@@ -3096,11 +3781,44 @@ function FlowCanvas() {
           </div>
         )}
 
-        {workspace === 'dac' && showDacEditor && (
-          <div className="dac-editor-pane" style={{ width: splitWidth }}>
-            <div className="dac-header">
+        {/* CAD collapsed tab — visible when editor is collapsed */}
+        {workspace === 'cad' && showCadEditor && editorMode === 'collapsed' && (
+          <div
+            className="cad-collapsed-tab"
+            title="Expand editor"
+            onClick={() => setEditorMode('docked')}
+          >
+            <span style={{ writingMode: 'vertical-rl', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--accent-blue)', textTransform: 'uppercase' }}>Editor</span>
+            <ChevronRight size={14} style={{ color: 'var(--accent-blue)' }} />
+          </div>
+        )}
+
+        {workspace === 'cad' && showCadEditor && editorMode !== 'collapsed' && (
+          <div
+            className={`cad-editor-pane${editorMode === 'float' ? ' cad-editor-float' : ''}`}
+            style={editorMode === 'float'
+              ? { position: 'absolute', left: floatPos.x, top: floatPos.y, width: Math.min(splitWidth, 520), height: '600px', maxHeight: 'calc(100% - 100px)', opacity: editorOpacity / 100, zIndex: 200, borderRadius: '12px', boxShadow: '0 20px 40px rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', overflow: 'hidden' }
+              : { width: splitWidth }
+            }
+            ref={editorMode === 'float' ? (el) => {
+              if (!el) return;
+              // drag-to-move for float mode
+              const onDown = (e) => {
+                if (e.target.closest('button,select,textarea,.monaco-editor,.cad-emoji-picker')) return;
+                const startX = e.clientX - floatPos.x;
+                const startY = e.clientY - floatPos.y;
+                const onMove = (ev) => setFloatPos({ x: ev.clientX - startX, y: ev.clientY - startY });
+                const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+                window.addEventListener('mousemove', onMove);
+                window.addEventListener('mouseup', onUp);
+              };
+              el.addEventListener('mousedown', onDown);
+              floatDragRef.current = () => el.removeEventListener('mousedown', onDown);
+            } : null}
+          >
+            <div className="cad-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div className="dac-logo-mark">
+                <div className="cad-logo-mark">
                   <MSLogo size={22} />
                 </div>
                 <div>
@@ -3109,25 +3827,99 @@ function FlowCanvas() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
-                {/^flowchart\b/m.test(dacCode) && (
+                {/* Editor mode controls */}
+                <div style={{ display: 'flex', gap: '2px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '2px' }}>
+                  <button
+                    className={`btn btn-icon-only${editorMode === 'docked' ? ' btn-primary' : ''}`}
+                    title="Docked (split view)"
+                    style={{ padding: '3px 6px' }}
+                    onClick={() => setEditorMode('docked')}
+                  ><Columns size={13} /></button>
+                  <button
+                    className={`btn btn-icon-only${editorMode === 'float' ? ' btn-primary' : ''}`}
+                    title="Float editor over diagram"
+                    style={{ padding: '3px 6px' }}
+                    onClick={() => setEditorMode(m => m === 'float' ? 'docked' : 'float')}
+                  ><PanelTopOpen size={13} /></button>
+                  <button
+                    className="btn btn-icon-only"
+                    title="Collapse editor"
+                    style={{ padding: '3px 6px' }}
+                    onClick={() => setEditorMode('collapsed')}
+                  ><PanelLeftClose size={13} /></button>
+                </div>
+                {/* Opacity slider — only in float mode */}
+                {editorMode === 'float' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Opacity</span>
+                    <input
+                      type="range" min={20} max={100} step={5}
+                      value={editorOpacity}
+                      onChange={e => setEditorOpacity(Number(e.target.value))}
+                      style={{ width: '72px', cursor: 'pointer', accentColor: 'var(--accent-blue)' }}
+                      title={`Editor opacity: ${editorOpacity}%`}
+                    />
+                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', minWidth: '26px' }}>{editorOpacity}%</span>
+                  </div>
+                )}
+                {/^flowchart\b/m.test(cadCode) && (
                   <div style={{ display: 'flex', gap: '2px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '2px' }}>
                     <button
-                      className={`btn btn-icon-only${/^flowchart\s+(LR|RL)/m.test(dacCode) ? ' btn-primary' : ''}`}
+                      className={`btn btn-icon-only${/^flowchart\s+(LR|RL)/m.test(cadCode) ? ' btn-primary' : ''}`}
                       title="Left → Right layout"
                       style={{ padding: '3px 8px', fontSize: '0.68rem', fontWeight: 700 }}
-                      onClick={() => { dacSourceRef.current = 'code'; setDacCode(c => c.replace(/^(flowchart\s+)(LR|TD|TB|RL|BT)/m, '$1LR')); }}
+                      onClick={() => { cadSourceRef.current = 'code'; setCadCode(c => c.replace(/^(flowchart\s+)(LR|TD|TB|RL|BT)/m, '$1LR')); }}
                     >LR</button>
                     <button
-                      className={`btn btn-icon-only${/^flowchart\s+(TD|TB)/m.test(dacCode) ? ' btn-primary' : ''}`}
+                      className={`btn btn-icon-only${/^flowchart\s+(TD|TB)/m.test(cadCode) ? ' btn-primary' : ''}`}
                       title="Top → Down layout"
                       style={{ padding: '3px 8px', fontSize: '0.68rem', fontWeight: 700 }}
-                      onClick={() => { dacSourceRef.current = 'code'; setDacCode(c => c.replace(/^(flowchart\s+)(LR|TD|TB|RL|BT)/m, '$1TD')); }}
+                      onClick={() => { cadSourceRef.current = 'code'; setCadCode(c => c.replace(/^(flowchart\s+)(LR|TD|TB|RL|BT)/m, '$1TD')); }}
+                    >TD</button>
+                  </div>
+                )}
+                {/^stateDiagram/m.test(cadCode) && (
+                  <div style={{ display: 'flex', gap: '2px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '2px' }}>
+                    <button
+                      className={`btn btn-icon-only${/^\s*direction\s+LR\s*$/m.test(cadCode) ? ' btn-primary' : ''}`}
+                      title="Left → Right layout"
+                      style={{ padding: '3px 8px', fontSize: '0.68rem', fontWeight: 700 }}
+                      onClick={() => {
+                        cadSourceRef.current = 'code';
+                        setCadCode(c => {
+                          if (/^\s*direction\s+(LR|TD|TB)\s*$/m.test(c))
+                            return c.replace(/^(\s*direction\s+)(LR|TD|TB)(\s*)$/m, '$1LR$3');
+                          return c.replace(/^(stateDiagram[^\n]*\n)/, '$1  direction LR\n');
+                        });
+                      }}
+                    >LR</button>
+                    <button
+                      className={`btn btn-icon-only${!/^\s*direction\s+LR\s*$/m.test(cadCode) ? ' btn-primary' : ''}`}
+                      title="Top → Down layout"
+                      style={{ padding: '3px 8px', fontSize: '0.68rem', fontWeight: 700 }}
+                      onClick={() => {
+                        cadSourceRef.current = 'code';
+                        setCadCode(c => c.replace(/^\s*direction\s+(LR|TD|TB)\s*\n?/m, ''));
+                      }}
                     >TD</button>
                   </div>
                 )}
                 <select
                   title="Mermaid theme"
-                  value={(() => { const m = dacCode.match(/%%\{init[^%]*['"]theme['"]:\s*['"](\w+)['"]/s); return m?.[1] || ''; })()}
+                  value={(() => {
+                    const initBlock = cadCode.match(/%%\{init[^%]*%%/s)?.[0] || '';
+                    if (!initBlock) return '';
+                    const theme = initBlock.match(/['"]theme['"]:\s*['"](\w+)['"]/)?.[1] || '';
+                    if (theme && theme !== 'base') return theme;
+                    // custom 'base' themes — detect by their unique primaryColor
+                    const pc = (initBlock.match(/['"]primaryColor['"]:\s*['"]([^'"]+)['"]/)?.[1] || '').toLowerCase();
+                    return ({
+                      '#1e3a5f':'ocean','#0f0f23':'midnight','#064e3b':'emerald',
+                      '#2e1065':'amethyst','#4c0519':'rose','#431407':'sunrise',
+                      '#1e293b':'slate','#1a1a1a':'mono','#dbeafe':'corporate',
+                      '#0d001a':'cyberpunk','#001a0d':'neon',
+                    })[pc] || (theme || '');
+                  })()}
                   onChange={(e) => {
                     const key = e.target.value;
                     const THEME_DIRECTIVES = {
@@ -3144,10 +3936,12 @@ function FlowCanvas() {
                       sunrise:    `%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#431407', 'primaryTextColor': '#fed7aa', 'primaryBorderColor': '#c2410c', 'secondaryColor': '#7c2d12', 'tertiaryColor': '#1c0a03', 'background': '#0e0603', 'lineColor': '#f97316', 'edgeLabelBackground': '#431407', 'clusterBkg': '#2c0e05'}}}%%`,
                       slate:      `%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#1e293b', 'primaryTextColor': '#e2e8f0', 'primaryBorderColor': '#475569', 'secondaryColor': '#334155', 'tertiaryColor': '#0f172a', 'background': '#020617', 'lineColor': '#64748b', 'edgeLabelBackground': '#1e293b', 'clusterBkg': '#0f1729'}}}%%`,
                       mono:       `%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#1a1a1a', 'primaryTextColor': '#e5e5e5', 'primaryBorderColor': '#525252', 'secondaryColor': '#262626', 'tertiaryColor': '#0a0a0a', 'background': '#000000', 'lineColor': '#737373', 'edgeLabelBackground': '#1a1a1a', 'clusterBkg': '#111111'}}}%%`,
+                      cyberpunk:  `%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#0d001a', 'primaryTextColor': '#ff00ff', 'primaryBorderColor': '#ff00ff', 'secondaryColor': '#00001a', 'tertiaryColor': '#001a00', 'background': '#000000', 'lineColor': '#00ffff', 'edgeLabelBackground': '#0d001a', 'clusterBkg': '#0a000d', 'titleColor': '#ffff00', 'nodeTextColor': '#ff00ff', 'edgeLabelColor': '#00ffff', 'labelBackground': '#0d001a', 'labelTextColor': '#ff00ff', 'relationColor': '#00ffff', 'relationLabelColor': '#ffff00', 'fillType0': '#0d001a', 'fillType1': '#00001a', 'fillType2': '#001a00', 'fillType3': '#1a000d', 'fillType4': '#00101a', 'fillType5': '#1a0d00', 'fillType6': '#0d0d00', 'fillType7': '#00000d'}}}%%`,
+                      neon:       `%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#001a0d', 'primaryTextColor': '#00ff88', 'primaryBorderColor': '#00ff88', 'secondaryColor': '#000d1a', 'tertiaryColor': '#0d0022', 'background': '#000000', 'lineColor': '#7700ff', 'edgeLabelBackground': '#001a0d', 'clusterBkg': '#000d07', 'titleColor': '#00ffff', 'nodeTextColor': '#00ff88', 'edgeLabelColor': '#7700ff', 'labelBackground': '#001a0d', 'labelTextColor': '#00ff88', 'relationColor': '#7700ff', 'relationLabelColor': '#00ffff'}}}%%`,
                       corporate:  `%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#dbeafe', 'primaryTextColor': '#1e3a5f', 'primaryBorderColor': '#2563eb', 'secondaryColor': '#eff6ff', 'tertiaryColor': '#f0f4ff', 'background': '#ffffff', 'lineColor': '#2563eb', 'edgeLabelBackground': '#f8fafc', 'clusterBkg': '#f0f6ff', 'titleColor': '#1e3a5f', 'edgeLabelBackground': '#ffffff', 'nodeTextColor': '#1e3a5f'}}}%%`,
                     };
-                    dacSourceRef.current = 'code';
-                    setDacCode(prev => {
+                    cadSourceRef.current = 'code';
+                    setCadCode(prev => {
                       const cleaned = prev.replace(/^%%\{init[^%]*%%\s*\n?/ms, '');
                       return key ? `${THEME_DIRECTIVES[key]}\n${cleaned}` : cleaned;
                     });
@@ -3171,36 +3965,112 @@ function FlowCanvas() {
                     <option value="sunrise">🌅 Sunrise</option>
                     <option value="slate">🪨 Slate</option>
                     <option value="mono">⬛ Monochrome</option>
+                    <option value="cyberpunk">🟣 Cyberpunk</option>
+                    <option value="neon">🟢 Neon</option>
                   </optgroup>
                   <optgroup label="Light">
                     <option value="corporate">🏢 Corporate</option>
                   </optgroup>
                 </select>
                 <button className="btn btn-primary" title="Render Diagram" onClick={() => {
-                  dacSourceRef.current = 'code';
-                  const current = dacCode;
-                  setDacCode('');
-                  setTimeout(() => setDacCode(current), 10);
+                  cadSourceRef.current = 'code';
+                  const current = cadCode;
+                  setCadCode('');
+                  setTimeout(() => setCadCode(current), 10);
                 }} style={{ padding: '4px 10px', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <PlayCircle size={13} /> Render
                 </button>
                 <button className="btn btn-icon-only" title="Templates" onClick={() => setShowTemplateGallery(true)} style={{ padding: '4px' }}>
                   <LayoutGrid size={15} />
                 </button>
-                <button className="btn btn-icon-only" title="Copy code" onClick={() => { navigator.clipboard?.writeText(dacCode); }} style={{ padding: '4px' }}>
+                <button className="btn btn-icon-only" title="Copy code" onClick={() => { navigator.clipboard?.writeText(cadCode); }} style={{ padding: '4px' }}>
                   <Copy size={15} />
+                </button>
+                <button
+                  className={`btn btn-icon-only${showEmojiPicker ? ' active' : ''}`}
+                  title="Insert emoji / icon"
+                  onClick={() => setShowEmojiPicker(v => !v)}
+                  style={{ padding: '4px', fontSize: '13px', background: showEmojiPicker ? 'var(--accent-blue)' : undefined, color: showEmojiPicker ? '#fff' : undefined }}
+                >
+                  😀
                 </button>
               </div>
             </div>
+
+            {/* Emoji / icon picker panel */}
+            {showEmojiPicker && (() => {
+              const EMOJI_GROUPS = [
+                { label: '👤 People & Roles', icons: ['👤','👥','👑','👔','🧑‍💻','👨‍💼','👩‍💼','🧑‍🔬','🧑‍🏫','🕵️','🧑‍⚕️','🤝','👁️','🧠','🫂'] },
+                { label: '🖥️ Infrastructure', icons: ['🖥️','💻','📱','🗄️','🖨️','⌨️','🖱️','📡','📺','🔌','🔋','💾','📀','💿','🧮'] },
+                { label: '☁️ Cloud & Network', icons: ['☁️','🌐','🛰️','🔗','🔀','↔️','⬆️','⬇️','⬅️','➡️','🔄','🔁','🌍','🛜','📶'] },
+                { label: '🗄️ Data & Storage', icons: ['🗄️','🗃️','📦','📁','📂','🗂️','📋','📊','📈','📉','📇','🗒️','📝','📄','📜'] },
+                { label: '✉️ Messaging & Events', icons: ['✉️','📨','📬','📤','📥','💬','📣','🔔','🔕','📢','📡','🗣️','💭','🗨️','📩'] },
+                { label: '⚙️ Process & Dev', icons: ['⚙️','🔧','🛠️','🔩','🪛','⚒️','🏗️','🧱','🔨','🪚','🔑','🗝️','🪝','🔐','🧩'] },
+                { label: '✅ Status & Decisions', icons: ['✅','❌','⚠️','🚫','❓','❕','💡','🚦','🟢','🟡','🔴','⏸️','▶️','⏹️','🔃'] },
+                { label: '🔒 Security', icons: ['🔒','🔓','🛡️','🔐','🔑','🗝️','🪪','🧿','⛔','🚧','🚨','🚔','🕵️','🛂','🔏'] },
+                { label: '💰 Finance & Business', icons: ['💰','💳','💵','💹','📊','🏦','🏧','💸','🏆','🎯','📌','📍','🗓️','⏱️','⏰'] },
+                { label: '🚀 Deployment & Ops', icons: ['🚀','🛸','🛩️','📦','🏭','🔭','🧪','🧬','⚗️','🔬','🌡️','💊','🩺','🩻','🩹'] },
+                { label: '🔢 Symbols & Arrows', icons: ['→','←','↑','↓','↗','↘','↙','↖','↕','↔','⇒','⇐','⇑','⇓','⇔','①','②','③','④','⑤'] },
+              ];
+
+              const insertEmoji = (emoji) => {
+                const editor = cadEditorRef.current;
+                if (!editor) return;
+                const selection = editor.getSelection();
+                editor.executeEdits('emoji-picker', [{
+                  range: selection,
+                  text: emoji,
+                  forceMoveMarkers: true,
+                }]);
+                editor.focus();
+              };
+
+              return (
+                <div style={{
+                  position: 'relative', zIndex: 50,
+                  background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
+                  borderTop: 'none', padding: '10px 12px', maxHeight: '260px', overflowY: 'auto',
+                }}>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                    Click any emoji to insert at cursor · Works in node labels, edge labels, subgraph titles
+                  </div>
+                  {EMOJI_GROUPS.map(group => (
+                    <div key={group.label} style={{ marginBottom: '8px' }}>
+                      <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600 }}>{group.label}</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px' }}>
+                        {group.icons.map(emoji => (
+                          <button
+                            key={emoji}
+                            onClick={() => insertEmoji(emoji)}
+                            title={emoji}
+                            style={{
+                              background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)',
+                              borderRadius: '5px', padding: '3px 5px', fontSize: '15px',
+                              cursor: 'pointer', lineHeight: 1, transition: 'background 0.15s',
+                              minWidth: '28px', textAlign: 'center',
+                            }}
+                            onMouseEnter={e => e.target.style.background = 'var(--accent-blue)'}
+                            onMouseLeave={e => e.target.style.background = 'var(--bg-tertiary)'}
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
             <div className="monaco-editor-container" onKeyDown={(e) => e.stopPropagation()}>
               <Editor
                 height="100%"
                 language="mermaid"
                 theme={theme === 'dark' ? 'mermaid-dark' : 'mermaid-light'}
-                value={dacCode}
+                value={cadCode}
                 beforeMount={(monaco) => registerMermaidLanguage(monaco)}
-                onMount={(editor, monaco) => { dacEditorRef.current = editor; dacMonacoRef.current = monaco; }}
-                onChange={(value) => { dacSourceRef.current = 'code'; setDacCode(value || ''); }}
+                onMount={(editor, monaco) => { cadEditorRef.current = editor; cadMonacoRef.current = monaco; }}
+                onChange={(value) => { cadSourceRef.current = 'code'; setCadCode(value || ''); }}
                 options={{
                   minimap: { enabled: true, scale: 1, renderCharacters: false },
                   fontSize: 14,
@@ -3213,7 +4083,7 @@ function FlowCanvas() {
                   cursorBlinking: 'smooth',
                   cursorSmoothCaretAnimation: 'on',
                   renderLineHighlight: 'all',
-                  fontLigatures: true,
+                  fontLigatures: false,
                   fontFamily: "'JetBrains Mono', 'Fira Code', 'SF Mono', Menlo, monospace",
                   bracketPairColorization: { enabled: true },
                   guides: { indentation: true, bracketPairs: true },
@@ -3225,20 +4095,20 @@ function FlowCanvas() {
                 }}
               />
             </div>
-            <div className={`dac-status ${dacStatus.ok ? 'ok' : 'err'}`}>
-              <span className="dac-status-dot" />
-              {dacStatus.ok
-                ? (dacStatus.message || 'Ready')
-                : dacStatus.message}
+            <div className={`cad-status ${cadStatus.ok ? 'ok' : 'err'}`}>
+              <span className="cad-status-dot" />
+              {cadStatus.ok
+                ? (cadStatus.message || 'Ready')
+                : cadStatus.message}
             </div>
-            <div className="dac-resizer" onMouseDown={startResizing} />
+            <div className="cad-resizer" onMouseDown={startResizing} />
           </div>
         )}
 
-        {workspace === 'dac' && showTemplateGallery && (
-          <div className="dac-gallery-overlay" onClick={() => setShowTemplateGallery(false)}>
-            <div className="dac-gallery" onClick={(e) => e.stopPropagation()} style={{ width: 'min(1100px, 95vw)', maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}>
-              <div className="dac-gallery-head">
+        {workspace === 'cad' && showTemplateGallery && (
+          <div className="cad-gallery-overlay" onClick={() => setShowTemplateGallery(false)}>
+            <div className="cad-gallery" onClick={(e) => e.stopPropagation()} style={{ width: 'min(1100px, 95vw)', maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}>
+              <div className="cad-gallery-head">
                 <div>
                   <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Diagram Templates</h2>
                   <p style={{ margin: '4px 0 0', color: 'var(--text-secondary)', fontSize: '0.78rem' }}>
@@ -3251,30 +4121,30 @@ function FlowCanvas() {
                 {['All', 'Flowchart', 'OrgChart', 'Architecture', 'Sequence', 'C4', 'ER / DB', 'State & Git', 'Analytics', 'Story', 'Other'].map(cat => (
                   <button
                     key={cat}
-                    onClick={() => setDacGalFilter(cat)}
+                    onClick={() => setCadGalFilter(cat)}
                     style={{
                       padding: '5px 14px', fontSize: '0.75rem', fontWeight: 600, borderRadius: '999px', cursor: 'pointer', border: '1px solid',
-                      background: dacGalFilter === cat ? 'var(--accent-blue, #2563eb)' : 'transparent',
-                      borderColor: dacGalFilter === cat ? 'var(--accent-blue, #2563eb)' : 'var(--border-color)',
-                      color: dacGalFilter === cat ? '#fff' : 'var(--text-secondary)',
+                      background: cadGalFilter === cat ? 'var(--accent-blue, #2563eb)' : 'transparent',
+                      borderColor: cadGalFilter === cat ? 'var(--accent-blue, #2563eb)' : 'var(--border-color)',
+                      color: cadGalFilter === cat ? '#fff' : 'var(--text-secondary)',
                       transition: 'all 0.15s',
                     }}
                   >{cat}</button>
                 ))}
               </div>
               <div style={{ flex: 1, overflowY: 'auto', padding: '20px 22px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px', alignContent: 'start' }}>
-                {dacTemplates.filter(t => {
-                  if (dacGalFilter === 'All') return true;
-                  if (dacGalFilter === 'Flowchart') return t.type === 'Flowchart';
-                  if (dacGalFilter === 'Architecture') return ['Architecture', 'Block'].includes(t.type);
-                  if (dacGalFilter === 'Sequence') return t.type === 'Sequence';
-                  if (dacGalFilter === 'C4') return t.type === 'C4';
-                  if (dacGalFilter === 'ER / DB') return ['ER', 'Class', 'Requirement'].includes(t.type);
-                  if (dacGalFilter === 'State & Git') return ['State', 'Git'].includes(t.type);
-                  if (dacGalFilter === 'Analytics') return ['Pie', 'XY', 'Radar', 'Quadrant', 'Sankey', 'Gantt', 'Timeline', 'Journey', 'Kanban'].includes(t.type);
-                  if (dacGalFilter === 'OrgChart') return t.type === 'OrgChart';
-                  if (dacGalFilter === 'Story') return t.type === 'Story';
-                  if (dacGalFilter === 'Other') return ['Mindmap', 'Packet'].includes(t.type);
+                {cadTemplates.filter(t => {
+                  if (cadGalFilter === 'All') return true;
+                  if (cadGalFilter === 'Flowchart') return t.type === 'Flowchart';
+                  if (cadGalFilter === 'Architecture') return ['Architecture', 'Block'].includes(t.type);
+                  if (cadGalFilter === 'Sequence') return t.type === 'Sequence';
+                  if (cadGalFilter === 'C4') return t.type === 'C4';
+                  if (cadGalFilter === 'ER / DB') return ['ER', 'Class', 'Requirement'].includes(t.type);
+                  if (cadGalFilter === 'State & Git') return ['State', 'Git'].includes(t.type);
+                  if (cadGalFilter === 'Analytics') return ['Pie', 'XY', 'Radar', 'Quadrant', 'Sankey', 'Gantt', 'Timeline', 'Journey', 'Kanban'].includes(t.type);
+                  if (cadGalFilter === 'OrgChart') return t.type === 'OrgChart';
+                  if (cadGalFilter === 'Story') return t.type === 'Story';
+                  if (cadGalFilter === 'Other') return ['Mindmap', 'Packet'].includes(t.type);
                   return true;
                 }).map((t) => {
                   const typeColors = {
@@ -3305,16 +4175,16 @@ function FlowCanvas() {
                   return (
                     <button
                       key={t.name}
-                      className="dac-template-card"
+                      className="cad-template-card"
                       style={{ borderTop: `3px solid ${c.border}` }}
-                      onClick={() => { dacIdRef.current = 0; dacSourceRef.current = 'code'; dacSigRef.current = null; setDacCode(t.code); setShowTemplateGallery(false); }}
+                      onClick={() => { cadIdRef.current = 0; cadSourceRef.current = 'code'; cadSigRef.current = null; setCadCode(t.code); setShowTemplateGallery(false); }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
                         <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: c.text, background: c.bg, border: `1px solid ${c.border}30`, borderRadius: '999px', padding: '2px 9px' }}>{t.type}</span>
                       </div>
-                      <div className="dac-template-card-name">{t.name}</div>
-                      <div className="dac-template-card-desc">{t.description}</div>
-                      <pre className="dac-template-card-code">{t.code.split('\n').slice(0, 5).join('\n')}</pre>
+                      <div className="cad-template-card-name">{t.name}</div>
+                      <div className="cad-template-card-desc">{t.description}</div>
+                      <pre className="cad-template-card-code">{t.code.split('\n').slice(0, 5).join('\n')}</pre>
                     </button>
                   );
                 })}
@@ -3323,56 +4193,23 @@ function FlowCanvas() {
           </div>
         )}
 
-        <div style={{ flex: 1, position: 'relative', height: '100%' }}>
-        {/* Pure Pointer Event Catcher for Drawing */}
-        {workspace === 'draw' && activeTool !== 'select' && (
-          <div
-            className="drawing-interaction-layer"
-            onPointerDown={(e) => {
-              e.preventDefault();
-              if (isDrawingMode) handleDrawingStart(e);
-              else handlePaneMouseDown(e);
-            }}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 50,
-              cursor: 'crosshair',
-              touchAction: 'none'
-            }}
-          >
-            {isDrawingMode && currentPath.length > 1 && (
-              <svg style={{ width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'none' }}>
-                <path
-                  d={`M ${currentPath.map(p => `${p.screenX} ${p.screenY}`).join(' L ')}`}
-                  fill="none"
-                  stroke={drawingColor || '#3b82f6'}
-                  strokeWidth={drawingStrokeWidth + 2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            )}
-          </div>
-        )}
+        <div ref={cadCanvasRef} data-cad={workspace === 'cad' ? 'true' : undefined} style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <div ref={cadPreviewRef} style={{ flex: 1, position: 'relative', isolation: 'isolate', overflow: 'hidden' }}>
 
         <ReactFlow
           nodes={reactFlowNodes}
           proOptions={{ hideAttribution: true }}
           edges={reactFlowEdges}
-          onNodesChange={handleNodesChange} // This will only affect non-DAC nodes
-          onEdgesChange={onEdgesChange}    // This will only affect non-DAC edges
+          onNodesChange={handleNodesChange} // This will only affect non-CAD nodes
+          onEdgesChange={onEdgesChange}    // This will only affect non-CAD edges
           onConnect={onConnect}
-          onInit={setReactFlowInstance}
+          onInit={(inst) => { setReactFlowInstance(inst); reactFlowInstanceRef.current = inst; }}
           onDrop={onDrop}
           onDragOver={onDragOver}
           onNodeContextMenu={onNodeContextMenu}
           onPaneMouseDown={(e) => {
-            if (workspace !== 'draw' && workspace !== 'dac') return;
-            if (workspace === 'draw' && isDrawingMode) handleDrawingStart(e);
+            if (workspace !== 'draw') return;
+            if (isDrawingMode) handleDrawingStart(e);
             else handlePaneMouseDown(e);
           }}
           onPaneClick={() => { setContextMenu(null); setShowJson(false); }}
@@ -3380,122 +4217,109 @@ function FlowCanvas() {
           onNodeDragStop={onNodeDragStop}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
-          panOnDrag={workspace === 'dac' ? true : (!isDrawingMode && interactionMode === 'pan' && (workspace !== 'draw' || activeTool === 'select'))}
-          selectionOnDrag={workspace === 'dac' ? false : (!isDrawingMode && interactionMode === 'move' && (workspace !== 'draw' || activeTool === 'select'))}
-          nodesDraggable={workspace === 'dac' ? false : (!isDrawingMode && (activeTool === 'select' || workspace !== 'draw'))}
-          nodesConnectable={workspace === 'dac' ? false : (!isDrawingMode && (workspace !== 'draw' || activeTool === 'select'))}
-          elementsSelectable={workspace === 'dac' ? false : (!isDrawingMode && (workspace !== 'draw' || activeTool === 'select'))}
+          panOnDrag={!isDrawingMode && interactionMode === 'pan'}
+          selectionOnDrag={workspace === 'cad' ? false : (!isDrawingMode && interactionMode === 'move')}
+          nodesDraggable={workspace === 'cad' ? true : (!isDrawingMode && (activeTool === 'select' || workspace !== 'draw'))}
+          nodesConnectable={workspace === 'cad' ? false : (!isDrawingMode && (workspace !== 'draw' || activeTool === 'select'))}
+          elementsSelectable={workspace === 'cad' ? true : (!isDrawingMode && (workspace !== 'draw' || activeTool === 'select'))}
           panOnScroll={false}
           panActivationKeyCode={null}
-          zoomOnScroll={workspace === 'dac' ? true : (!isDrawingMode && (workspace !== 'draw' || activeTool === 'select' || interactionMode === 'move'))}
-          minZoom={workspace === 'dac' ? 0.05 : 0.1}
-          maxZoom={workspace === 'dac' ? 4 : 2}
+          zoomOnScroll={!isDrawingMode}
+          minZoom={workspace === 'cad' ? 0.05 : 0.05}
+          maxZoom={workspace === 'cad' ? 4 : 4}
           defaultViewport={initialViewport}
           colorMode={theme}
+          style={undefined}
           defaultEdgeOptions={defaultEdgeOptions}
           deleteKeyCode={['Backspace', 'Delete']}
           >
           {bgVariant === 'dots' && <Background color={theme === 'dark' ? '#fff' : '#000'} gap={16} size={1} opacity={theme === 'dark' ? 0.1 : 0.05} variant="dots" />}
-          <Controls />
 
-          {/* Mermaid SVG preview for non-flowchart types — rendered INSIDE the flow so
-              the floating toolbars (higher z-index) stay on top instead of vanishing. */}
-          {workspace === 'dac' && (
-            <div className="mmd-preview-layer">
-              <MermaidPreview 
-                code={dacCode} 
-                theme={theme} 
-                onStatus={setDacStatus} 
-                viewport={{ x, y, zoom }} 
-                reactFlowInstance={reactFlowInstance} 
-                onDimensions={(w, h) => {
-                  setDacNodes(nds => nds.map(n => {
-                    if (n.id !== 'mermaid-other-node') return n;
-                    const currentWidth = n.data?.width ?? n.style?.width;
-                    const currentHeight = n.data?.height ?? n.style?.height;
-                    if (Math.abs(currentWidth - w) < 1 && Math.abs(currentHeight - h) < 1) return n;
-                    return { ...n, style: { ...n.style, width: w, height: h }, data: { ...n.data, width: w, height: h } };
-                  }));
-                }}
-              />
+          <Controls>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '24px', background: 'var(--bg-secondary)', borderTop: '1px solid var(--border-color)', fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-secondary)', userSelect: 'none' }}>
+              {Math.round(zoom * 100)}%
+            </div>
+          </Controls>
+          {workspace !== 'cad' && (
+            <Panel position="bottom-left" style={{ margin: '0 0 8px 8px' }}>
+              <div className="toolbar" style={{ flexDirection: 'column', gap: '2px', padding: '4px', borderRadius: '8px', background: 'var(--bg-glass)', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow)' }}>
+                <button className="btn btn-icon-only" onClick={resetZoom} title="Reset to 100%">
+                  <Target size={15} />
+                </button>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', textAlign: 'center', padding: '2px 0', minWidth: '32px' }}>
+                  {Math.round(zoom * 100)}%
+                </div>
+              </div>
+            </Panel>
+          )}
+
+          {/* Drawing overlay — inside ReactFlow so Panel toolbars (z:1000) sit above it (z:5) */}
+          {workspace === 'draw' && activeTool !== 'select' && (
+            <div
+              className="drawing-interaction-layer"
+              onPointerDown={(e) => {
+                e.preventDefault();
+                if (activeTool === 'eraser') {
+                  e.currentTarget.setPointerCapture(e.pointerId);
+                  eraseAtPoint(e.clientX, e.clientY);
+                  return;
+                }
+                if (isDrawingMode) handleDrawingStart(e);
+                else handlePaneMouseDown(e);
+              }}
+              onPointerMove={(e) => {
+                if (activeTool === 'eraser' && e.buttons === 1) {
+                  eraseAtPoint(e.clientX, e.clientY);
+                }
+              }}
+              onWheel={(e) => {
+                if (!reactFlowInstance) return;
+                const { x, y, zoom } = reactFlowInstance.getViewport();
+                const delta = e.deltaY > 0 ? 0.9 : 1.1;
+                const newZoom = Math.max(0.05, Math.min(4, zoom * delta));
+                const rect = e.currentTarget.getBoundingClientRect();
+                const cx = e.clientX - rect.left;
+                const cy = e.clientY - rect.top;
+                const newX = cx - (cx - x) * (newZoom / zoom);
+                const newY = cy - (cy - y) * (newZoom / zoom);
+                reactFlowInstance.setViewport({ x: newX, y: newY, zoom: newZoom });
+              }}
+              style={{
+                position: 'absolute',
+                top: 0, left: 0, right: 0, bottom: 0,
+                zIndex: 5,
+                cursor: activeTool === 'eraser' ? 'cell' : 'crosshair',
+                touchAction: 'none'
+              }}
+            >
+              {isDrawingMode && currentPath.length > 1 && (
+                <svg style={{ width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'none' }}>
+                  <path
+                    d={buildSmoothSvgPath(currentPath)}
+                    fill="none"
+                    stroke={drawingColor || '#3b82f6'}
+                    strokeWidth={drawingStrokeWidth}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeDasharray={drawStrokeStyle === 'dashed' ? `${drawingStrokeWidth * 3},${drawingStrokeWidth * 2}` : drawStrokeStyle === 'dotted' ? `${drawingStrokeWidth},${drawingStrokeWidth * 2}` : 'none'}
+                  />
+                </svg>
+              )}
             </div>
           )}
 
-          {/* Interaction & Background Toolbar */}
-          <Panel position="bottom-center">
-            <div className="toolbar" style={{ position: 'relative', top: 0, right: 0, marginBottom: '20px' }}>
+          {/* placeholder — MermaidPreview moved outside ReactFlow to avoid overflow:hidden clipping */}
 
-               <button
-                 className={`btn btn-icon-only ${interactionMode === 'move' ? 'btn-primary' : ''}`}
- 
-                onClick={() => setInteractionMode('move')}
-                title="Select & Move (V)"
-              >
-                <MousePointer2 size={18} />
-              </button>
-              <button 
-                className={`btn btn-icon-only ${interactionMode === 'pan' ? 'btn-primary' : ''}`} 
-                onClick={() => setInteractionMode('pan')}
-                title="Pan Canvas (H)"
-              >
-                <Hand size={18} />
-              </button>
-              
-              <div style={{ width: '1px', height: '20px', background: 'var(--border-color)', margin: '0 4px' }}></div>
-              
-              <button 
-                className={`btn btn-icon-only ${bgVariant === 'dots' ? 'btn-primary' : ''}`} 
-                onClick={() => setBgVariant(bgVariant === 'dots' ? 'plain' : 'dots')}
-                title="Toggle Canvas Background"
-              >
-                <Grid3X3 size={18} />
-              </button>
+          {/* Main Drawing Tools Toolbar Removed from here */}
 
-              {workspace !== 'dac' && (
-                <>
-                  <div style={{ width: '1px', height: '20px', background: 'var(--border-color)', margin: '0 4px' }}></div>
-                  <button
-                    className="btn btn-icon-only"
-                    onClick={() => autoLayout('LR')}
-                    title="Auto Layout (Left to Right)"
-                  >
-                    <ArrowRightLeft size={18} />
-                  </button>
-                  <button
-                    className="btn btn-icon-only"
-                    onClick={() => autoLayout('TB')}
-                    title="Auto Layout (Top to Bottom)"
-                  >
-                    <ArrowDownUp size={18} />
-                  </button>
-                </>
-              )}
-
-              <div style={{ width: '1px', height: '20px', background: 'var(--border-color)', margin: '0 4px' }}></div>
-              
-              <button 
-                className="btn btn-icon-only" 
-                onClick={resetZoom}
-                title="Reset Zoom to 100%"
-              >
-                <Target size={18} />
-              </button>
-
-              <div style={{ display: 'flex', alignItems: 'center', padding: '0 8px', fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 'bold' }}>
-                {Math.round(zoom * 100)}%
-              </div>
-            </div>
-          </Panel>
-           {/* Main Drawing Tools Toolbar Removed from here */}
-
-           <Panel position="top-left" className="ms-topbar ms-topbar-left" style={{ top: '20px', left: '20px', margin: 0, zIndex: 1000 }}>
+           <Panel position="top-left" className="ms-topbar ms-topbar-left" style={{ display: 'none' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--bg-secondary)', padding: '6px 12px', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 4px 15px rgba(0,0,0,0.2)', backdropFilter: 'blur(8px)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderRight: '1px solid var(--border-color)', paddingRight: '12px', marginRight: '4px' }}>
+              <div onClick={onGoHome} style={{ display: 'flex', alignItems: 'center', gap: '8px', borderRight: '1px solid var(--border-color)', paddingRight: '12px', marginRight: '4px', cursor: 'pointer' }} title="Go to home page">
                 <MSLogo size={26} />
                 <span style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>Model Studio</span>
               </div>
               <div style={{ display: 'flex', gap: '4px' }}>
-                {['diagram', 'draw', 'eip', 'dac', 'ddd'].map((ws) => (
+                {['cad', 'diagram', 'draw', 'eip', 'ddd'].map((ws) => (
                   <button
                     key={ws}
                     onClick={() => {
@@ -3503,9 +4327,13 @@ function FlowCanvas() {
                         setActiveTool('select');
                         setIsDrawingMode(false);
                         setInteractionMode('move');
-                        if (ws === 'draw') setBgVariant('plain');
-                        if (ws === 'dac') setShowDacEditor(true);
-                        if (ws !== 'dac') {
+                        if (ws === 'draw') setBgVariant('dots');
+                        if (ws === 'cad') {
+                          setShowCadEditor(true);
+                          // Dispatch event so MermaidPreview retries fit until container has dimensions
+                          const delays = [80, 200, 400, 800];
+                          [100, 300, 600].forEach(d => setTimeout(() => reactFlowInstance?.fitView({ padding: 0.05, duration: 300 }), d));
+                        } else {
                           setTimeout(() => reactFlowInstance?.fitView({ padding: 0.15, duration: 600 }), 80);
                         }
                     }}
@@ -3518,93 +4346,115 @@ function FlowCanvas() {
                       border: workspace === ws ? undefined : 'none'
                     }}
                   >
-                    {ws === 'ddd' ? 'Domain Driven Design' : (ws === 'eip' ? 'Camel' : (ws === 'diagram' ? 'Diagrams' : (ws === 'dac' ? 'Code as Diagram' : 'Draw')))}
+                    {ws === 'ddd' ? 'Domain Driven Design' : (ws === 'eip' ? 'Camel' : (ws === 'diagram' ? 'Diagrams' : (ws === 'cad' ? 'Code as Diagram' : 'Draw')))}
                   </button>
                 ))}
               </div>
             </div>
           </Panel>
 
-          <Panel position="top-right" className="ms-topbar ms-topbar-right" style={{ top: '20px', right: '20px', margin: 0, maxWidth: 'calc(100vw - 300px)', zIndex: 1000, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
+          <Panel position="top-right" className="ms-topbar ms-topbar-right" style={{ display: 'none' }}>
             <div className="toolbar" style={{ position: 'relative', display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'flex-end' }}>
               
               {/* Draw Tools Section */}
               {workspace === 'draw' && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '2px', background: 'var(--bg-tertiary)', padding: '6px 12px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                  <span style={{ fontSize: '0.65rem', fontWeight: 'bold', color: 'var(--text-secondary)', marginRight: '4px' }}>DRAW</span>
-                  <button className={`btn btn-icon-only ${activeTool === 'select' && !isDrawingMode ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('select'); setIsDrawingMode(false); setInteractionMode('move'); }} title="Select (V)"><MousePointer2 size={16} /></button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '2px', background: 'var(--bg-tertiary)', padding: '6px 10px', borderRadius: '12px', border: '1px solid var(--border-color)', flexWrap: 'wrap' }}>
+                  {/* Undo / Redo */}
+                  <button className="btn btn-icon-only" onClick={undoDraw} title="Undo (Ctrl+Z)" style={{ opacity: drawHistoryRef.current.length > 1 && drawHistoryIndexRef.current > 0 ? 1 : 0.35 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"/></svg>
+                  </button>
+                  <button className="btn btn-icon-only" onClick={redoDraw} title="Redo (Ctrl+Shift+Z)" style={{ opacity: drawHistoryIndexRef.current < drawHistoryRef.current.length - 1 ? 1 : 0.35 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 019-9 9 9 0 016 2.3L21 13"/></svg>
+                  </button>
                   <div style={{ width: '1px', height: '16px', background: 'var(--border-color)', margin: '0 4px' }}></div>
-                  <button className={`btn btn-icon-only ${activeTool === 'rectangle' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('rectangle'); setIsDrawingMode(false); }} title="Rectangle (R)"><Square size={16} /></button>
-                  <button className={`btn btn-icon-only ${activeTool === 'circle' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('circle'); setIsDrawingMode(false); }} title="Circle (O)"><CircleIcon size={16} /></button>
-                  <button className={`btn btn-icon-only ${activeTool === 'diamond' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('diamond'); setIsDrawingMode(false); }} title="Diamond (D)"><Diamond size={16} /></button>
-                  <button className={`btn btn-icon-only ${activeTool === 'arrow' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('arrow'); setIsDrawingMode(false); }} title="Arrow (A)"><ArrowUpRight size={16} /></button>
-                  <button className={`btn btn-icon-only ${activeTool === 'line' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('line'); setIsDrawingMode(false); }} title="Line (L)"><Minus size={16} /></button>
-                  <button className={`btn btn-icon-only ${isDrawingMode ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('pencil'); setIsDrawingMode(true); }} title="Pencil (P)"><Pencil size={16} /></button>
+
+                  {/* Tools */}
+                  <button className={`btn btn-icon-only ${activeTool === 'select' && !isDrawingMode ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('select'); setIsDrawingMode(false); setInteractionMode('move'); }} title="Select / Move (V · 1)"><MousePointer2 size={16} /></button>
                   <div style={{ width: '1px', height: '16px', background: 'var(--border-color)', margin: '0 4px' }}></div>
-                  <button className={`btn btn-icon-only ${isRoughGlobal ? 'btn-primary' : ''}`} onClick={() => setIsRoughGlobal(!isRoughGlobal)} title="Toggle Hand-drawn Style"><Paintbrush size={16} /></button>
+                  <button className={`btn btn-icon-only ${activeTool === 'rectangle' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('rectangle'); setIsDrawingMode(false); }} title="Rectangle (R · 2)"><Square size={16} /></button>
+                  <button className={`btn btn-icon-only ${activeTool === 'circle' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('circle'); setIsDrawingMode(false); }} title="Circle (O · 4)"><CircleIcon size={16} /></button>
+                  <button className={`btn btn-icon-only ${activeTool === 'diamond' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('diamond'); setIsDrawingMode(false); }} title="Diamond (D · 3)"><Diamond size={16} /></button>
+                  <button className={`btn btn-icon-only ${activeTool === 'triangle' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('triangle'); setIsDrawingMode(false); }} title="Triangle (0)"><Triangle size={16} /></button>
+                  <button className={`btn btn-icon-only ${activeTool === 'cloud' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('cloud'); setIsDrawingMode(false); }} title="Cloud (C)"><Cloud size={16} /></button>
+                  <button className={`btn btn-icon-only ${activeTool === 'arrow' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('arrow'); setIsDrawingMode(false); }} title="Arrow (A · 5)"><ArrowUpRight size={16} /></button>
+                  <button className={`btn btn-icon-only ${activeTool === 'line' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('line'); setIsDrawingMode(false); }} title="Line (L · 6)"><Minus size={16} /></button>
+                  <button className={`btn btn-icon-only ${activeTool === 'text' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('text'); setIsDrawingMode(false); }} title="Text (8)"><Type size={16} /></button>
+                  <button className={`btn btn-icon-only ${isDrawingMode ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('pencil'); setIsDrawingMode(true); }} title="Pencil / Freehand (P · 7)"><Pencil size={16} /></button>
+                  <button className={`btn btn-icon-only ${activeTool === 'eraser' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('eraser'); setIsDrawingMode(false); }} title="Eraser (E)"><Eraser size={16} /></button>
+                  <button className="btn btn-icon-only" onClick={() => { addCanvasWidget('note'); setActiveTool('select'); setIsDrawingMode(false); }} title="Sticky Note (N)" style={{ color: '#ca8a04' }}><StickyNote size={16} /></button>
                   <div style={{ width: '1px', height: '16px', background: 'var(--border-color)', margin: '0 4px' }}></div>
-                  {/* Stroke color */}
-                  <input
-                    type="color"
-                    value={drawingColor}
-                    onChange={(e) => setDrawingColor(e.target.value)}
-                    title="Stroke Color"
-                    style={{ width: 28, height: 28, padding: 0, border: '2px solid var(--border-color)', borderRadius: 6, cursor: 'pointer', background: 'none' }}
-                  />
-                  {/* Stroke width */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                    <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', lineHeight: 1 }}>{drawingStrokeWidth}px</span>
-                    <input
-                      type="range"
-                      min="1" max="20"
-                      value={drawingStrokeWidth}
-                      onChange={(e) => setDrawingStrokeWidth(parseInt(e.target.value, 10))}
-                      title={`Stroke Width: ${drawingStrokeWidth}px`}
-                      style={{ width: 64, accentColor: '#3b82f6', cursor: 'pointer' }}
-                    />
-                  </div>
-                  {/* Stroke style */}
-                  <select
-                    value={drawStrokeStyle}
-                    onChange={(e) => setDrawStrokeStyle(e.target.value)}
-                    title="Stroke Style"
-                    style={{ fontSize: '0.72rem', padding: '3px 4px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: 6, cursor: 'pointer' }}
+
+                  {/* Hand-drawn & Tool lock */}
+                  <button className={`btn btn-icon-only ${isRoughGlobal ? 'btn-primary' : ''}`} onClick={() => setIsRoughGlobal(!isRoughGlobal)} title="Hand-drawn Style"><Paintbrush size={16} /></button>
+                  <button
+                    className={`btn btn-icon-only ${drawToolLock ? 'btn-primary' : ''}`}
+                    onClick={() => setDrawToolLock(v => !v)}
+                    title={drawToolLock ? 'Tool locked (click to unlock — auto-return to Select after each draw)' : 'Tool unlocked (click to lock — keep current tool after draw)'}
+                    style={{ fontSize: '0.65rem', fontWeight: 700 }}
                   >
-                    <option value="solid">—— Solid</option>
-                    <option value="dashed">- - Dashed</option>
-                    <option value="dotted">··· Dotted</option>
-                  </select>
+                    {drawToolLock ? <Lock size={16} /> : <Lock size={16} style={{ opacity: 0.4 }} />}
+                  </button>
                 </div>
               )}
 
               {/* Templates & General Widgets Section */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--bg-secondary)', padding: '6px 12px', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 4px 15px rgba(0,0,0,0.2)', backdropFilter: 'blur(8px)' }}>
-                <button className="btn" onClick={() => (workspace === 'dac' ? setShowTemplateGallery(true) : setShowTemplatesModal(true))} style={{ fontSize: '0.8rem', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid var(--accent-blue)', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa' }}>
-                  <Layers size={14} /> Templates
-                </button>
-                
-                {workspace !== 'eip' && (
+                {/* Interaction mode & canvas toggle */}
+                {workspace !== 'draw' && (
+                  <>
+                    <button className={`btn btn-icon-only ${interactionMode === 'move' ? 'btn-primary' : ''}`} onClick={() => setInteractionMode('move')} title="Select & Move (V)">
+                      <MousePointer2 size={16} />
+                    </button>
+                    <button className={`btn btn-icon-only ${interactionMode === 'pan' ? 'btn-primary' : ''}`} onClick={() => setInteractionMode('pan')} title="Pan Canvas (H)">
+                      <Hand size={16} />
+                    </button>
+                    {workspace !== 'cad' && (
+                      <>
+                        <button className="btn btn-icon-only" onClick={() => autoLayout('LR')} title="Auto Layout Left→Right"><ArrowRightLeft size={16} /></button>
+                        <button className="btn btn-icon-only" onClick={() => autoLayout('TB')} title="Auto Layout Top→Bottom"><ArrowDownUp size={16} /></button>
+                      </>
+                    )}
+                    <div style={{ width: '1px', height: '16px', background: 'var(--border-color)', margin: '0 4px' }}></div>
+                  </>
+                )}
+                {workspace !== 'draw' && (
+                  <button className="btn" onClick={() => (workspace === 'cad' ? setShowTemplateGallery(true) : setShowTemplatesModal(true))} style={{ fontSize: '0.8rem', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid var(--accent-blue)', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa' }}>
+                    <Layers size={14} /> Templates
+                  </button>
+                )}
+
+                {workspace !== 'draw' && (
                   <>
                     <div style={{ width: '1px', height: '16px', background: 'var(--border-color)', margin: '0 4px' }}></div>
-                    <button className="btn btn-icon-only" onClick={() => addCanvasWidget('text')} style={{ border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)' }} title="Insert Title / Text Header">
-                      <Type size={16} />
-                    </button>
-                    <button className="btn btn-icon-only" onClick={() => addCanvasWidget('note')} style={{ border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)' }} title="Insert Sticky Note">
+                    {workspace !== 'eip' && (
+                      <button className="btn btn-icon-only" onClick={() => addCanvasWidget('text')} style={{ border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)' }} title="Insert Title / Text Header">
+                        <Type size={16} />
+                      </button>
+                    )}
+                    <button className="btn btn-icon-only" onClick={() => addCanvasWidget('note')} style={{ border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: '#ca8a04' }} title="Insert Sticky Note">
                       <StickyNote size={16} />
-                    </button>
-                    <button className="btn btn-icon-only" onClick={() => addCanvasWidget('callout')} style={{ border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)' }} title="Insert Callout Box">
-                      <Info size={16} />
                     </button>
                   </>
                 )}
                 
                 <div style={{ width: '1px', height: '16px', background: 'var(--border-color)', margin: '0 4px' }}></div>
                 
-                {workspace !== 'dac' && (
+                {workspace !== 'cad' && (
                   <button className="btn btn-icon-only" onClick={() => setShowJson(!showJson)} title="View Model Source (JSON/YAML)">
                     <Code size={16} />
                   </button>
                 )}
+                <button className="btn btn-icon-only" title="Share (copy link)" onClick={() => {
+                  try {
+                    const n = workspace === 'draw' ? drawNodes : workspace === 'diagram' ? diagramNodes : workspace === 'ddd' ? dddNodes : workspace === 'eip' ? eipNodes : cadNodes;
+                    const e = workspace === 'draw' ? drawEdges : workspace === 'diagram' ? diagramEdges : workspace === 'ddd' ? dddEdges : workspace === 'eip' ? eipEdges : cadEdges;
+                    const payload = btoa(JSON.stringify({ nodes: n, edges: e }));
+                    const url = `${window.location.origin}${window.location.pathname}#${workspace}=${payload}`;
+                    navigator.clipboard.writeText(url).then(() => alert('Share link copied to clipboard!')).catch(() => prompt('Copy this share link:', url));
+                  } catch { alert('Canvas too large to share via URL.'); }
+                }}>
+                  <Share2 size={16} />
+                </button>
                 <button className="btn btn-icon-only" onClick={clearCanvas} title="Clear Everything (Reset Canvas)">
                   <Eraser size={16} color="#ef4444" />
                 </button>
@@ -3624,7 +4474,7 @@ function FlowCanvas() {
                   type="file"
                   ref={fileInputRef}
                   onChange={handleImportFile}
-                  accept={workspace === 'dac' ? '.mermaid,text/plain' : '.json,.yaml,.yml'}
+                  accept={workspace === 'cad' ? '.mmd,.mermaid,text/plain' : '.json,.yaml,.yml'}
                   style={{ display: 'none' }}
                 />
                 <input 
@@ -3641,17 +4491,17 @@ function FlowCanvas() {
                   </button>
                   {showExportDropdown && (
                     <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '8px', zIndex: 1000, width: '240px', padding: '6px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      {workspace === 'dac' ? (
+                      {workspace === 'cad' ? (
                         <button className="btn" onClick={() => {
-                          const blob = new Blob([dacCode], { type: 'text/plain' });
-                          const url = URL.createObjectURL(blob);
                           const a = document.createElement('a');
-                          a.href = url;
-                          a.download = 'diagram.mermaid';
+                          a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(cadCode);
+                          a.download = `${getSanitizedBaseName()}.mmd`;
+                          document.body.appendChild(a);
                           a.click();
+                          document.body.removeChild(a);
                           setShowExportDropdown(false);
                         }} style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', background: 'transparent', color: '#60a5fa', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer' }}>
-                          <Code size={14} /> Export Mermaid Code (.mermaid)
+                          <Code size={14} /> Export Mermaid Code (.mmd)
                         </button>
                       ) : (
                         <>
@@ -3669,11 +4519,17 @@ function FlowCanvas() {
                         </button>
                       )}
                       <div style={{ height: '1px', background: 'var(--border-color)', margin: '4px 0' }}></div>
-                      <button className="btn" onClick={() => { exportAsPng(); setShowExportDropdown(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', background: 'transparent', color: 'var(--text-primary)', fontSize: '0.8rem', cursor: 'pointer' }}>
-                        <Image size={14} /> Export Image (PNG)
+                      <button className="btn" onClick={() => { exportAsPng({ transparent: false }); setShowExportDropdown(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', background: 'transparent', color: 'var(--text-primary)', fontSize: '0.8rem', cursor: 'pointer' }}>
+                        <Image size={14} /> Export PNG (with bg)
                       </button>
-                      <button className="btn" onClick={() => { exportAsSvg(); setShowExportDropdown(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', background: 'transparent', color: 'var(--text-primary)', fontSize: '0.8rem', cursor: 'pointer' }}>
-                        <FileText size={14} /> Export Image (SVG)
+                      <button className="btn" onClick={() => { exportAsPng({ transparent: true }); setShowExportDropdown(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', background: 'transparent', color: 'var(--text-primary)', fontSize: '0.8rem', cursor: 'pointer' }}>
+                        <Image size={14} /> Export PNG (transparent)
+                      </button>
+                      <button className="btn" onClick={() => { exportAsSvg({ transparent: false }); setShowExportDropdown(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', background: 'transparent', color: 'var(--text-primary)', fontSize: '0.8rem', cursor: 'pointer' }}>
+                        <FileText size={14} /> Export SVG (with bg)
+                      </button>
+                      <button className="btn" onClick={() => { exportAsSvg({ transparent: true }); setShowExportDropdown(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', background: 'transparent', color: 'var(--text-primary)', fontSize: '0.8rem', cursor: 'pointer' }}>
+                        <FileText size={14} /> Export SVG (transparent)
                       </button>
                     </div>
                   )}
@@ -3688,7 +4544,13 @@ function FlowCanvas() {
               <h3 style={{ margin: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Code size={20} color="#3b82f6" /> {workspace === 'eip' ? 'Camel Route YAML' : 'Model Definition (JSON/YAML)'}
               </h3>
-              <div style={{ display: 'flex', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                {workspace !== 'eip' && (
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: 'var(--text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    <input type="checkbox" checked={jsonIncludeNotes} onChange={(e) => setJsonIncludeNotes(e.target.checked)} />
+                    Include sticky notes
+                  </label>
+                )}
                 <button className="btn btn-icon-only" onClick={() => setShowJson(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)' }}>
                   <X size={20} />
                 </button>
@@ -3696,17 +4558,19 @@ function FlowCanvas() {
             </div>
             <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#0a0a0a' }}>
               <pre style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, margin: 0, padding: '24px', overflow: 'auto', color: '#a78bfa', fontFamily: '"Fira Code", monospace', fontSize: '0.85rem', lineHeight: '1.6' }}>
-                {workspace === 'eip' ? generateYaml() : JSON.stringify({ nodes, edges }, null, 2)}
+                {workspace === 'eip' ? generateYaml() : JSON.stringify({ nodes: jsonIncludeNotes ? nodes : nodes.filter(n => n.data?.shape !== 'note'), edges }, null, 2)}
               </pre>
             </div>
             <div style={{ padding: '20px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '12px', background: 'rgba(255,255,255,0.02)' }}>
               <button className="btn" onClick={() => {
-                const blob = new Blob([workspace === 'eip' ? generateYaml() : JSON.stringify({ nodes, edges }, null, 2)], { type: 'text/plain' });
-                const url = URL.createObjectURL(blob);
+                const exportNodes = jsonIncludeNotes ? nodes : nodes.filter(n => n.data?.shape !== 'note');
+                const content = workspace === 'eip' ? generateYaml() : JSON.stringify({ nodes: exportNodes, edges }, null, 2);
                 const a = document.createElement('a');
-                a.href = url;
-                a.download = `model-source.${workspace === 'eip' ? 'yaml' : 'json'}`;
+                a.href = `data:text/plain;charset=utf-8,` + encodeURIComponent(content);
+                a.download = `${getSanitizedBaseName()}-source.${workspace === 'eip' ? 'yaml' : 'json'}`;
+                document.body.appendChild(a);
                 a.click();
+                document.body.removeChild(a);
               }} style={{ border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}>
                 <Download size={16} /> Download Source
               </button>
@@ -3853,11 +4717,162 @@ function FlowCanvas() {
           )}
           {activeNode && (
             <Panel position="top-right" style={{ top: '80px', right: '20px' }}>
-              <div className="json-viewer-overlay" style={{ width: '280px', padding: '20px', margin: 0, maxHeight: 'calc(100vh - 100px)', overflowY: 'auto' }}>
-                <div className="json-viewer-header" style={{ marginBottom: '16px' }}>
-                  <span>Edit Properties</span>
-                  <button onClick={() => setSelectedNodeId(null)} style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}>&times;</button>
+              <div className="json-viewer-overlay" style={{ width: '240px', padding: '16px', margin: 0, maxHeight: 'calc(100vh - 100px)', overflowY: 'auto' }}>
+                <div className="json-viewer-header" style={{ marginBottom: '12px' }}>
+                  <span style={{ fontSize: '0.85rem' }}>{workspace === 'draw' ? 'Element' : 'Edit Properties'}</span>
+                  <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                    {workspace === 'draw' && (
+                      <button title="Reset to defaults" onClick={() => {
+                        updateNodeData('color', drawingColor);
+                        updateNodeData('fillColor', drawFillColor);
+                        updateNodeData('strokeWidth', drawingStrokeWidth);
+                        updateNodeData('strokeStyle', drawStrokeStyle);
+                        updateNodeData('strokeOpacity', drawStrokeOpacity);
+                        updateNodeData('fillOpacity', drawFillOpacity);
+                        updateNodeData('opacity', drawOpacity);
+                        updateNodeData('shadow', drawShadow);
+                        updateNodeData('cornerRadius', drawCornerRadius);
+                      }} style={{ background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-muted)', cursor: 'pointer', borderRadius: 4, fontSize: '0.6rem', padding: '1px 5px' }}>reset</button>
+                    )}
+                    <button onClick={() => setSelectedNodeId(null)} style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}>&times;</button>
+                  </div>
                 </div>
+
+                {/* ── DRAW workspace: styling panel ── */}
+                {workspace === 'draw' ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    {/* Label */}
+                    {!['drawing', 'line', 'arrow'].includes(activeNode.data.shape) && (
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '5px' }}>Label</label>
+                        <input value={activeNode.data.label || ''} onChange={(e) => updateNodeData('label', e.target.value)} placeholder="Double-click to edit inline" style={{ width: '100%', padding: '6px 8px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '6px', fontSize: '0.82rem', outline: 'none', boxSizing: 'border-box' }} />
+                      </div>
+                    )}
+                    {/* Font */}
+                    {!['drawing', 'line', 'arrow'].includes(activeNode.data.shape) && (
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '5px' }}>Font</label>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <select value={activeNode.data.fontFamily || 'virgil'} onChange={(e) => updateNodeData('fontFamily', e.target.value)} style={{ flex: 1, padding: '5px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '4px', fontSize: '0.75rem', outline: 'none' }}>
+                            <option value="virgil">Handwriting</option>
+                            <option value="sans-serif">Sans-Serif</option>
+                            <option value="monospace">Monospace</option>
+                          </select>
+                          <input type="number" value={parseInt(activeNode.data.fontSize) || 16} onChange={(e) => updateNodeData('fontSize', e.target.value + 'px')} style={{ width: '52px', padding: '5px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '4px', fontSize: '0.75rem', outline: 'none' }} title="Font Size" />
+                        </div>
+                      </div>
+                    )}
+                    {/* Stroke */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '5px' }}>Stroke</label>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <input type="color" value={activeNode.data.color || drawingColor} onChange={(e) => updateNodeData('color', e.target.value)} style={{ width: 32, height: 28, padding: 0, border: '2px solid var(--border-color)', borderRadius: 4, cursor: 'pointer', background: 'none' }} />
+                        <input type="range" min="0" max="100" value={activeNode.data.strokeOpacity ?? drawStrokeOpacity} onChange={(e) => updateNodeData('strokeOpacity', parseInt(e.target.value))} style={{ flex: 1, accentColor: '#3b82f6' }} title="Stroke Opacity" />
+                        <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', minWidth: 26, textAlign: 'right' }}>{activeNode.data.strokeOpacity ?? drawStrokeOpacity}%</span>
+                      </div>
+                    </div>
+                    {/* Stroke Width + Style */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '5px' }}>Stroke Width & Style</label>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <input type="range" min="1" max="20" value={activeNode.data.strokeWidth || drawingStrokeWidth} onChange={(e) => updateNodeData('strokeWidth', parseInt(e.target.value))} style={{ flex: 1, accentColor: '#3b82f6' }} title="Stroke Width" />
+                        <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', minWidth: 22 }}>{activeNode.data.strokeWidth || drawingStrokeWidth}px</span>
+                        <select value={activeNode.data.strokeStyle || drawStrokeStyle} onChange={(e) => updateNodeData('strokeStyle', e.target.value)} style={{ fontSize: '0.72rem', padding: '3px 4px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: 4 }}>
+                          <option value="solid">Solid</option>
+                          <option value="dashed">Dashed</option>
+                          <option value="dotted">Dotted</option>
+                        </select>
+                      </div>
+                    </div>
+                    {/* Corner Radius */}
+                    {!['line', 'arrow', 'drawing', 'circle', 'oval', 'diamond', 'triangle', 'cloud'].includes(activeNode.data.shape) && (
+                      <div>
+                        <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '5px' }}>
+                          Corners
+                          <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{activeNode.data.cornerRadius ?? 4}px</span>
+                        </label>
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                          <button onClick={() => updateNodeData('cornerRadius', 0)} style={{ padding: '2px 8px', fontSize: '0.65rem', background: (activeNode.data.cornerRadius ?? 4) === 0 ? '#3b82f6' : 'var(--bg-secondary)', color: (activeNode.data.cornerRadius ?? 4) === 0 ? '#fff' : 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: 4, cursor: 'pointer' }}>Sharp</button>
+                          <input type="range" min="0" max="50" value={activeNode.data.cornerRadius ?? 4} onChange={(e) => updateNodeData('cornerRadius', parseInt(e.target.value))} style={{ flex: 1, accentColor: '#3b82f6' }} />
+                          <button onClick={() => updateNodeData('cornerRadius', 50)} style={{ padding: '2px 8px', fontSize: '0.65rem', background: (activeNode.data.cornerRadius ?? 4) === 50 ? '#3b82f6' : 'var(--bg-secondary)', color: (activeNode.data.cornerRadius ?? 4) === 50 ? '#fff' : 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: 4, cursor: 'pointer' }}>Round</button>
+                        </div>
+                      </div>
+                    )}
+                    {/* Fill */}
+                    {!['line', 'arrow', 'drawing'].includes(activeNode.data.shape) && (
+                      <div>
+                        <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '5px' }}>
+                          Fill
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', color: 'var(--text-primary)', cursor: 'pointer' }}>
+                            <input type="checkbox" checked={!activeNode.data.hideFill} onChange={(e) => updateNodeData('hideFill', !e.target.checked)} />
+                            on
+                          </label>
+                        </label>
+                        {!activeNode.data.hideFill && (
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <input type="color" value={activeNode.data.fillColor && activeNode.data.fillColor !== 'transparent' ? activeNode.data.fillColor : drawFillColor} onChange={(e) => updateNodeData('fillColor', e.target.value)} style={{ width: 32, height: 28, padding: 0, border: '2px solid var(--border-color)', borderRadius: 4, cursor: 'pointer', background: 'none' }} />
+                            <input type="range" min="0" max="100" value={activeNode.data.fillOpacity ?? drawFillOpacity} onChange={(e) => updateNodeData('fillOpacity', parseInt(e.target.value))} style={{ flex: 1, accentColor: '#3b82f6' }} title="Fill Opacity" />
+                            <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', minWidth: 26, textAlign: 'right' }}>{activeNode.data.fillOpacity ?? drawFillOpacity}%</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {/* Element Opacity */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '5px' }}>Element Opacity</label>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <input type="range" min="10" max="100" value={activeNode.data.opacity || drawOpacity} onChange={(e) => updateNodeData('opacity', parseInt(e.target.value))} style={{ flex: 1, accentColor: '#3b82f6' }} />
+                        <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', minWidth: 26, textAlign: 'right' }}>{activeNode.data.opacity || drawOpacity}%</span>
+                      </div>
+                    </div>
+                    {/* Rough + Fill Style */}
+                    <div>
+                      <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '5px' }}>
+                        Hand-drawn Style
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', color: 'var(--text-primary)', cursor: 'pointer' }}>
+                          <input type="checkbox" checked={!!activeNode.data.isRough} onChange={(e) => updateNodeData('isRough', e.target.checked)} />
+                          rough
+                        </label>
+                      </label>
+                      {activeNode.data.isRough && (
+                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: 4 }}>
+                          {['hachure', 'solid', 'zigzag', 'cross-hatch', 'dots', 'sunburst'].map(s => (
+                            <button key={s} className={`btn ${(activeNode.data.fillStyle || 'hachure') === s ? 'btn-primary' : ''}`} onClick={() => updateNodeData('fillStyle', s)} style={{ fontSize: '0.6rem', padding: '2px 5px', textTransform: 'capitalize' }}>{s}</button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {/* Shadow */}
+                    <div>
+                      <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '5px' }}>
+                        Shadow
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', color: 'var(--text-primary)', cursor: 'pointer' }}>
+                          <input type="checkbox" checked={!!activeNode.data.shadow} onChange={(e) => updateNodeData('shadow', e.target.checked)} />
+                          on
+                        </label>
+                      </label>
+                      {activeNode.data.shadow && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <input type="color" value={activeNode.data.shadowColor || drawShadowColor} onChange={(e) => updateNodeData('shadowColor', e.target.value)} style={{ width: 32, height: 28, padding: 0, border: '2px solid var(--border-color)', borderRadius: 4, cursor: 'pointer', background: 'none' }} title="Shadow Color" />
+                            <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>color</span>
+                          </div>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', minWidth: 26 }}>blur</span>
+                            <input type="range" min="0" max="30" value={activeNode.data.shadowBlur ?? drawShadowBlur} onChange={(e) => updateNodeData('shadowBlur', parseInt(e.target.value))} style={{ flex: 1, accentColor: '#3b82f6' }} />
+                            <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', minWidth: 22 }}>{activeNode.data.shadowBlur ?? drawShadowBlur}px</span>
+                          </div>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', minWidth: 26 }}>opac</span>
+                            <input type="range" min="0" max="100" value={activeNode.data.shadowOpacity ?? drawShadowOpacity} onChange={(e) => updateNodeData('shadowOpacity', parseInt(e.target.value))} style={{ flex: 1, accentColor: '#3b82f6' }} />
+                            <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', minWidth: 26, textAlign: 'right' }}>{activeNode.data.shadowOpacity ?? drawShadowOpacity}%</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>Text Alignment</label>
@@ -4010,8 +5025,31 @@ function FlowCanvas() {
                         </div>
                       </div>
 
+                      <div style={{ display: 'flex', gap: '16px' }}>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Fill Opacity: {activeNode.data.fillOpacity ?? 100}%</label>
+                          <input
+                            type="range"
+                            min="0" max="100"
+                            value={activeNode.data.fillOpacity ?? 100}
+                            onChange={(e) => updateNodeData('fillOpacity', parseInt(e.target.value))}
+                            style={{ width: '100%', accentColor: '#3b82f6' }}
+                          />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Stroke Opacity: {activeNode.data.strokeOpacity ?? 100}%</label>
+                          <input
+                            type="range"
+                            min="0" max="100"
+                            value={activeNode.data.strokeOpacity ?? 100}
+                            onChange={(e) => updateNodeData('strokeOpacity', parseInt(e.target.value))}
+                            style={{ width: '100%', accentColor: '#3b82f6' }}
+                          />
+                        </div>
+                      </div>
+
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Opacity: {activeNode.data.opacity || 100}%</label>
+                        <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>Element Opacity: {activeNode.data.opacity || 100}%</label>
                         <input
                           type="range"
                           min="10" max="100"
@@ -4351,6 +5389,7 @@ function FlowCanvas() {
                     <Trash2 size={16} /> Delete Node
                   </button>
                 </div>
+                )} {/* end else (non-draw) */}
               </div>
             </Panel>
           )}
@@ -4445,7 +5484,7 @@ function FlowCanvas() {
                   )}
                 </>
               )}
-              {workspace === 'dac' && (
+              {workspace === 'cad' && (
                 <div style={{ padding: '4px', minWidth: '210px' }}>
                   <button className="btn" onClick={() => dacRenameNode(contextMenu.id)} style={{ textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Pencil size={15} /> Edit Label…
@@ -4463,11 +5502,11 @@ function FlowCanvas() {
 
                   <div style={{ fontSize: '0.7rem', color: '#94a3b8', padding: '4px 4px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}><Plus size={12} /> Add Connected Node</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '6px' }}>
-                    <button className="btn btn-icon-only" style={{ padding: '6px' }} title="Rectangle" onClick={() => dacAddConnected(contextMenu.id, 'rectangle')}><Square size={16} /></button>
-                    <button className="btn btn-icon-only" style={{ padding: '6px' }} title="Rounded" onClick={() => dacAddConnected(contextMenu.id, 'rectangle', true)}><Square size={16} style={{ borderRadius: 4 }} /></button>
-                    <button className="btn btn-icon-only" style={{ padding: '6px' }} title="Decision" onClick={() => dacAddConnected(contextMenu.id, 'diamond')}><Diamond size={16} /></button>
-                    <button className="btn btn-icon-only" style={{ padding: '6px' }} title="Circle" onClick={() => dacAddConnected(contextMenu.id, 'circle')}><CircleIcon size={16} /></button>
-                    <button className="btn btn-icon-only" style={{ padding: '6px' }} title="Database" onClick={() => dacAddConnected(contextMenu.id, 'cylinder')}><Database size={16} /></button>
+                    <button className="btn btn-icon-only" style={{ padding: '6px' }} title="Rectangle" onClick={() => cadAddConnected(contextMenu.id, 'rectangle')}><Square size={16} /></button>
+                    <button className="btn btn-icon-only" style={{ padding: '6px' }} title="Rounded" onClick={() => cadAddConnected(contextMenu.id, 'rectangle', true)}><Square size={16} style={{ borderRadius: 4 }} /></button>
+                    <button className="btn btn-icon-only" style={{ padding: '6px' }} title="Decision" onClick={() => cadAddConnected(contextMenu.id, 'diamond')}><Diamond size={16} /></button>
+                    <button className="btn btn-icon-only" style={{ padding: '6px' }} title="Circle" onClick={() => cadAddConnected(contextMenu.id, 'circle')}><CircleIcon size={16} /></button>
+                    <button className="btn btn-icon-only" style={{ padding: '6px' }} title="Database" onClick={() => cadAddConnected(contextMenu.id, 'cylinder')}><Database size={16} /></button>
                   </div>
 
                   <div style={{ fontSize: '0.7rem', color: '#94a3b8', padding: '4px 4px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}><Palette size={12} /> Colour</div>
@@ -4479,15 +5518,15 @@ function FlowCanvas() {
                 </div>
               )}
               <div style={{ height: '1px', background: 'var(--border-color)', margin: '4px 0' }}></div>
-              <button className="btn" onClick={() => (workspace === 'dac' ? dacDeleteNode(contextMenu.id) : deleteContextMenuNode())} style={{ textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button className="btn" onClick={() => (workspace === 'cad' ? dacDeleteNode(contextMenu.id) : deleteContextMenuNode())} style={{ textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Trash2 size={16} /> Delete Node
               </button>
             </div>
           )}
         </ReactFlow>
-        </div>
 
-        {nodes.length === 0 && !(workspace === 'dac' && dacKind === 'other') && (
+
+        {(workspace === 'cad' ? (cadCode.trim() === '') : (nodes.length === 0)) && (
           <div style={{
             position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
             pointerEvents: 'none', textAlign: 'center', color: 'var(--text-secondary)',
@@ -4501,12 +5540,14 @@ function FlowCanvas() {
                 {workspace === 'diagram' && "Drag and drop shapes from the sidebar to begin drawing your flowchart, UML, or system architecture."}
                 {workspace === 'draw' && "Select a tool from the toolbar above to start drawing or sketching."}
                 {workspace === 'eip' && "Drag and drop Enterprise Camel Patterns from the sidebar to begin building your Camel route."}
-                {workspace === 'dac' && "Start typing in the code editor on the left to generate your diagram."}
+                {workspace === 'cad' && "Start typing in the code editor on the left to generate your diagram."}
               </p>
             </div>
           </div>
         )}
-        
+        </div>{/* end cadPreviewRef inner preview container */}
+        </div>{/* end cadCanvasRef */}
+
         {showIconPicker && (
           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ background: 'var(--bg-secondary)', padding: '20px', borderRadius: '12px', width: '600px', height: '600px', display: 'flex', flexDirection: 'column', border: '1px solid var(--border-color)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
@@ -4547,6 +5588,7 @@ function FlowCanvas() {
           </div>
         )}
       </main>
+      </div>
 
       {showClearConfirm && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
@@ -4640,42 +5682,39 @@ function FlowCanvas() {
             <p style={{ margin: '0 0 24px 0', color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: '1.6' }}>
               Select a pre-configured architecture pattern for the <b>{workspace.toUpperCase()}</b> workspace. Loading a template will replace your current workspace canvas.
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {(templates[workspace] || []).map((tpl, idx) => (
-                <div 
-                  key={idx} 
-                  onClick={() => loadTemplate(tpl)}
-                  style={{ 
-                    background: 'rgba(255, 255, 255, 0.02)', 
-                    border: '1px solid var(--border-color)', 
-                    borderRadius: '12px', 
-                    padding: '16px', 
-                    cursor: 'pointer', 
-                    transition: 'all 0.2s',
+                <div
+                  key={idx}
+                  onClick={() => { loadTemplate(tpl); setShowTemplatesModal(false); }}
+                  onMouseEnter={() => setTemplateFocusIdx(idx)}
+                  style={{
+                    background: templateFocusIdx === idx ? 'rgba(59,130,246,0.08)' : 'rgba(255,255,255,0.02)',
+                    border: `1px solid ${templateFocusIdx === idx ? 'var(--accent-blue, #2563eb)' : 'var(--border-color)'}`,
+                    borderRadius: '12px',
+                    padding: '14px 16px',
+                    cursor: 'pointer',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '8px'
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--accent-blue)';
-                    e.currentTarget.style.background = 'rgba(59, 130, 246, 0.05)';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--border-color)';
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+                    gap: '6px',
+                    outline: 'none',
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: 'bold', color: 'var(--text-primary)', fontSize: '1.05rem' }}>{tpl.name}</span>
-                    <span style={{ fontSize: '0.75rem', color: '#60a5fa', background: 'rgba(59,130,246,0.15)', padding: '4px 10px', borderRadius: '9999px', fontWeight: 'bold' }}>Load Pattern</span>
+                    <span style={{ fontWeight: 'bold', color: 'var(--text-primary)', fontSize: '1rem' }}>{tpl.name}</span>
+                    <span style={{ fontSize: '0.72rem', color: '#60a5fa', background: 'rgba(59,130,246,0.15)', padding: '3px 10px', borderRadius: '9999px', fontWeight: 'bold' }}>
+                      {templateFocusIdx === idx ? '↵ Enter to load' : 'Load'}
+                    </span>
                   </div>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>{tpl.description}</span>
+                  <span style={{ fontSize: '0.83rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>{tpl.description}</span>
                 </div>
               ))}
             </div>
           </div>
         </div>
       )}
+
+      {showHelp && <HelpModal onClose={() => setShowHelp(false)} initialTab={helpTab} />}
 
       {/* Hand-drawn aesthetic filter */}
       <svg style={{ position: 'absolute', width: 0, height: 0 }}>
@@ -4688,15 +5727,40 @@ function FlowCanvas() {
   );
 }
 
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(e) { return { error: e }; }
+  render() {
+    if (this.state.error) {
+      return <div style={{ color: 'red', padding: 32, fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+        <b>Runtime error:</b>{'\n'}{this.state.error?.message}{'\n'}{this.state.error?.stack}
+      </div>;
+    }
+    return this.props.children;
+  }
+}
+
 export default function App() {
-  const [showStudio, setShowStudio] = useState(false);
+  const hasShareHash = () => {
+    const hash = window.location.hash;
+    return hash && (
+      hash.startsWith('#draw=') ||
+      hash.startsWith('#diagram=') ||
+      hash.startsWith('#ddd=') ||
+      hash.startsWith('#eip=') ||
+      hash.startsWith('#cad=')
+    );
+  };
+  const [showStudio, setShowStudio] = useState(hasShareHash());
 
   return (
     <>
       {showStudio ? (
-        <ReactFlowProvider>
-          <FlowCanvas />
-        </ReactFlowProvider>
+        <ErrorBoundary>
+          <ReactFlowProvider>
+            <FlowCanvas onGoHome={() => setShowStudio(false)} />
+          </ReactFlowProvider>
+        </ErrorBoundary>
       ) : (
         <LandingPage onLaunch={() => setShowStudio(true)} />
       )}
