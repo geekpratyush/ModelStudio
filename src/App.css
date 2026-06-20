@@ -333,6 +333,14 @@ body {
     cursor: default !important;
 }
 
+/* Hand / pan tool — grab cursor on the pane */
+.draw-hand-mode .react-flow__pane {
+    cursor: grab !important;
+}
+.draw-hand-mode .react-flow__pane:active {
+    cursor: grabbing !important;
+}
+
 .canvas-area.theme-dark {
   background: radial-gradient(circle at center, #1a1c29 0%, #0f111a 100%);
 }
