@@ -754,9 +754,17 @@ function FlowCanvas({ onGoHome }) {
 
       // Global hotkeys
       if (key === 'v') { setActiveTool('select'); setIsDrawingMode(false); setInteractionMode('move'); return; }
-      if (key === 'h') { setInteractionMode('pan'); return; }
+      if (key === 'h') {
+        if (workspaceRef.current === 'draw') { setActiveTool('hand'); setIsDrawingMode(false); }
+        setInteractionMode('pan');
+        return;
+      }
       if (key === 't' && workspaceRef.current !== 'draw') {
         if (workspaceRef.current === 'cad') { setShowTemplateGallery(true); } else { setTemplateFocusIdx(0); setShowTemplatesModal(true); setShowTemplateGallery(false); }
+        return;
+      }
+      if (key === 'n' && workspaceRef.current === 'cad') {
+        addCanvasWidget('note');
         return;
       }
       if (key === 'escape') {
@@ -1874,7 +1882,7 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
   const isDraggingRef = useRef(false);
 
   const handlePaneMouseDown = useCallback((e) => {
-    if (workspace !== 'draw' || activeTool === 'select' || activeTool === 'pencil' || activeTool === 'eraser' || isDrawingMode) return;
+    if (workspace !== 'draw' || activeTool === 'select' || activeTool === 'hand' || activeTool === 'pencil' || activeTool === 'eraser' || isDrawingMode) return;
 
     // Avoid starting drawing if clicking on a node or UI element
     if (e.target.closest('.react-flow__node') || e.target.closest('.toolbar') || e.target.closest('.sidebar') || e.target.closest('.btn')) return;
@@ -3351,8 +3359,9 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
             </button>
             <div style={{ width: '1px', height: '14px', background: 'var(--border-color)', margin: '0 2px' }} />
             <button className={`btn btn-icon-only ${activeTool === 'select' && !isDrawingMode ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('select'); setIsDrawingMode(false); setInteractionMode('move'); }} title="Select / Move (V)"><MousePointer2 size={14} /></button>
+            <button className={`btn btn-icon-only ${activeTool === 'hand' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('hand'); setIsDrawingMode(false); setInteractionMode('pan'); }} title="Hand / Pan (H)"><Hand size={14} /></button>
             <div style={{ width: '1px', height: '14px', background: 'var(--border-color)', margin: '0 2px' }} />
-            <button className={`btn btn-icon-only ${activeTool === 'rectangle' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('rectangle'); setIsDrawingMode(false); }} title="Rectangle (R)"><Square size={14} /></button>
+            <button className={`btn btn-icon-only ${activeTool === 'rectangle' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('rectangle'); setIsDrawingMode(false); setInteractionMode('move'); }} title="Rectangle (R)"><Square size={14} /></button>
             <button className={`btn btn-icon-only ${activeTool === 'circle' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('circle'); setIsDrawingMode(false); }} title="Circle (O)"><CircleIcon size={14} /></button>
             <button className={`btn btn-icon-only ${activeTool === 'diamond' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('diamond'); setIsDrawingMode(false); }} title="Diamond (D)"><Diamond size={14} /></button>
             <button className={`btn btn-icon-only ${activeTool === 'triangle' ? 'btn-primary' : ''}`} onClick={() => { setActiveTool('triangle'); setIsDrawingMode(false); }} title="Triangle"><Triangle size={14} /></button>
@@ -3397,6 +3406,9 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
               )}
               <button className="btn btn-icon-only" onClick={() => addCanvasWidget('note')} style={{ border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: '#ca8a04' }} title="Insert Sticky Note"><StickyNote size={14} /></button>
             </>
+          )}
+          {workspace === 'cad' && (
+            <button className="btn btn-icon-only" onClick={() => addCanvasWidget('note')} style={{ border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: '#ca8a04' }} title="Add Sticky Note (N)"><StickyNote size={14} /></button>
           )}
           <div style={{ width: '1px', height: '14px', background: 'var(--border-color)', margin: '0 2px' }} />
           {workspace !== 'cad' && (
@@ -4197,6 +4209,7 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
           <div ref={cadPreviewRef} style={{ flex: 1, position: 'relative', isolation: 'isolate', overflow: 'hidden' }}>
 
         <ReactFlow
+          className={workspace === 'draw' && activeTool === 'hand' ? 'draw-hand-mode' : ''}
           nodes={reactFlowNodes}
           proOptions={{ hideAttribution: true }}
           edges={reactFlowEdges}
@@ -4254,7 +4267,8 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
           )}
 
           {/* Drawing overlay — inside ReactFlow so Panel toolbars (z:1000) sit above it (z:5) */}
-          {workspace === 'draw' && activeTool !== 'select' && (
+          {/* Hand tool bypasses the overlay so ReactFlow can pan natively */}
+          {workspace === 'draw' && activeTool !== 'select' && activeTool !== 'hand' && (
             <div
               className="drawing-interaction-layer"
               onPointerDown={(e) => {

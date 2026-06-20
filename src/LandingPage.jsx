@@ -19,79 +19,6 @@ const LinkedInIcon = ({ size = 20 }) => (
   </svg>
 );
 
-/* ── Particle Canvas ───────────────────────────────────────────── */
-function ParticleCanvas() {
-  const canvasRef = useRef(null);
-  const rafRef = useRef(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    let W = canvas.offsetWidth;
-    let H = canvas.offsetHeight;
-    canvas.width = W;
-    canvas.height = H;
-
-    const N = 60;
-    const particles = Array.from({ length: N }, () => ({
-      x: Math.random() * W,
-      y: Math.random() * H,
-      vx: (Math.random() - 0.5) * 0.4,
-      vy: (Math.random() - 0.5) * 0.4,
-      r: Math.random() * 1.5 + 0.8,
-    }));
-
-    const resize = () => {
-      W = canvas.offsetWidth;
-      H = canvas.offsetHeight;
-      canvas.width = W;
-      canvas.height = H;
-    };
-    window.addEventListener('resize', resize);
-
-    const draw = () => {
-      ctx.clearRect(0, 0, W, H);
-      for (const p of particles) {
-        p.x += p.vx;
-        p.y += p.vy;
-        if (p.x < 0 || p.x > W) p.vx *= -1;
-        if (p.y < 0 || p.y > H) p.vy *= -1;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(59,130,246,0.45)';
-        ctx.fill();
-      }
-      for (let i = 0; i < N; i++) {
-        for (let j = i + 1; j < N; j++) {
-          const dx = particles[i].x - particles[j].x;
-          const dy = particles[i].y - particles[j].y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 130) {
-            ctx.beginPath();
-            ctx.strokeStyle = `rgba(59,130,246,${0.12 * (1 - dist / 130)})`;
-            ctx.lineWidth = 0.6;
-            ctx.moveTo(particles[i].x, particles[i].y);
-            ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.stroke();
-          }
-        }
-      }
-      rafRef.current = requestAnimationFrame(draw);
-    };
-    draw();
-    return () => {
-      cancelAnimationFrame(rafRef.current);
-      window.removeEventListener('resize', resize);
-    };
-  }, []);
-
-  return (
-    <div className="hero-particle-bg">
-      <canvas ref={canvasRef} style={{ width: '100%', height: '100%' }} />
-    </div>
-  );
-}
 
 /* ── useScrollReveal ──────────────────────────────────────────── */
 function useScrollReveal() {
@@ -487,9 +414,9 @@ function HeroCycler() {
   );
 }
 
-/* ── Section Beam ──────────────────────────────────────────────── */
-function SectionBeam() {
-  return <div className="section-beam" />;
+/* ── Section Divider ───────────────────────────────────────────── */
+function SectionDivider() {
+  return <div className="section-divider" />;
 }
 
 /* ── Carousel slide visuals ────────────────────────────────────── */
@@ -692,62 +619,151 @@ const SLIDES = [
   { tag:'Export & Share', tagColor:'#3b82f6', headline:'Every Format. One Click. Share Instantly.', body:'Export as PNG (retina), SVG, JSON, YAML, Mermaid source, or Camel DSL. Click Share to get a clipboard link that encodes your entire diagram — no account needed.', steps:['Finish your diagram','Export: PNG · SVG · JSON · YAML · .mmd','Click Share → link copied to clipboard','Send link → anyone opens the full diagram'], stepColor:'#3b82f6', Visual:ExportShareVisual },
 ];
 
-function Carousel() {
-  const [idx, setIdx] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const [animDir, setAnimDir] = useState('next');
-  const [visible, setVisible] = useState(true);
-  const timerRef = useRef(null);
+const SLIDE_DURATION = 6000; // ms per slide
 
-  const go = useCallback((next, dir = 'next') => {
-    setAnimDir(dir);
-    setVisible(false);
-    setTimeout(() => { setIdx(next); setVisible(true); }, 220);
+function Carousel() {
+  const [idx, setIdx]       = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [phase, setPhase]   = useState('in');   // 'in' | 'out'
+  const [dir, setDir]       = useState(1);       // 1 = forward, -1 = back
+  const touchX              = useRef(null);
+  const timerRef            = useRef(null);
+
+  /* ── slide transition ─────────────────────────────────────────── */
+  const go = useCallback((nextIdx, direction = 1) => {
+    setDir(direction);
+    setPhase('out');
+    setTimeout(() => {
+      setIdx(nextIdx);
+      setPhase('in');
+    }, 320);
   }, []);
 
-  const next = useCallback(() => go((idx + 1) % SLIDES.length, 'next'), [idx, go]);
-  const prev = useCallback(() => go((idx - 1 + SLIDES.length) % SLIDES.length, 'prev'), [idx, go]);
+  const goNext = useCallback(() => go((idx + 1) % SLIDES.length,  1), [idx, go]);
+  const goPrev = useCallback(() => go((idx - 1 + SLIDES.length) % SLIDES.length, -1), [idx, go]);
 
+  /* ── auto-advance ─────────────────────────────────────────────── */
   useEffect(() => {
     if (paused) return;
-    timerRef.current = setInterval(next, 5200);
-    return () => clearInterval(timerRef.current);
-  }, [paused, next]);
+    timerRef.current = setTimeout(goNext, SLIDE_DURATION);
+    return () => clearTimeout(timerRef.current);
+  }, [paused, goNext, idx]);
+
+  /* ── touch swipe ──────────────────────────────────────────────── */
+  const onTouchStart = (e) => { touchX.current = e.touches[0].clientX; };
+  const onTouchEnd   = (e) => {
+    if (touchX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchX.current;
+    if (Math.abs(dx) > 44) dx < 0 ? goNext() : goPrev();
+    touchX.current = null;
+  };
 
   const slide = SLIDES[idx];
   const { Visual } = slide;
 
+  /* ── parallax offsets ─────────────────────────────────────────── */
+  // Text layer: full travel. Visual layer: 45 % travel → depth illusion.
+  const exiting = phase === 'out';
+  const textX   = exiting ? `${dir * -52}px`  : '0px';
+  const visualX = exiting ? `${dir * -24}px`  : '0px';
+  const opacity = exiting ? 0 : 1;
+
   return (
-    <section className="carousel-section reveal" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
-      <div className="section-header" style={{ marginBottom: '32px' }}>
+    <section
+      className="carousel-section reveal"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      <div className="section-header" style={{ marginBottom: '2rem', textAlign: 'left' }}>
         <h2>Your Workflow, <span className="text-gradient">Supercharged by AI</span></h2>
-        <p>Six powerful ways Model Studio fits into how modern engineers and architects work.</p>
+        <p style={{ margin: 0 }}>Six ways Model Studio fits into how engineers and architects work.</p>
       </div>
-      <div className="carousel-stage">
-        <div className="carousel-slide" style={{ opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : `translateY(${animDir === 'next' ? '12px' : '-12px'})`, transition: 'opacity 0.22s ease, transform 0.22s ease' }}>
-          <div className="carousel-text">
-            <div className="carousel-tag" style={{ background:`${slide.tagColor}20`, border:`1px solid ${slide.tagColor}50`, color:slide.tagColor }}>{slide.tag}</div>
+
+      <div
+        className="carousel-stage"
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      >
+        {/* Progress bar — key forces remount and restarts animation each slide */}
+        <div className="carousel-progress">
+          <div
+            key={`${idx}-${paused}`}
+            className={`carousel-progress-fill ${paused ? 'paused' : ''}`}
+            style={{ '--slide-duration': `${SLIDE_DURATION}ms`, background: slide.tagColor }}
+          />
+        </div>
+
+        <div className="carousel-slide">
+          {/* Text — full-speed layer */}
+          <div
+            className="carousel-text"
+            style={{
+              opacity,
+              transform: `translateX(${textX})`,
+              transition: exiting
+                ? 'opacity 0.28s ease, transform 0.32s ease'
+                : 'opacity 0.38s ease 0.05s, transform 0.42s cubic-bezier(0.22,1,0.36,1) 0.05s',
+            }}
+          >
+            <div className="carousel-tag" style={{ background:`${slide.tagColor}20`, border:`1px solid ${slide.tagColor}50`, color:slide.tagColor }}>
+              {slide.tag}
+            </div>
             <h3 className="carousel-headline">{slide.headline}</h3>
             <p className="carousel-body">{slide.body}</p>
             <div className="carousel-steps">
               {slide.steps.map((step, i) => (
                 <div key={i} className="carousel-step">
-                  <div className="carousel-step-num" style={{ background:`${slide.stepColor}20`, border:`1px solid ${slide.stepColor}50`, color:slide.stepColor }}>{i+1}</div>
+                  <div className="carousel-step-num" style={{ background:`${slide.stepColor}20`, border:`1px solid ${slide.stepColor}50`, color:slide.stepColor }}>{i + 1}</div>
                   <span>{step}</span>
                 </div>
               ))}
             </div>
           </div>
-          <div className="carousel-visual"><Visual /></div>
+
+          {/* Visual — slower layer (parallax depth) */}
+          <div
+            className="carousel-visual"
+            style={{
+              opacity,
+              transform: `translateX(${visualX})`,
+              transition: exiting
+                ? 'opacity 0.28s ease, transform 0.42s ease'
+                : 'opacity 0.38s ease 0.05s, transform 0.55s cubic-bezier(0.22,1,0.36,1) 0.05s',
+            }}
+          >
+            <Visual />
+          </div>
         </div>
-        <button className="carousel-arrow carousel-arrow-left" onClick={prev} aria-label="Previous"><ChevronLeft size={20}/></button>
-        <button className="carousel-arrow carousel-arrow-right" onClick={next} aria-label="Next"><ChevronRight size={20}/></button>
+
+        <button className="carousel-arrow carousel-arrow-left"  onClick={goPrev} aria-label="Previous"><ChevronLeft  size={18}/></button>
+        <button className="carousel-arrow carousel-arrow-right" onClick={goNext} aria-label="Next"><ChevronRight size={18}/></button>
       </div>
+
+      {/* Dot indicators */}
       <div className="carousel-dots">
-        {SLIDES.map((s, i) => (<button key={i} className={`carousel-dot ${i===idx?'active':''}`} style={{'--dot-color':s.tagColor}} onClick={() => go(i, i>idx?'next':'prev')} aria-label={s.tag}/>))}
+        {SLIDES.map((s, i) => (
+          <button
+            key={i}
+            className={`carousel-dot ${i === idx ? 'active' : ''}`}
+            style={{ '--dot-color': s.tagColor }}
+            onClick={() => go(i, i > idx ? 1 : -1)}
+            aria-label={s.tag}
+          />
+        ))}
       </div>
+
+      {/* Strip tab navigation */}
       <div className="carousel-strip">
-        {SLIDES.map((s, i) => (<button key={i} onClick={() => go(i, i>idx?'next':'prev')} className={`carousel-strip-item ${i===idx?'active':''}`} style={{'--strip-color':s.tagColor}}>{s.tag}</button>))}
+        {SLIDES.map((s, i) => (
+          <button
+            key={i}
+            onClick={() => go(i, i > idx ? 1 : -1)}
+            className={`carousel-strip-item ${i === idx ? 'active' : ''}`}
+            style={{ '--strip-color': s.tagColor }}
+          >
+            {s.tag}
+          </button>
+        ))}
       </div>
     </section>
   );
@@ -867,9 +883,8 @@ function LandingPage({ onLaunch }) {
 
       {/* Hero */}
       <header className="hero-section">
-        <ParticleCanvas />
         <div className="hero-content">
-          <div className="hero-badge">AI-Powered Diagramming · Open Source · Runs in Your Browser</div>
+          <div className="hero-badge">Open Source · Runs in Your Browser · No Account Needed</div>
           <h1>Think It. Prompt It.<br /><span className="text-gradient">Diagram It.</span></h1>
           <p>
             Five specialised workspaces — Architecture Diagrams, Code as Diagram, Apache Camel EIP,
@@ -893,14 +908,14 @@ function LandingPage({ onLaunch }) {
         </div>
       </header>
 
-      <SectionBeam />
+      <SectionDivider />
 
       {/* Carousel */}
       <div id="how-it-works">
         <Carousel />
       </div>
 
-      <SectionBeam />
+      <SectionDivider />
 
       {/* Workspaces */}
       <section id="workspaces" className="workspaces-section">
@@ -926,7 +941,7 @@ function LandingPage({ onLaunch }) {
         </div>
       </section>
 
-      <SectionBeam />
+      <SectionDivider />
 
       {/* Features */}
       <section id="features" className="features-section">
@@ -938,8 +953,10 @@ function LandingPage({ onLaunch }) {
           {FEATURES.map((f, i) => (
             <div key={f.title} className="feature-item reveal" style={{ transitionDelay:`${i * 60}ms` }}>
               <div className="feature-icon" style={{ background:`${f.accent}15`, color:f.accent }}>{f.icon}</div>
-              <h3>{f.title}</h3>
-              <p>{f.desc}</p>
+              <div className="feature-text">
+                <h3>{f.title}</h3>
+                <p>{f.desc}</p>
+              </div>
             </div>
           ))}
         </div>
@@ -950,7 +967,7 @@ function LandingPage({ onLaunch }) {
         <div className="cta-box reveal">
           <div className="cta-glow"/>
           <MSLogo size={52}/>
-          <h2 className="text-gradient-animated">Start Designing Right Now</h2>
+          <h2 className="text-gradient">Start Designing Right Now</h2>
           <p>No sign-up. No install. Runs entirely in your browser — your diagrams stay on your machine.</p>
           <div style={{ display:'flex', gap:'1rem', justifyContent:'center', flexWrap:'wrap' }}>
             <button className="btn btn-lg btn-primary" onClick={onLaunch}>Launch Studio <ArrowRight size={20}/></button>
