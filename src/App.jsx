@@ -21,7 +21,7 @@ import '@xyflow/react/dist/style.css';
 import { toPng, toSvg } from 'html-to-image';
 import { v4 as uuidv4 } from 'uuid';
 import yaml from 'js-yaml';
-import { Download, Upload, FileJson, Image, PlayCircle, Box, Diamond, Server, Trash2, Database, Cloud, MousePointer2, Hand, Grid3X3, Code, ChevronLeft, ChevronRight, ChevronsDown, ChevronsUp, Filter, ListOrdered, FileText, Shield, ShieldCheck, MessageSquare, Send, Skull, Mail, Clock, GitMerge, GitBranch, Workflow, Network, ArrowRightLeft, Route, FilePlus, RefreshCw, Radio, Share2, ListChecks, Scale, Settings2, ArrowDownUp, TerminalSquare, CheckCircle2, PackageOpen, Package, FileArchive, MessageCircle, RadioTower, Webhook, Hexagon, Building2, CloudLightning, BoxSelect, Plug, Zap, Cpu, User, File, Type, Table, Building, Layers, Search, X, Target, Eraser, StickyNote, Info, Pencil, Paintbrush, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Triangle, ArrowUpRight, Minus, Circle as CircleIcon, Square, LayoutGrid, Copy, Columns, PanelTopOpen, PanelLeftClose, Plus, Palette, Shapes, Globe, Lock, Wifi, Monitor, Smartphone, Terminal, HardDrive, Users, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
+import { Download, Upload, FileJson, Image, PlayCircle, Box, Diamond, Server, Trash2, Database, Cloud, MousePointer2, Hand, Grid3X3, Code, ChevronLeft, ChevronRight, ChevronsDown, ChevronsUp, Filter, ListOrdered, FileText, Shield, ShieldCheck, MessageSquare, Send, Skull, Mail, Clock, GitMerge, GitBranch, Workflow, Network, ArrowRightLeft, Route, FilePlus, RefreshCw, Radio, Share2, ListChecks, Scale, Settings2, ArrowDownUp, TerminalSquare, CheckCircle2, PackageOpen, Package, FileArchive, MessageCircle, RadioTower, Webhook, Hexagon, Building2, CloudLightning, BoxSelect, Plug, Zap, Cpu, User, File, Type, Table, Building, Layers, Search, X, Target, Eraser, StickyNote, Info, Pencil, Paintbrush, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Triangle, ArrowUpRight, Minus, Circle as CircleIcon, Square, LayoutGrid, Copy, Columns, PanelTopOpen, PanelLeftClose, Plus, Palette, Shapes, Globe, Lock, Wifi, Monitor, Smartphone, Terminal, HardDrive, Users, ZoomIn, ZoomOut, Maximize2, Sparkles } from 'lucide-react';
 import ThemeToggle from './components/ThemeToggle';
 import MSLogo from './components/MSLogo';
 import { useTheme } from './contexts/ThemeContext';
@@ -30,6 +30,7 @@ import CustomNode from './CustomNode';
 import CustomEdge from './CustomEdge';
 import LandingPage from './LandingPage';
 import HelpModal from './HelpModal';
+import NeonLaser from './components/NeonLaser';
 import './App.css';
 
 const allIconNames = Object.keys(AllIcons).filter(k => k[0] === k[0].toUpperCase() && k !== 'LucideIcon' && k !== 'Icon');
@@ -1264,6 +1265,7 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
   const initialViewport = loadState('flow-viewport', { x: 0, y: 0, zoom: 1 });
 
   const [bgVariant, setBgVariant] = useState('dots'); // 'dots' or 'plain'
+  const [neonActive, setNeonActive] = useState(false);
   const [showJson, setShowJson] = useState(false);
   const [jsonIncludeNotes, setJsonIncludeNotes] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -3092,103 +3094,92 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
     const rendererEl = document.querySelector('.react-flow__renderer');
     if (!rendererEl) return;
     const savedVp = reactFlowInstance.getViewport();
-    reactFlowInstance.fitView({ padding: 0.12, duration: 0 });
+    const padding = 40;
+    const nodeBounds = getNodesBounds(reactFlowNodes);
+    const exportW = Math.round(nodeBounds.width + padding * 2);
+    const exportH = Math.round(nodeBounds.height + padding * 2);
+
+    // Temporarily expand renderer to full diagram size at zoom=1
+    const origW = rendererEl.style.width;
+    const origH = rendererEl.style.height;
+    rendererEl.style.width = exportW + 'px';
+    rendererEl.style.height = exportH + 'px';
+    reactFlowInstance.setViewport({ zoom: 1, x: padding - nodeBounds.x, y: padding - nodeBounds.y }, { duration: 0 });
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     try {
-      const bounds = getDiagramBoundingBox(rendererEl);
-      const dataUrl = await toPng(rendererEl, { pixelRatio: 2, skipFonts: true });
-      
+      const dataUrl = await toPng(rendererEl, { pixelRatio: 1, skipFonts: true, width: exportW, height: exportH });
+
       const img = new window.Image();
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-        img.src = dataUrl;
-      });
+      await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; img.src = dataUrl; });
 
       const canvas = document.createElement('canvas');
-      const scale = 2;
-      canvas.width = bounds.width * scale;
-      canvas.height = bounds.height * scale;
+      canvas.width = exportW;
+      canvas.height = exportH;
       const ctx = canvas.getContext('2d');
-
       if (!options.transparent) {
         ctx.fillStyle = exportBgColor;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillRect(0, 0, exportW, exportH);
       }
+      ctx.drawImage(img, 0, 0);
 
-      ctx.drawImage(
-        img,
-        bounds.x * scale,
-        bounds.y * scale,
-        bounds.width * scale,
-        bounds.height * scale,
-        0,
-        0,
-        bounds.width * scale,
-        bounds.height * scale
-      );
-
-      const pngDataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.download = filename;
-      link.href = pngDataUrl;
+      link.href = canvas.toDataURL('image/png');
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     } catch (err) { console.error('PNG export error:', err); }
-    finally { reactFlowInstance.setViewport(savedVp, { duration: 300 }); }
+    finally {
+      rendererEl.style.width = origW;
+      rendererEl.style.height = origH;
+      reactFlowInstance.setViewport(savedVp, { duration: 300 });
+    }
   };
 
   const captureCanvasAsSvg = async (filename, options = {}) => {
     const rendererEl = document.querySelector('.react-flow__renderer');
     if (!rendererEl) return;
     const savedVp = reactFlowInstance.getViewport();
-    reactFlowInstance.fitView({ padding: 0.12, duration: 0 });
+    const padding = 40;
+    const nodeBounds = getNodesBounds(reactFlowNodes);
+    const exportW = Math.round(nodeBounds.width + padding * 2);
+    const exportH = Math.round(nodeBounds.height + padding * 2);
+
+    const origW = rendererEl.style.width;
+    const origH = rendererEl.style.height;
+    rendererEl.style.width = exportW + 'px';
+    rendererEl.style.height = exportH + 'px';
+    reactFlowInstance.setViewport({ zoom: 1, x: padding - nodeBounds.x, y: padding - nodeBounds.y }, { duration: 0 });
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     try {
-      const bounds = getDiagramBoundingBox(rendererEl);
-      const dataUri = await toSvg(rendererEl, { skipFonts: true });
+      const dataUri = await toSvg(rendererEl, { skipFonts: true, width: exportW, height: exportH });
       const svgText = svgDataUriToText(dataUri);
-      
-      const rect = rendererEl.getBoundingClientRect();
-      const origWidth = rect.width;
-      const origHeight = rect.height;
 
       let openingTag = svgText.match(/<svg([^>]*)>/s)?.[0];
-      if (!openingTag) throw new Error("Could not find root SVG tag");
-
-      let attrs = openingTag;
-      attrs = attrs.replace(/\bwidth\s*=\s*"[^"]*"/gi, '');
-      attrs = attrs.replace(/\bheight\s*=\s*"[^"]*"/gi, '');
-      attrs = attrs.replace(/\bviewBox\s*=\s*"[^"]*"/gi, '');
-
-      const newAttrs = ` width="${bounds.width}" height="${bounds.height}" viewBox="${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}"`;
-      const newOpeningTag = attrs.replace(/<svg/i, `<svg${newAttrs}`);
-
+      if (!openingTag) throw new Error('Could not find root SVG tag');
+      let attrs = openingTag
+        .replace(/\bwidth\s*=\s*"[^"]*"/gi, '')
+        .replace(/\bheight\s*=\s*"[^"]*"/gi, '')
+        .replace(/\bviewBox\s*=\s*"[^"]*"/gi, '');
+      const newOpeningTag = attrs.replace(/<svg/i, `<svg width="${exportW}" height="${exportH}" viewBox="0 0 ${exportW} ${exportH}"`);
       let result = svgText.replace(/<svg[^>]*>/s, newOpeningTag);
 
-      let foreignObjectTag = result.match(/<foreignObject([^>]*)>/i)?.[0];
-      if (foreignObjectTag) {
-        let newForeignObjectTag = foreignObjectTag;
-        newForeignObjectTag = newForeignObjectTag.replace(/\bwidth\s*=\s*"[^"]*"/gi, `width="${origWidth}"`);
-        newForeignObjectTag = newForeignObjectTag.replace(/\bheight\s*=\s*"[^"]*"/gi, `height="${origHeight}"`);
-        result = result.replace(foreignObjectTag, newForeignObjectTag);
-      }
-
       if (!options.transparent) {
-        const bgRect = `<rect x="${bounds.x}" y="${bounds.y}" width="${bounds.width}" height="${bounds.height}" fill="${exportBgColor}"/>`;
-        result = result.replace(/(<svg[^>]*>)/s, `$1${bgRect}`);
+        result = result.replace(/(<svg[^>]*>)/s, `$1<rect width="${exportW}" height="${exportH}" fill="${exportBgColor}"/>`);
       }
 
-      const dataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(result);
       const link = document.createElement('a');
       link.download = filename;
-      link.href = dataUrl;
+      link.href = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(result);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     } catch (err) { console.error('SVG export error:', err); }
-    finally { reactFlowInstance.setViewport(savedVp, { duration: 300 }); }
+    finally {
+      rendererEl.style.width = origW;
+      rendererEl.style.height = origH;
+      reactFlowInstance.setViewport(savedVp, { duration: 300 });
+    }
   };
 
   const exportAsPng = (options = {}) => {
@@ -3450,6 +3441,7 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
           </button>
           <div style={{ width: '1px', height: '14px', background: 'var(--border-color)', margin: '0 2px' }} />
           <button className={`btn btn-icon-only ${bgVariant === 'dots' ? 'btn-primary' : ''}`} onClick={() => setBgVariant(v => v === 'dots' ? 'plain' : 'dots')} title={bgVariant === 'dots' ? 'Hide canvas grid' : 'Show canvas grid'}><Grid3X3 size={14} /></button>
+          <button className={`btn btn-icon-only ${neonActive ? 'btn-primary' : ''}`} onClick={() => setNeonActive(v => !v)} title={neonActive ? 'Close Neon Pen (Esc)' : 'Neon Laser / Pen'} style={neonActive ? { boxShadow: '0 0 8px #00ffff88', color: '#00ffff', borderColor: '#00ffff66' } : {}}><Sparkles size={14} /></button>
           <ThemeToggle />
           <button className="btn btn-icon-only" onClick={() => { setHelpTab(workspace === 'eip' ? 'eip' : workspace === 'cad' ? 'cad' : workspace); setShowHelp(true); }} title="Help & Reference (?)"><Info size={14} /></button>
           <div style={{ width: '1px', height: '14px', background: 'var(--border-color)', margin: '0 2px' }} />
@@ -4249,6 +4241,13 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
           {bgVariant === 'dots' && <Background color={theme === 'dark' ? '#fff' : '#000'} gap={16} size={1} opacity={theme === 'dark' ? 0.1 : 0.05} variant="dots" />}
 
           <Controls>
+            <button
+              onClick={() => reactFlowInstance?.zoomTo(1, { duration: 300 })}
+              title="Set zoom to 100% (1:1)"
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '24px', width: '100%', background: 'var(--bg-secondary)', borderTop: '1px solid var(--border-color)', border: 'none', cursor: 'pointer', fontSize: '0.6rem', fontWeight: 800, color: Math.round(zoom) === 100 ? 'var(--color-primary, #3b82f6)' : 'var(--text-secondary)', letterSpacing: '0.02em' }}
+            >
+              1:1
+            </button>
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '24px', background: 'var(--bg-secondary)', borderTop: '1px solid var(--border-color)', fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-secondary)', userSelect: 'none' }}>
               {Math.round(zoom * 100)}%
             </div>
@@ -5539,6 +5538,7 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
           )}
         </ReactFlow>
 
+        <NeonLaser containerRef={cadPreviewRef} active={neonActive} onActiveChange={setNeonActive} />
 
         {(workspace === 'cad' ? (cadCode.trim() === '') : (nodes.length === 0)) && (
           <div style={{
