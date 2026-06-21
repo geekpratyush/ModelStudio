@@ -31,6 +31,7 @@ import CustomEdge from './CustomEdge';
 import LandingPage from './LandingPage';
 import HelpModal from './HelpModal';
 import NeonLaser from './components/NeonLaser';
+import MermaidStylePanel from './components/MermaidStylePanel';
 import './App.css';
 
 const allIconNames = Object.keys(AllIcons).filter(k => k[0] === k[0].toUpperCase() && k !== 'LucideIcon' && k !== 'Icon');
@@ -933,6 +934,7 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
   // 'docked' | 'collapsed' | 'float'
   const [editorMode, setEditorMode] = useState('docked');
   const [editorOpacity, setEditorOpacity] = useState(90);
+  const [cadEditorTab, setCadEditorTab] = useState('code'); // 'code' | 'styles'
   const [floatPos, setFloatPos] = useState({ x: 24, y: 60 });
   const floatDragRef = useRef(null);
   const [cadGalFilter, setCadGalFilter] = useState('All');
@@ -946,6 +948,8 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
   const cadCanvasRef   = useRef(null);   // diagram area div (right panel in CAD)
   const cadPreviewRef  = useRef(null);   // inner preview area (kept for layout ref)
   const cadKind = workspace === 'cad' ? detectDiagramKind(cadCode) : 'flowchart'; // 'flowchart' | 'other'
+  // Reset styles tab when switching away from flowchart
+  useEffect(() => { if (cadKind !== 'flowchart') setCadEditorTab('code'); }, [cadKind]);
   const [cadDiagramPos, setCadDiagramPos] = useState({ x: 0, y: 0 }); // position of the whole diagram in flow space
   const [diagramTitle, setDiagramTitle] = useState(() => {
     return localStorage.getItem(`${workspace}-title`) || (
@@ -4001,6 +4005,23 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
               </div>
             </div>
 
+            {/* Code / Styles tab toggle — only for flowchart diagrams */}
+            {cadKind === 'flowchart' && (
+              <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-tertiary)' }}>
+                {[['code', '{ } Code'], ['styles', '🎨 Styles']].map(([tab, label]) => (
+                  <button key={tab} onClick={() => setCadEditorTab(tab)}
+                    style={{
+                      flex: 1, padding: '6px 0', fontSize: '0.68rem', fontWeight: 700,
+                      border: 'none', cursor: 'pointer', background: 'transparent',
+                      color: cadEditorTab === tab ? 'var(--accent-blue, #3b82f6)' : 'var(--text-secondary)',
+                      borderBottom: cadEditorTab === tab ? '2px solid var(--accent-blue, #3b82f6)' : '2px solid transparent',
+                      letterSpacing: '0.03em',
+                    }}
+                  >{label}</button>
+                ))}
+              </div>
+            )}
+
             {/* Emoji / icon picker panel */}
             {showEmojiPicker && (() => {
               const EMOJI_GROUPS = [
@@ -4066,7 +4087,7 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
               );
             })()}
 
-            <div className="monaco-editor-container" onKeyDown={(e) => e.stopPropagation()}>
+            <div className="monaco-editor-container" onKeyDown={(e) => e.stopPropagation()} style={{ display: cadEditorTab === 'code' ? 'flex' : 'none', flexDirection: 'column' }}>
               <Editor
                 height="100%"
                 language="mermaid"
@@ -4099,6 +4120,9 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
                 }}
               />
             </div>
+            {cadEditorTab === 'styles' && (
+              <MermaidStylePanel cadCode={cadCode} setCadCode={setCadCode} cadSourceRef={cadSourceRef} />
+            )}
             <div className={`cad-status ${cadStatus.ok ? 'ok' : 'err'}`}>
               <span className="cad-status-dot" />
               {cadStatus.ok
@@ -4594,7 +4618,7 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
           </div>
         </div>
       )}
-          {activeEdge && !activeNode && (
+          {activeEdge && !activeNode && workspace !== 'cad' && (
             <Panel position="top-right" style={{ top: '80px', right: '20px' }}>
               <div className="json-viewer-overlay" style={{ width: '280px', padding: '20px', margin: 0, maxHeight: 'calc(100vh - 100px)', overflowY: 'auto' }}>
                 <div className="json-viewer-header" style={{ marginBottom: '16px' }}>
@@ -4728,7 +4752,7 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
               </div>
             </Panel>
           )}
-          {activeNode && (
+          {activeNode && workspace !== 'cad' && (
             <Panel position="top-right" style={{ top: '80px', right: '20px' }}>
               <div className="json-viewer-overlay" style={{ width: '240px', padding: '16px', margin: 0, maxHeight: 'calc(100vh - 100px)', overflowY: 'auto' }}>
                 <div className="json-viewer-header" style={{ marginBottom: '12px' }}>
@@ -5406,7 +5430,7 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
               </div>
             </Panel>
           )}
-          {contextMenu && (
+          {contextMenu && workspace !== 'cad' && (
             <div style={{ position: 'absolute', top: contextMenu.top, left: contextMenu.left, background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '8px', zIndex: 1000, boxShadow: '0 10px 30px rgba(0,0,0,0.5)', padding: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
               {nodes.filter(n => n.selected).length > 1 && (
                 <div style={{ padding: '4px', minWidth: '180px' }}>
