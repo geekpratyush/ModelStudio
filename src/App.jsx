@@ -918,9 +918,38 @@ function FlowCanvas({ onGoHome }) {
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const [showCadEditor, setShowCadEditor] = useState(true);
   const [splitWidth, setSplitWidth] = useState(450);
+  // ── Multi-tab model for the "Code as Diagram" workspace ───────────────────
+  // Each tab: { id, name, code }. The active tab's code drives `cadCode` and its
+  // name drives `diagramTitle` (so exports are named after the tab). Persisted to
+  // localStorage; migrated once from the legacy single `cadCode`/`cad-title`.
+  const cadInitRef = useRef(null);
+  if (!cadInitRef.current) {
+    let tabs = null;
+    try {
+      const raw = localStorage.getItem('cadTabs');
+      const arr = raw && JSON.parse(raw);
+      if (Array.isArray(arr) && arr.length) tabs = arr.filter(t => t && t.id);
+    } catch { /* ignore corrupt cache */ }
+    if (!tabs || !tabs.length) {
+      const cached = localStorage.getItem('cadCode') || localStorage.getItem('dacCode');
+      tabs = [{
+        id: uuidv4(),
+        name: localStorage.getItem('cad-title') || 'Code as Diagram',
+        code: (cached && cached.trim()) ? cached : cadTemplates[0].code,
+      }];
+    }
+    let active = localStorage.getItem('cadActiveTab');
+    if (!tabs.some(t => t.id === active)) active = tabs[0].id;
+    cadInitRef.current = { tabs, active };
+  }
+  const [cadTabs, setCadTabs] = useState(cadInitRef.current.tabs);
+  const [activeCadTabId, setActiveCadTabId] = useState(cadInitRef.current.active);
+  const activeCadTabIdRef = useRef(cadInitRef.current.active);
+  const [editingCadTabId, setEditingCadTabId] = useState(null); // tab id being renamed inline
+  const [showNewTabMenu, setShowNewTabMenu] = useState(false);
   const [cadCode, setCadCode] = useState(() => {
-    const cached = localStorage.getItem('cadCode') || localStorage.getItem('dacCode');
-    return (cached && cached.trim()) ? cached : cadTemplates[0].code;
+    const t = cadInitRef.current.tabs.find(x => x.id === cadInitRef.current.active);
+    return t ? t.code : cadTemplates[0].code;
   });
   const [cadNodes, setCadNodes, onCadNodesChange] = useNodesState(loadState('cadNodes', loadState('dacNodes', [])));
   const [cadEdges, setCadEdges, onCadEdgesChange] = useEdgesState(loadState('cadEdges', loadState('dacEdges', [])));
@@ -960,6 +989,12 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
   });
 
   useEffect(() => {
+    if (workspace === 'cad') {
+      // In cad, the title reflects the active tab's name.
+      const t = cadTabs.find(x => x.id === activeCadTabIdRef.current);
+      setDiagramTitle(t ? t.name : 'Code as Diagram');
+      return;
+    }
     const saved = localStorage.getItem(`${workspace}-title`);
     if (saved) {
       setDiagramTitle(saved);
@@ -1115,7 +1150,23 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('cadCode', cadCode);
+    // Mirror the live code into the active tab so it survives reloads / tab switches.
+    setCadTabs(prev => {
+      const next = prev.map(t => t.id === activeCadTabIdRef.current ? { ...t, code: cadCode } : t);
+      localStorage.setItem('cadTabs', JSON.stringify(next));
+      return next;
+    });
   }, [cadCode]);
+
+  // Mirror the diagram title into the active tab's name (cad workspace only).
+  useEffect(() => {
+    if (workspace !== 'cad') return;
+    setCadTabs(prev => {
+      const next = prev.map(t => t.id === activeCadTabIdRef.current ? { ...t, name: diagramTitle } : t);
+      localStorage.setItem('cadTabs', JSON.stringify(next));
+      return next;
+    });
+  }, [diagramTitle, workspace]);
 
   const nodes = workspace === 'ddd' ? dddNodes : (workspace === 'diagram' ? diagramNodes : (workspace === 'draw' ? drawNodes : eipNodes));
   const edges = workspace === 'ddd' ? dddEdges : (workspace === 'diagram' ? diagramEdges : (workspace === 'draw' ? drawEdges : eipEdges));
@@ -3284,6 +3335,196 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
     setContextMenu(null);
   };
 
+  // ── CAD tab operations ────────────────────────────────────────────────────
+  const persistCadTabs = (tabs, activeId) => {
+    setCadTabs(tabs);
+    localStorage.setItem('cadTabs', JSON.stringify(tabs));
+    if (activeId !== undefined) {
+      activeCadTabIdRef.current = activeId;
+      setActiveCadTabId(activeId);
+      localStorage.setItem('cadActiveTab', activeId);
+    }
+  };
+  // Load a tab's content into the live editor/preview, resetting render refs so
+  // the canvas rebuilds cleanly (mirrors the template-apply reset).
+  const loadCadTab = (tab) => {
+    cadIdRef.current = 0;
+    cadSourceRef.current = 'code';
+    cadSigRef.current = null;
+    cadReadyRef.current = false;
+    setCadCode(tab.code);
+    setDiagramTitle(tab.name);
+    localStorage.setItem('cad-title', tab.name);
+    setShowEmojiPicker(false);
+  };
+  const switchCadTab = (id) => {
+    if (id === activeCadTabId) return;
+    const tab = cadTabs.find(t => t.id === id);
+    if (!tab) return;
+    activeCadTabIdRef.current = id;
+    setActiveCadTabId(id);
+    localStorage.setItem('cadActiveTab', id);
+    loadCadTab(tab);
+  };
+  const newCadTab = (code, baseName) => {
+    const base = baseName || 'Untitled';
+    const names = new Set(cadTabs.map(t => t.name));
+    let name = base, n = 1;
+    while (names.has(name)) { n += 1; name = `${base} ${n}`; }
+    const tab = { id: uuidv4(), name, code: (code && code.trim()) ? code : cadTemplates[0].code };
+    persistCadTabs([...cadTabs, tab], tab.id);
+    loadCadTab(tab);
+    setShowNewTabMenu(false);
+  };
+  const closeCadTab = (id) => {
+    if (cadTabs.length <= 1) {
+      // Never leave zero tabs — reset the last one to a fresh default.
+      const fresh = { id: uuidv4(), name: 'Untitled', code: cadTemplates[0].code };
+      persistCadTabs([fresh], fresh.id);
+      loadCadTab(fresh);
+      return;
+    }
+    const idx = cadTabs.findIndex(t => t.id === id);
+    const next = cadTabs.filter(t => t.id !== id);
+    if (id === activeCadTabId) {
+      const neighbor = next[Math.min(idx, next.length - 1)];
+      persistCadTabs(next, neighbor.id);
+      loadCadTab(neighbor);
+    } else {
+      persistCadTabs(next, activeCadTabId);
+    }
+  };
+  const renameCadTab = (id, name) => {
+    const clean = (name || '').trim() || 'Untitled';
+    const next = cadTabs.map(t => t.id === id ? { ...t, name: clean } : t);
+    setCadTabs(next);
+    localStorage.setItem('cadTabs', JSON.stringify(next));
+    if (id === activeCadTabId) {
+      setDiagramTitle(clean);
+      localStorage.setItem('cad-title', clean);
+    }
+  };
+  // Diagram-type starters for the "+" menu, sourced from the template library.
+  const CAD_NEW_TYPES = [
+    ['Flowchart', 'Flowchart'],
+    ['Sequence Diagram', 'Sequence'],
+    ['Class Diagram', 'Class'],
+    ['State Diagram', 'State'],
+    ['ER Diagram', 'ER'],
+    ['User Journey', 'Journey'],
+    ['Gantt Chart', 'Gantt'],
+    ['Pie Chart', 'Pie'],
+    ['Git Graph', 'Git Graph'],
+    ['Mindmap', 'Mindmap'],
+    ['Timeline', 'Timeline'],
+    ['C4 Context', 'C4 Context'],
+  ].map(([tmplName, label]) => ({ label, tmpl: cadTemplates.find(t => t.name === tmplName) }))
+   .filter(x => x.tmpl);
+
+  // Notepad++-style diagram tab strip — rendered on the diagram canvas (top),
+  // so it stays visible regardless of code-editor mode (docked / float / collapsed).
+  const cadTabStrip = (
+    <div style={{ display: 'flex', alignItems: 'stretch', background: 'var(--bg-tertiary)', borderBottom: '1px solid var(--border-color)', minHeight: '30px', flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'stretch', overflowX: 'auto', flex: 1, scrollbarWidth: 'thin' }}>
+        {cadTabs.map(tab => {
+          const active = tab.id === activeCadTabId;
+          return (
+            <div
+              key={tab.id}
+              onClick={() => switchCadTab(tab.id)}
+              onDoubleClick={() => setEditingCadTabId(tab.id)}
+              title={active ? 'Double-click to rename' : tab.name}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '0 8px 0 10px', cursor: 'pointer', whiteSpace: 'nowrap',
+                borderRight: '1px solid var(--border-color)',
+                background: active ? 'var(--bg-secondary)' : 'transparent',
+                borderTop: active ? '2px solid var(--accent-blue)' : '2px solid transparent',
+                color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
+                fontSize: '0.72rem', fontWeight: active ? 700 : 500, maxWidth: '180px',
+              }}
+            >
+              {editingCadTabId === tab.id ? (
+                <input
+                  autoFocus
+                  defaultValue={tab.name}
+                  onClick={(e) => e.stopPropagation()}
+                  onBlur={(e) => { renameCadTab(tab.id, e.target.value); setEditingCadTabId(null); }}
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
+                    if (e.key === 'Enter') { renameCadTab(tab.id, e.target.value); setEditingCadTabId(null); }
+                    else if (e.key === 'Escape') { setEditingCadTabId(null); }
+                  }}
+                  style={{
+                    background: 'var(--bg-tertiary)', border: '1px solid var(--accent-blue)',
+                    borderRadius: '3px', color: 'var(--text-primary)', fontSize: '0.72rem',
+                    padding: '1px 4px', width: '110px', outline: 'none',
+                  }}
+                />
+              ) : (
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{tab.name}</span>
+              )}
+              <button
+                title="Close tab"
+                onClick={(e) => { e.stopPropagation(); closeCadTab(tab.id); }}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: '16px', height: '16px', border: 'none', borderRadius: '3px',
+                  background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer',
+                  fontSize: '13px', lineHeight: 1, flexShrink: 0,
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-tertiary)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+              >×</button>
+            </div>
+          );
+        })}
+      </div>
+      {/* New tab (+) with diagram-type menu */}
+      <div style={{ position: 'relative', flexShrink: 0 }}>
+        <button
+          title="New diagram tab"
+          onClick={() => setShowNewTabMenu(v => !v)}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px',
+            height: '100%', padding: '0 10px', border: 'none', borderLeft: '1px solid var(--border-color)',
+            background: showNewTabMenu ? 'var(--bg-secondary)' : 'transparent',
+            color: 'var(--accent-blue)', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 700,
+          }}
+        ><Plus size={14} /></button>
+        {showNewTabMenu && (
+          <>
+            <div onClick={() => setShowNewTabMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 60 }} />
+            <div style={{
+              position: 'absolute', top: '100%', right: 0, zIndex: 61, marginTop: '2px',
+              background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
+              borderRadius: '8px', boxShadow: '0 10px 30px rgba(0,0,0,0.3)', padding: '5px',
+              minWidth: '180px', maxHeight: '320px', overflowY: 'auto',
+            }}>
+              <div style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '4px 8px 5px' }}>New diagram</div>
+              <button
+                onClick={() => newCadTab(cadTemplates[0].code, 'Untitled')}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', border: 'none', background: 'transparent', color: 'var(--text-primary)', padding: '6px 8px', borderRadius: '5px', cursor: 'pointer', fontSize: '0.74rem', textAlign: 'left' }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-tertiary)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              ><FilePlus size={14} /> Blank flowchart</button>
+              <div style={{ height: '1px', background: 'var(--border-color)', margin: '4px 6px' }} />
+              {CAD_NEW_TYPES.map(({ label, tmpl }) => (
+                <button
+                  key={label}
+                  onClick={() => newCadTab(tmpl.code, label)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', border: 'none', background: 'transparent', color: 'var(--text-secondary)', padding: '6px 8px', borderRadius: '5px', cursor: 'pointer', fontSize: '0.74rem', textAlign: 'left' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-tertiary)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                ><Code size={13} style={{ opacity: 0.7 }} /> {label}</button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', overflow: 'hidden' }}>
       {/* Unified top bar — all workspaces */}
@@ -4222,6 +4463,7 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
         )}
 
         <div ref={cadCanvasRef} data-cad={workspace === 'cad' ? 'true' : undefined} style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
+          {workspace === 'cad' && cadTabStrip}
           <div ref={cadPreviewRef} style={{ flex: 1, position: 'relative', isolation: 'isolate', overflow: 'hidden' }}>
 
         <ReactFlow
