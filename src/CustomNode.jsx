@@ -2,9 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { Handle, Position, NodeToolbar, NodeResizer, useReactFlow } from '@xyflow/react';
 import * as LucideIcons from 'lucide-react';
 import rough from 'roughjs';
+import { recomputeArrowBindings } from './utils/arrowBinding';
 
 export default function CustomNode({ id, data, selected, ...props }) {
-  const { setNodes, setEdges, getNodes } = useReactFlow();
+  const { setNodes, setEdges, getNodes, screenToFlowPosition } = useReactFlow();
   const [isEditing, setIsEditing] = useState(!!data.isNew);
 
   useEffect(() => {
@@ -182,10 +183,14 @@ export default function CustomNode({ id, data, selected, ...props }) {
     <NodeResizer
       minWidth={40}
       minHeight={40}
-      lineStyle={{ borderColor: color, borderWidth: 1 }}
-      handleStyle={{ width: 8, height: 8, background: '#fff', border: `1.5px solid ${color}`, borderRadius: '2px' }}
+      lineStyle={{ borderColor: color, borderWidth: 1.5 }}
+      handleStyle={{ width: 11, height: 11, background: '#fff', border: `2px solid ${color}`, borderRadius: '3px', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }}
       onResize={(_, { width: w, height: h }) => {
-        setNodes(nds => nds.map(n => n.id === id ? { ...n, style: { ...n.style, width: w, height: h }, data: { ...n.data, width: w, height: h } } : n));
+        setNodes(nds => {
+          const updated = nds.map(n => n.id === id ? { ...n, style: { ...n.style, width: w, height: h }, data: { ...n.data, width: w, height: h } } : n);
+          // Keep bound arrows attached to this shape as it resizes.
+          return recomputeArrowBindings(updated, id);
+        });
       }}
     />
   );
@@ -890,6 +895,80 @@ export default function CustomNode({ id, data, selected, ...props }) {
     const start = data.arrowStart || { x: 0, y: 0 };
     const end = data.arrowEnd || { x: width, y: height };
     const isArrow = data.shape === 'arrow';
+
+    // Drag one endpoint of the arrow/line, recomputing the bounding box + local
+    // endpoint coords so both ends stay correct (mirrors the creation math).
+    const startEndpointDrag = (which, e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      const onMove = (ev) => {
+        const flow = screenToFlowPosition({ x: ev.clientX, y: ev.clientY });
+        setNodes(nds => nds.map(n => {
+          if (n.id !== id) return n;
+          const pos = n.position;
+          const aStart = n.data.arrowStart || { x: 0, y: 0 };
+          const aEnd = n.data.arrowEnd || { x: n.data.width || 0, y: n.data.height || 0 };
+          let A = { x: pos.x + aStart.x, y: pos.y + aStart.y };
+          let B = { x: pos.x + aEnd.x, y: pos.y + aEnd.y };
+          if (which === 'start') A = flow; else B = flow;
+          const nx = Math.min(A.x, B.x);
+          const ny = Math.min(A.y, B.y);
+          const nw = Math.max(Math.abs(B.x - A.x), 1);
+          const nh = Math.max(Math.abs(B.y - A.y), 1);
+          return {
+            ...n,
+            position: { x: nx, y: ny },
+            style: { ...n.style, width: nw, height: nh },
+            data: {
+              ...n.data, width: nw, height: nh,
+              arrowStart: { x: A.x - nx, y: A.y - ny },
+              arrowEnd: { x: B.x - nx, y: B.y - ny },
+            },
+          };
+        }));
+      };
+      const onUp = () => {
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+        // Bind this endpoint to a shape it was dropped on (Excalidraw-style), and
+        // snap it to that shape's border so the arrow touches the edge cleanly.
+        const shapes = getNodes().filter(nn =>
+          nn.id !== id && nn.data?.isDrawShape &&
+          nn.data?.shape !== 'arrow' && nn.data?.shape !== 'line' && nn.data?.shape !== 'text');
+        setNodes(nds => nds.map(n => {
+          if (n.id !== id) return n;
+          const pos = n.position;
+          let A = { x: pos.x + (n.data.arrowStart?.x || 0), y: pos.y + (n.data.arrowStart?.y || 0) };
+          let B = { x: pos.x + (n.data.arrowEnd?.x || 0), y: pos.y + (n.data.arrowEnd?.y || 0) };
+          const movingPt = which === 'start' ? A : B;
+          const hit = shapes.find(s => {
+            const sw = s.data?.width ?? 100, sh = s.data?.height ?? 60;
+            return movingPt.x >= s.position.x - 6 && movingPt.x <= s.position.x + sw + 6 &&
+                   movingPt.y >= s.position.y - 6 && movingPt.y <= s.position.y + sh + 6;
+          });
+          const bindKey = which === 'start' ? 'startBinding' : 'endBinding';
+          const data = { ...n.data, [bindKey]: hit ? hit.id : null };
+          if (hit) {
+            const sw = hit.data?.width ?? 100, sh = hit.data?.height ?? 60;
+            const cx = hit.position.x + sw / 2, cy = hit.position.y + sh / 2;
+            const other = which === 'start' ? B : A;
+            let dx = other.x - cx, dy = other.y - cy;
+            if (dx === 0 && dy === 0) dy = -1;
+            const sc = Math.min(dx !== 0 ? (sw / 2) / Math.abs(dx) : Infinity, dy !== 0 ? (sh / 2) / Math.abs(dy) : Infinity);
+            const bp = { x: cx + dx * sc, y: cy + dy * sc };
+            if (which === 'start') A = bp; else B = bp;
+          }
+          const nx = Math.min(A.x, B.x), ny = Math.min(A.y, B.y);
+          const nw = Math.max(Math.abs(B.x - A.x), 1), nh = Math.max(Math.abs(B.y - A.y), 1);
+          return {
+            ...n, position: { x: nx, y: ny }, style: { ...n.style, width: nw, height: nh },
+            data: { ...data, width: nw, height: nh, arrowStart: { x: A.x - nx, y: A.y - ny }, arrowEnd: { x: B.x - nx, y: B.y - ny } },
+          };
+        }));
+      };
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+    };
     const nodeOpacity = (data.opacity != null ? data.opacity : 100) / 100;
     const dashArray = data.strokeStyle === 'dashed' ? `${strokeWidth * 3} ${strokeWidth * 2}` : (data.strokeStyle === 'dotted' ? `${strokeWidth} ${strokeWidth * 2}` : 'none');
     
@@ -950,6 +1029,21 @@ export default function CustomNode({ id, data, selected, ...props }) {
           </svg>
           <Handle type="source" position={Position.Right} id="right" style={{ }} />
           <Handle type="source" position={Position.Bottom} id="bottom" style={{ }} />
+          {selected && [['start', start], ['end', end]].map(([which, pt]) => (
+            <div
+              key={which}
+              className="nodrag nopan"
+              onPointerDown={(e) => startEndpointDrag(which, e)}
+              title="Drag to move endpoint"
+              style={{
+                position: 'absolute', left: pt.x, top: pt.y,
+                width: 12, height: 12, transform: 'translate(-50%, -50%)',
+                borderRadius: '50%', background: '#fff',
+                border: `2px solid ${strokeColor}`, boxShadow: '0 1px 3px rgba(0,0,0,0.35)',
+                cursor: 'grab', zIndex: 10, pointerEvents: 'all',
+              }}
+            />
+          ))}
         </div>
       </>
     );

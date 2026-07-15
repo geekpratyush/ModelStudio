@@ -2,6 +2,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
 import { parseMermaid, serializeMermaid, serializePlantUML, serializeD2, validateMermaid, detectDiagramKind } from './utils/cadUtils';
 import { registerMermaidLanguage } from './utils/monacoMermaid';
+import { recomputeArrowBindings } from './utils/arrowBinding';
 import cadTemplates from './templates/cadTemplates.json';
 import {
   ReactFlow,
@@ -15,7 +16,8 @@ import {
   useOnSelectionChange,
   MarkerType,
   useViewport,
-  getNodesBounds
+  getNodesBounds,
+  ConnectionMode
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { toPng, toSvg } from 'html-to-image';
@@ -2729,6 +2731,7 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
   const onNodeDragStop = useCallback((event, node) => {
     // Push history for draw workspace moves
     if (workspaceRef.current === 'draw') {
+      setDrawNodes(prev => recomputeArrowBindings(prev, node?.id));
       pushDrawHistory(drawNodesRef.current, drawEdgesRef.current);
     }
     // Persist sticky note and diagram position in CAD workspace
@@ -3528,9 +3531,10 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
   return (
     <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', overflow: 'hidden' }}>
       {/* Unified top bar — all workspaces */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 10px', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', flexShrink: 0, zIndex: 1001, gap: '8px', width: '100%' }}>
-        {/* Left: logo + workspace tabs */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 10px', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', flexShrink: 0, zIndex: 1001, gap: '8px', width: '100%' }}>
+        {/* Left: logo + workspace tabs. Shrinks/scrolls when the window is narrow so
+            the right-side action group (incl. Export) always stays on-screen. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 1, minWidth: 0, overflowX: 'auto', scrollbarWidth: 'thin' }}>
           <div onClick={onGoHome} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }} title="Go to home page">
             <MSLogo size={22} />
             <span style={{ fontWeight: 'bold', fontSize: '0.82rem', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>Model Studio</span>
@@ -3551,7 +3555,9 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
               fontSize: '0.8rem',
               fontWeight: 500,
               padding: '2px 6px',
-              width: '180px',
+              width: '150px',
+              minWidth: '90px',
+              flexShrink: 1,
               outline: 'none',
               transition: 'all 0.2s',
             }}
@@ -3584,9 +3590,10 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
           </div>
         </div>
 
-        {/* Center: Draw tools (only for Draw workspace) */}
+        {/* Center: Draw tools (only for Draw workspace) — floated below the bar so
+            it doesn't consume top-bar width and push the action buttons off-screen. */}
         {workspace === 'draw' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+          <div style={{ position: 'absolute', top: 'calc(100% + 8px)', left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0, maxWidth: 'calc(100vw - 24px)', flexWrap: 'wrap', justifyContent: 'center', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '4px 6px', boxShadow: '0 6px 20px rgba(0,0,0,0.28)', zIndex: 1000 }}>
             <button className="btn btn-icon-only" onClick={undoDraw} title="Undo (Ctrl+Z)" style={{ opacity: drawHistoryRef.current.length > 1 && drawHistoryIndexRef.current > 0 ? 1 : 0.35 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"/></svg>
             </button>
@@ -3661,7 +3668,7 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
           }}><Share2 size={14} /></button>
           <button className="btn btn-icon-only" onClick={clearCanvas} title="Clear Everything"><Eraser size={14} color="#ef4444" /></button>
           <button
-            className="btn"
+            className="btn btn-icon-only"
             onClick={() => {
               if (window.confirm("Reset Studio?\n\nThis will permanently clear all cached diagrams, code, and settings from your browser, then reload the studio with default settings.")) {
                 localStorage.clear();
@@ -3670,19 +3677,18 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
               }
             }}
             style={{
-              fontSize: '0.72rem',
-              padding: '3px 8px',
+              padding: '3px',
               display: 'flex',
               alignItems: 'center',
-              gap: '4px',
+              justifyContent: 'center',
               border: '1px solid #ef4444',
               background: 'rgba(239,68,68,0.1)',
               color: '#f87171',
-              whiteSpace: 'nowrap'
+              flexShrink: 0
             }}
             title="Reset Studio — clear all cache & reload with defaults"
           >
-            <RefreshCw size={13} /> Reset Studio
+            <RefreshCw size={14} />
           </button>
           <div style={{ width: '1px', height: '14px', background: 'var(--border-color)', margin: '0 2px' }} />
           <button className={`btn btn-icon-only ${bgVariant === 'dots' ? 'btn-primary' : ''}`} onClick={() => setBgVariant(v => v === 'dots' ? 'plain' : 'dots')} title={bgVariant === 'dots' ? 'Hide canvas grid' : 'Show canvas grid'}><Grid3X3 size={14} /></button>
@@ -3691,7 +3697,7 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
           <button className="btn btn-icon-only" onClick={() => { setHelpTab(workspace === 'eip' ? 'eip' : workspace === 'cad' ? 'cad' : workspace); setShowHelp(true); }} title="Help & Reference (?)"><Info size={14} /></button>
           <div style={{ width: '1px', height: '14px', background: 'var(--border-color)', margin: '0 2px' }} />
           <button className="btn btn-icon-only" onClick={() => setShowTextEditor(true)} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)' }} title="Import diagram from text"><FilePlus size={14} /></button>
-          <button className="btn" onClick={() => fileInputRef.current?.click()} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', padding: '3px 8px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', whiteSpace: 'nowrap' }} title="Import from file"><Upload size={13} /> Import</button>
+          <button className="btn btn-icon-only" onClick={() => fileInputRef.current?.click()} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '3px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', flexShrink: 0 }} title="Import from file"><Upload size={14} /></button>
           <div style={{ position: 'relative' }}>
             <button className="btn btn-primary" onClick={() => setShowExportDropdown(!showExportDropdown)} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', padding: '3px 8px', whiteSpace: 'nowrap' }}><Download size={13} /> Export</button>
             {showExportDropdown && (
@@ -4474,6 +4480,7 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
           onNodesChange={handleNodesChange} // This will only affect non-CAD nodes
           onEdgesChange={onEdgesChange}    // This will only affect non-CAD edges
           onConnect={onConnect}
+          connectionMode={workspace === 'cad' ? ConnectionMode.Strict : ConnectionMode.Loose}
           onInit={(inst) => { setReactFlowInstance(inst); reactFlowInstanceRef.current = inst; }}
           onDrop={onDrop}
           onDragOver={onDragOver}
@@ -4485,6 +4492,7 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
           }}
           onPaneClick={() => { setContextMenu(null); setShowJson(false); }}
           onMoveEnd={onMoveEnd}
+          onNodeDrag={(_, node) => { if (workspaceRef.current === 'draw') setDrawNodes(prev => recomputeArrowBindings(prev, node?.id)); }}
           onNodeDragStop={onNodeDragStop}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
