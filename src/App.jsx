@@ -936,11 +936,45 @@ function FlowCanvas({ onGoHome }) {
       const cached = localStorage.getItem('cadCode') || localStorage.getItem('dacCode');
       const flowchartTmpl = cadTemplates.find(t => t.name === 'Flowchart') || cadTemplates[0];
       const orgChartTmpl = cadTemplates.find(t => t.name === 'Technology Company Org Chart') || cadTemplates.find(t => t.type === 'OrgChart');
+      
+      let tab1Code = flowchartTmpl.code;
+      let tab1Name = 'Flowchart';
+      
+      if (cached && cached.trim()) {
+        tab1Code = cached;
+        const match = cached.match(/^\s*(classDiagram|sequenceDiagram|stateDiagram-v2|erDiagram|gantt|pie|journey|gitGraph|C4Context|C4Container|C4Component|C4Dynamic|C4Deployment|mindmap|timeline|quadrantChart|xychart-beta|block-beta|packet-beta|architecture-beta|sankey-beta|kanban|radar-beta)\b/i);
+        if (match) {
+          const type = match[1].toLowerCase();
+          if (type.includes('classdiagram')) tab1Name = 'Class Diagram';
+          else if (type.includes('sequencediagram')) tab1Name = 'Sequence Diagram';
+          else if (type.includes('statediagram')) tab1Name = 'State Diagram';
+          else if (type.includes('erdiagram')) tab1Name = 'ER Diagram';
+          else if (type.includes('c4')) tab1Name = 'C4 Diagram';
+          else if (type.includes('gantt')) tab1Name = 'Gantt Chart';
+          else if (type.includes('pie')) tab1Name = 'Pie Chart';
+          else if (type.includes('journey')) tab1Name = 'User Journey';
+          else if (type.includes('gitgraph')) tab1Name = 'Git Graph';
+          else if (type.includes('mindmap')) tab1Name = 'Mindmap';
+          else if (type.includes('timeline')) tab1Name = 'Timeline';
+          else if (type.includes('quadrant')) tab1Name = 'Quadrant Chart';
+          else if (type.includes('xychart')) tab1Name = 'XY Chart';
+          else if (type.includes('block')) tab1Name = 'Block Diagram';
+          else if (type.includes('packet')) tab1Name = 'Packet Diagram';
+          else if (type.includes('architecture')) tab1Name = 'Architecture';
+          else if (type.includes('sankey')) tab1Name = 'Sankey Diagram';
+          else if (type.includes('kanban')) tab1Name = 'Kanban Board';
+          else if (type.includes('radar')) tab1Name = 'Radar Chart';
+          else tab1Name = 'Diagram';
+        } else {
+          tab1Name = localStorage.getItem('cad-title') || 'Diagram';
+        }
+      }
+
       tabs = [
         {
           id: uuidv4(),
-          name: localStorage.getItem('cad-title') || 'Flowchart',
-          code: (cached && cached.trim()) ? cached : flowchartTmpl.code,
+          name: tab1Name,
+          code: tab1Code,
         },
         {
           id: uuidv4(),
