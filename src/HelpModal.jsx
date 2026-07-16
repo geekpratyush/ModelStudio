@@ -1,5 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, MousePointer2, Hand, Square, Circle as CircleIcon, Diamond, Triangle, Cloud, ArrowUpRight, Minus, Type, Pencil, Eraser, StickyNote, Paintbrush, Lock, Layers, Download, Upload, Share2, Code, GitBranch, Workflow, Box, Database, Server, Network, ZoomIn, ZoomOut, Maximize2, Grid3X3, Info, ChevronRight, Play, RotateCcw } from 'lucide-react';
+import cadScreenshot from './assets/screenshot_cad.png';
+import archScreenshot from './assets/screenshot_architecture.png';
+import dddScreenshot from './assets/screenshot_ddd.png';
+import camelScreenshot from './assets/screenshot_camel.png';
+import drawScreenshot from './assets/screenshot_draw.png';
 
 /* ─── Shared helpers ──────────────────────────────────────────── */
 const Kbd = ({ k }) => (
@@ -162,6 +167,9 @@ function DrawDemo() {
 function DiagramsHelp() {
   return (
     <div>
+      <div style={{ marginBottom:'18px', borderRadius:'10px', overflow:'hidden', border:'1px solid var(--border-color)', boxShadow:'0 4px 15px rgba(0,0,0,0.3)' }}>
+        <img src={archScreenshot} alt="System Architecture Workspace" style={{ width:'100%', display:'block' }} />
+      </div>
       <p style={{ fontSize:'0.85rem', color:'var(--text-secondary)', lineHeight:'1.6', marginBottom:'18px' }}>
         A drag-and-drop canvas for building system architecture, domain, and flow diagrams. Nodes connect with smart edges and auto-layout keeps things tidy.
       </p>
@@ -201,6 +209,9 @@ function DiagramsHelp() {
 function DrawHelp() {
   return (
     <div>
+      <div style={{ marginBottom:'18px', borderRadius:'10px', overflow:'hidden', border:'1px solid var(--border-color)', boxShadow:'0 4px 15px rgba(0,0,0,0.3)' }}>
+        <img src={drawScreenshot} alt="Freeform Sketch Workspace" style={{ width:'100%', display:'block' }} />
+      </div>
       <p style={{ fontSize:'0.85rem', color:'var(--text-secondary)', lineHeight:'1.6', marginBottom:'18px' }}>
         A freeform sketching canvas. Draw shapes, arrows, text, and freehand paths — optionally with a hand-drawn Rough.js aesthetic.
       </p>
@@ -267,9 +278,17 @@ function CADHelp() {
   ];
   return (
     <div>
+      <div style={{ marginBottom:'18px', borderRadius:'10px', overflow:'hidden', border:'1px solid var(--border-color)', boxShadow:'0 4px 15px rgba(0,0,0,0.3)' }}>
+        <img src={cadScreenshot} alt="Code as Diagram Workspace" style={{ width:'100%', display:'block' }} />
+      </div>
       <p style={{ fontSize:'0.85rem', color:'var(--text-secondary)', lineHeight:'1.6', marginBottom:'18px' }}>
         Write <b>Mermaid</b> diagram code in the left editor and see a live preview instantly. Supports every Mermaid diagram type plus C4 architecture diagrams.
       </p>
+      <Section title="Multi-Tab Notepad++ Caching">
+        <div style={{ fontSize:'0.82rem', color:'var(--text-secondary)', lineHeight:'1.7', padding:'12px 14px', background:'var(--bg-tertiary)', borderRadius:'8px', borderLeft:'3px solid #8b5cf6', marginBottom:'16px' }}>
+          <b>Notepad++ Caching:</b> All open tabs and active editor sessions are saved instantly to <code>localStorage</code>. There is no Save button—your work is fully preserved even if you reload, close the browser, or return days later. Double-click any tab header to rename it, and click the "+" button to start a new diagram from a built-in template.
+        </div>
+      </Section>
       <Section title="Supported Diagram Types">
         <div style={{ display:'flex', flexWrap:'wrap', gap:'6px', marginBottom:'8px' }}>
           {diagTypes.map(([name]) => <Chip key={name} color="#3b82f6">{name}</Chip>)}
@@ -318,6 +337,9 @@ function Palette(props) { return <svg {...props} width={props.size||15} height={
 function CamelHelp() {
   return (
     <div>
+      <div style={{ marginBottom:'18px', borderRadius:'10px', overflow:'hidden', border:'1px solid var(--border-color)', boxShadow:'0 4px 15px rgba(0,0,0,0.3)' }}>
+        <img src={camelScreenshot} alt="Apache Camel Integration Workspace" style={{ width:'100%', display:'block' }} />
+      </div>
       <p style={{ fontSize:'0.85rem', color:'var(--text-secondary)', lineHeight:'1.6', marginBottom:'18px' }}>
         A visual builder for <b>Apache Camel</b> integration routes using Enterprise Integration Patterns (EIP). Design message flows and export ready-to-use Camel YAML DSL.
       </p>
@@ -365,6 +387,9 @@ function CamelHelp() {
 function DDDHelp() {
   return (
     <div>
+      <div style={{ marginBottom:'18px', borderRadius:'10px', overflow:'hidden', border:'1px solid var(--border-color)', boxShadow:'0 4px 15px rgba(0,0,0,0.3)' }}>
+        <img src={dddScreenshot} alt="Domain-Driven Design Workspace" style={{ width:'100%', display:'block' }} />
+      </div>
       <p style={{ fontSize:'0.85rem', color:'var(--text-secondary)', lineHeight:'1.6', marginBottom:'18px' }}>
         A canvas for designing <b>Domain-Driven Design</b> architecture. Model strategic and tactical DDD patterns — bounded contexts, aggregates, events, and services.
       </p>

@@ -23,7 +23,7 @@ import '@xyflow/react/dist/style.css';
 import { toPng, toSvg } from 'html-to-image';
 import { v4 as uuidv4 } from 'uuid';
 import yaml from 'js-yaml';
-import { Download, Upload, FileJson, Image, PlayCircle, Box, Diamond, Server, Trash2, Database, Cloud, MousePointer2, Hand, Grid3X3, Code, ChevronLeft, ChevronRight, ChevronsDown, ChevronsUp, Filter, ListOrdered, FileText, Shield, ShieldCheck, MessageSquare, Send, Skull, Mail, Clock, GitMerge, GitBranch, Workflow, Network, ArrowRightLeft, Route, FilePlus, RefreshCw, Radio, Share2, ListChecks, Scale, Settings2, ArrowDownUp, TerminalSquare, CheckCircle2, PackageOpen, Package, FileArchive, MessageCircle, RadioTower, Webhook, Hexagon, Building2, CloudLightning, BoxSelect, Plug, Zap, Cpu, User, File, Type, Table, Building, Layers, Search, X, Target, Eraser, StickyNote, Info, Pencil, Paintbrush, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Triangle, ArrowUpRight, Minus, Circle as CircleIcon, Square, LayoutGrid, Copy, Columns, PanelTopOpen, PanelLeftClose, Plus, Palette, Shapes, Globe, Lock, Wifi, Monitor, Smartphone, Terminal, HardDrive, Users, ZoomIn, ZoomOut, Maximize2, Sparkles } from 'lucide-react';
+import { Save, Download, Upload, FileJson, Image, PlayCircle, Box, Diamond, Server, Trash2, Database, Cloud, MousePointer2, Hand, Grid3X3, Code, ChevronLeft, ChevronRight, ChevronsDown, ChevronsUp, Filter, ListOrdered, FileText, Shield, ShieldCheck, MessageSquare, Send, Skull, Mail, Clock, GitMerge, GitBranch, Workflow, Network, ArrowRightLeft, Route, FilePlus, RefreshCw, Radio, Share2, ListChecks, Scale, Settings2, ArrowDownUp, TerminalSquare, CheckCircle2, PackageOpen, Package, FileArchive, MessageCircle, RadioTower, Webhook, Hexagon, Building2, CloudLightning, BoxSelect, Plug, Zap, Cpu, User, File, Type, Table, Building, Layers, Search, X, Target, Eraser, StickyNote, Info, Pencil, Paintbrush, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Triangle, ArrowUpRight, Minus, Circle as CircleIcon, Square, LayoutGrid, Copy, Columns, PanelTopOpen, PanelLeftClose, Plus, Palette, Shapes, Globe, Lock, Wifi, Monitor, Smartphone, Terminal, HardDrive, Users, ZoomIn, ZoomOut, Maximize2, Sparkles } from 'lucide-react';
 import ThemeToggle from './components/ThemeToggle';
 import MSLogo from './components/MSLogo';
 import { useTheme } from './contexts/ThemeContext';
@@ -934,11 +934,20 @@ function FlowCanvas({ onGoHome }) {
     } catch { /* ignore corrupt cache */ }
     if (!tabs || !tabs.length) {
       const cached = localStorage.getItem('cadCode') || localStorage.getItem('dacCode');
-      tabs = [{
-        id: uuidv4(),
-        name: localStorage.getItem('cad-title') || 'Code as Diagram',
-        code: (cached && cached.trim()) ? cached : cadTemplates[0].code,
-      }];
+      const flowchartTmpl = cadTemplates.find(t => t.name === 'Flowchart') || cadTemplates[0];
+      const orgChartTmpl = cadTemplates.find(t => t.name === 'Technology Company Org Chart') || cadTemplates.find(t => t.type === 'OrgChart');
+      tabs = [
+        {
+          id: uuidv4(),
+          name: localStorage.getItem('cad-title') || 'Flowchart',
+          code: (cached && cached.trim()) ? cached : flowchartTmpl.code,
+        },
+        {
+          id: uuidv4(),
+          name: 'Org Chart',
+          code: orgChartTmpl ? orgChartTmpl.code : '',
+        }
+      ];
     }
     let active = localStorage.getItem('cadActiveTab');
     if (!tabs.some(t => t.id === active)) active = tabs[0].id;
@@ -962,6 +971,13 @@ function FlowCanvas({ onGoHome }) {
   const [cadStatus, setCadStatus] = useState({ ok: true, message: '' });
 const [showTemplateGallery, setShowTemplateGallery] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showTabSaveDropdownId, setShowTabSaveDropdownId] = useState(null);
+  const [saveDropdownCoords, setSaveDropdownCoords] = useState(null);
+  const cadTabHandles = useRef({});
+  const cadTabPngHandles = useRef({});
+  const cadTabSvgHandles = useRef({});
+  const diagramPngHandles = useRef({});
+  const diagramSvgHandles = useRef({});
   // 'docked' | 'collapsed' | 'float'
   const [editorMode, setEditorMode] = useState('docked');
   const [editorOpacity, setEditorOpacity] = useState(90);
@@ -1010,12 +1026,8 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
   }, [workspace]);
 
   const getSanitizedBaseName = () => {
-    return diagramTitle
-      .toLowerCase()
-      .replace(/&/g, 'and')
-      .replace(/[^a-z0-9\s-]/g, '')
-      .trim()
-      .replace(/\s+/g, '-');
+    const title = diagramTitle || 'diagram';
+    return title.trim().replace(/[\/\\:\*\?"<>\|]/g, '_');
   };
 
   useEffect(() => {
@@ -2990,6 +3002,51 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
     }
   };
 
+  const saveActiveCadTabToFile = async (tabId) => {
+    const tab = cadTabs.find(t => t.id === tabId);
+    if (!tab) return;
+    const defaultName = `${tab.name}.mmd`;
+    let handle = cadTabHandles.current[tabId];
+    
+    if (!handle && window.showSaveFilePicker) {
+      try {
+        handle = await window.showSaveFilePicker({
+          suggestedName: defaultName,
+          types: [{
+            description: 'Mermaid Diagram',
+            accept: { 'text/plain': ['.mmd'] }
+          }]
+        });
+        cadTabHandles.current[tabId] = handle;
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        console.warn('showSaveFilePicker failed:', err);
+      }
+    }
+    
+    if (handle) {
+      try {
+        const writable = await handle.createWritable();
+        await writable.write(cadCode);
+        await writable.close();
+        return;
+      } catch (err) {
+        console.error('Failed writing to file handle:', err);
+      }
+    }
+
+    // Fallback to standard download
+    const blob = new Blob([cadCode], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = defaultName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const handleImportFile = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -2999,9 +3056,11 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
       const text = e.target?.result;
       if (typeof text !== 'string') return;
 
+      const cleanName = file.name.replace(/\.[^/.]+$/, "");
+
       if (workspace === 'cad') {
-        // Direct .mermaid code file loading into the panel
         setCadCode(text);
+        renameCadTab(activeCadTabId, cleanName);
         return;
       }
 
@@ -3014,11 +3073,13 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
           } else {
             setEdges([]);
           }
+          setDiagramTitle(cleanName);
+          localStorage.setItem(`${workspace}-title`, cleanName);
           setTimeout(() => {
             if (reactFlowInstance) reactFlowInstance.fitView({ padding: 0.2, duration: 800 });
           }, 200);
         } else {
-          alert("Imported file does not contain a visual layout (nodes/edges structure). Please import a saved JSON/YAML diagram exported from this tool.");
+          alert("Imported file does not contain a visual layout (nodes/edges structure). Please import a saved JSON diagram exported from this tool.");
         }
       } catch (err) {
         console.error(err);
@@ -3148,7 +3209,48 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
     return { x, y, width, height };
   };
 
-  const captureCanvasAsPng = async (filename, options = {}) => {
+  const getSaveFileHandle = async (isPng) => {
+    let key, handle, defaultName;
+    if (workspace === 'cad') {
+      key = activeCadTabId;
+      const mmdHandle = cadTabHandles.current[key];
+      const baseName = mmdHandle ? mmdHandle.name.replace(/\.[^/.]+$/, '') : (cadTabs.find(t => t.id === key)?.name || 'diagram');
+      defaultName = `${baseName}.${isPng ? 'png' : 'svg'}`;
+      handle = isPng ? cadTabPngHandles.current[key] : cadTabSvgHandles.current[key];
+    } else {
+      key = workspace;
+      const baseName = getSanitizedBaseName();
+      defaultName = `${baseName}.${isPng ? 'png' : 'svg'}`;
+      handle = isPng ? diagramPngHandles.current[key] : diagramSvgHandles.current[key];
+    }
+
+    if (!handle && window.showSaveFilePicker) {
+      try {
+        handle = await window.showSaveFilePicker({
+          suggestedName: defaultName,
+          types: [{
+            description: isPng ? 'PNG Image' : 'SVG Vector Image',
+            accept: isPng ? { 'image/png': ['.png'] } : { 'image/svg+xml': ['.svg'] }
+          }]
+        });
+        if (workspace === 'cad') {
+          if (isPng) cadTabPngHandles.current[key] = handle;
+          else cadTabSvgHandles.current[key] = handle;
+        } else {
+          if (isPng) diagramPngHandles.current[key] = handle;
+          else diagramSvgHandles.current[key] = handle;
+        }
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          throw err;
+        }
+        console.warn('showSaveFilePicker failed:', err);
+      }
+    }
+    return { handle, defaultName };
+  };
+
+  const captureCanvasAsPng = async (handle, defaultName, options = {}) => {
     const rendererEl = document.querySelector('.react-flow__renderer');
     if (!rendererEl) return;
     const savedVp = reactFlowInstance.getViewport();
@@ -3180,12 +3282,19 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
       }
       ctx.drawImage(img, 0, 0);
 
-      const link = document.createElement('a');
-      link.download = filename;
-      link.href = canvas.toDataURL('image/png');
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      if (handle) {
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+      } else {
+        const link = document.createElement('a');
+        link.download = defaultName;
+        link.href = canvas.toDataURL('image/png');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
     } catch (err) { console.error('PNG export error:', err); }
     finally {
       rendererEl.style.width = origW;
@@ -3194,7 +3303,7 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
     }
   };
 
-  const captureCanvasAsSvg = async (filename, options = {}) => {
+  const captureCanvasAsSvg = async (handle, defaultName, options = {}) => {
     const rendererEl = document.querySelector('.react-flow__renderer');
     if (!rendererEl) return;
     const savedVp = reactFlowInstance.getViewport();
@@ -3226,12 +3335,18 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
         result = result.replace(/(<svg[^>]*>)/s, `$1<rect width="${exportW}" height="${exportH}" fill="${exportBgColor}"/>`);
       }
 
-      const link = document.createElement('a');
-      link.download = filename;
-      link.href = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(result);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      if (handle) {
+        const writable = await handle.createWritable();
+        await writable.write(result);
+        await writable.close();
+      } else {
+        const link = document.createElement('a');
+        link.download = defaultName;
+        link.href = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(result);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
     } catch (err) { console.error('SVG export error:', err); }
     finally {
       rendererEl.style.width = origW;
@@ -3240,16 +3355,26 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
     }
   };
 
-  const exportAsPng = (options = {}) => {
-    const filename = `${getSanitizedBaseName()}.png`;
+  const exportAsPng = async (options = {}) => {
     if (reactFlowNodes.length === 0) return;
-    captureCanvasAsPng(filename, options);
+    try {
+      const { handle, defaultName } = await getSaveFileHandle(true);
+      await captureCanvasAsPng(handle, defaultName, options);
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      console.error('PNG export failed:', err);
+    }
   };
 
-  const exportAsSvg = (options = {}) => {
-    const filename = `${getSanitizedBaseName()}.svg`;
+  const exportAsSvg = async (options = {}) => {
     if (reactFlowNodes.length === 0) return;
-    captureCanvasAsSvg(filename, options);
+    try {
+      const { handle, defaultName } = await getSaveFileHandle(false);
+      await captureCanvasAsSvg(handle, defaultName, options);
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      console.error('SVG export failed:', err);
+    }
   };
 
   const ctxNode = contextMenu ? nodes.find(n => n.id === contextMenu.id) : null;
@@ -3466,6 +3591,106 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
                 />
               ) : (
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{tab.name}</span>
+              )}
+              {active && editingCadTabId !== tab.id && (
+                <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-tertiary)', borderRadius: '3px', border: '1px solid var(--border-color)', overflow: 'hidden', padding: 0 }}>
+                  {/* Left part: Direct Save as MMD */}
+                  <button
+                    title={`Save as Mermaid (.mmd) - ${tab.name}.mmd`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      saveActiveCadTabToFile(tab.id);
+                      setShowTabSaveDropdownId(null);
+                    }}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: '16px', height: '16px', border: 'none',
+                      background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer',
+                      fontSize: '11px', padding: 0,
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = '#60a5fa'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                  >
+                    <Save size={10} />
+                  </button>
+
+                  {/* Divider line */}
+                  <div style={{ width: '1px', height: '10px', background: 'var(--border-color)' }} />
+
+                  {/* Right part: Caret to open PNG/SVG options */}
+                  <button
+                    title="Change save format"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      setSaveDropdownCoords({ top: rect.bottom, left: rect.left - 130 }); // offset left so it aligns nicely
+                      setShowTabSaveDropdownId(v => v === tab.id ? null : tab.id);
+                    }}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: '12px', height: '16px', border: 'none',
+                      background: showTabSaveDropdownId === tab.id ? 'rgba(59,130,246,0.15)' : 'transparent',
+                      color: 'var(--text-secondary)', cursor: 'pointer',
+                      fontSize: '7px', padding: 0,
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                  >
+                    ▼
+                  </button>
+
+                  {showTabSaveDropdownId === tab.id && saveDropdownCoords && (
+                    <>
+                      <div onClick={(e) => { e.stopPropagation(); setShowTabSaveDropdownId(null); }} style={{ position: 'fixed', inset: 0, zIndex: 1100, cursor: 'default' }} />
+                      <div style={{
+                        position: 'fixed',
+                        top: `${saveDropdownCoords.top + 4}px`,
+                        left: `${saveDropdownCoords.left}px`,
+                        zIndex: 1101,
+                        background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
+                        borderRadius: '6px', boxShadow: '0 8px 24px rgba(0,0,0,0.3)', padding: '4px',
+                        minWidth: '150px', display: 'flex', flexDirection: 'column', gap: '2px'
+                      }}>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            exportAsPng({ transparent: false });
+                            setShowTabSaveDropdownId(null);
+                          }}
+                          style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%', border: 'none', background: 'transparent', color: 'var(--text-primary)', padding: '6px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem', textAlign: 'left' }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-tertiary)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <Image size={11} /> Save as PNG
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            exportAsSvg({ transparent: false });
+                            setShowTabSaveDropdownId(null);
+                          }}
+                          style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%', border: 'none', background: 'transparent', color: 'var(--text-primary)', padding: '6px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem', textAlign: 'left' }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-tertiary)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <FileText size={11} /> Save as SVG
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            saveActiveCadTabToFile(tab.id);
+                            setShowTabSaveDropdownId(null);
+                          }}
+                          style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%', border: 'none', background: 'transparent', color: '#60a5fa', padding: '6px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem', textAlign: 'left', fontWeight: 'bold' }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-tertiary)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <Code size={11} /> Save as Mermaid (.mmd)
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               )}
               <button
                 title="Close tab"
@@ -3697,13 +3922,13 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
           <button className="btn btn-icon-only" onClick={() => { setHelpTab(workspace === 'eip' ? 'eip' : workspace === 'cad' ? 'cad' : workspace); setShowHelp(true); }} title="Help & Reference (?)"><Info size={14} /></button>
           <div style={{ width: '1px', height: '14px', background: 'var(--border-color)', margin: '0 2px' }} />
           <button className="btn btn-icon-only" onClick={() => setShowTextEditor(true)} style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)' }} title="Import diagram from text"><FilePlus size={14} /></button>
-          <button className="btn btn-icon-only" onClick={() => fileInputRef.current?.click()} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '3px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', flexShrink: 0 }} title="Import from file"><Upload size={14} /></button>
+          <button className="btn btn-icon-only" onClick={() => fileInputRef.current?.click()} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '3px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', flexShrink: 0 }} title="Open file"><Upload size={14} /></button>
           <div style={{ position: 'relative' }}>
             <button className="btn btn-primary" onClick={() => setShowExportDropdown(!showExportDropdown)} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', padding: '3px 8px', whiteSpace: 'nowrap' }}><Download size={13} /> Export</button>
             {showExportDropdown && (
               <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '4px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '8px', zIndex: 2000, width: '240px', padding: '6px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 {workspace === 'cad' ? (
-                  <button className="btn" onClick={() => { const a = document.createElement('a'); a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(cadCode); a.download = `${getSanitizedBaseName()}.mmd`; document.body.appendChild(a); a.click(); document.body.removeChild(a); setShowExportDropdown(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', background: 'transparent', color: '#60a5fa', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer' }}><Code size={14} /> Export Mermaid Code (.mmd)</button>
+                  <button className="btn" onClick={() => { saveActiveCadTabToFile(activeCadTabId); setShowExportDropdown(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', background: 'transparent', color: '#60a5fa', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer' }}><Code size={14} /> Export Mermaid Code (.mmd)</button>
                 ) : (
                   <>
                     <button className="btn" onClick={() => { exportLayout('json'); setShowExportDropdown(false); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', background: 'transparent', color: 'var(--text-primary)', fontSize: '0.8rem', cursor: 'pointer' }}><FileJson size={14} /> Export Layout (JSON)</button>
@@ -4754,14 +4979,14 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
                   <FilePlus size={16} />
                 </button>
                 <div style={{ width: '1px', height: '16px', background: 'var(--border-color)', margin: '0 4px' }}></div>
-                <button className="btn" onClick={() => fileInputRef.current?.click()} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '4px 8px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }} title="Load JSON/YAML diagram from disk">
-                  <Upload size={14} /> Import
+                <button className="btn" onClick={() => fileInputRef.current?.click()} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '4px 8px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }} title={workspace === 'cad' ? "Open Mermaid (.mmd) file" : "Open JSON diagram file"}>
+                  <Upload size={14} /> Open
                 </button>
                 <input
                   type="file"
                   ref={fileInputRef}
                   onChange={handleImportFile}
-                  accept={workspace === 'cad' ? '.mmd,.mermaid,text/plain' : '.json,.yaml,.yml'}
+                  accept={workspace === 'cad' ? '.mmd' : '.json'}
                   style={{ display: 'none' }}
                 />
                 <input 
@@ -4780,12 +5005,7 @@ const [showTemplateGallery, setShowTemplateGallery] = useState(false);
                     <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '8px', zIndex: 1000, width: '240px', padding: '6px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       {workspace === 'cad' ? (
                         <button className="btn" onClick={() => {
-                          const a = document.createElement('a');
-                          a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(cadCode);
-                          a.download = `${getSanitizedBaseName()}.mmd`;
-                          document.body.appendChild(a);
-                          a.click();
-                          document.body.removeChild(a);
+                          saveActiveCadTabToFile(activeCadTabId);
                           setShowExportDropdown(false);
                         }} style={{ display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', width: '100%', border: 'none', padding: '8px 12px', background: 'transparent', color: '#60a5fa', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer' }}>
                           <Code size={14} /> Export Mermaid Code (.mmd)

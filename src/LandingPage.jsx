@@ -7,6 +7,15 @@ import {
 } from 'lucide-react';
 import MSLogo from './components/MSLogo';
 import './LandingPage.css';
+import dddScreenshot from './assets/screenshot_ddd.png';
+import archScreenshot from './assets/screenshot_architecture.png';
+import cadScreenshot from './assets/screenshot_cad.png';
+import camelScreenshot from './assets/screenshot_camel.png';
+import drawScreenshot from './assets/screenshot_draw.png';
+import cadDemoVideo from './assets/videos/cad_demo.webm';
+import drawDemoVideo from './assets/videos/draw_demo.webm';
+import dddDemoVideo from './assets/videos/ddd_demo.webm';
+import camelDemoVideo from './assets/videos/camel_demo.webm';
 
 /* ── GitHub data fetcher ──────────────────────────────────────── */
 function useGitHubStats() {
@@ -458,11 +467,64 @@ const ExportShareVisual = () => (
   </svg>
 );
 
-/* ── Carousel (reduced to 3 focused slides) ───────────────────── */
+/* ── Carousel Slides ──────────────────────────────────────────── */
 const SLIDES = [
-  { tag:'Code to Diagram', tagColor:'#8b5cf6', headline:'Paste Mermaid code, get a diagram instantly', body:'Copy Mermaid or C4 code from any AI assistant, paste it into the editor and watch it render live. 26+ diagram types, 13 themes, all previewed as you type.', steps:['Copy code from any AI assistant','Paste into the Monaco editor','Live preview renders instantly','Export SVG, PNG, or share a link'], stepColor:'#8b5cf6', Visual:MermaidAIVisual },
-  { tag:'Apache Camel', tagColor:'#f59e0b', headline:'Design integration routes, export production YAML', body:'Drag EIP components onto the canvas to build Apache Camel routes. Connect, configure, then export a production-ready Camel YAML DSL.', steps:['Drag EIP components (REST, Choice, Kafka)','Connect and configure your route','Export Camel YAML DSL','Deploy to Spring Boot, Camel K, or Quarkus'], stepColor:'#f59e0b', Visual:CamelVisual },
-  { tag:'Export & Share', tagColor:'#3b82f6', headline:'Six formats, one click, zero friction', body:'Export as PNG (retina), SVG, JSON, YAML, Mermaid source, or Camel DSL. Share a link that encodes your entire diagram, no account required.', steps:['Finish your diagram','Choose your export format','Click Share to copy a link','Anyone opens it with full fidelity'], stepColor:'#3b82f6', Visual:ExportShareVisual },
+  {
+    tag: 'Code to Diagram',
+    tagColor: '#8b5cf6',
+    headline: 'Write Mermaid code, watch it render live',
+    body: 'Create multiple tabs in a Notepad++-style layout. Copy Mermaid or C4 code from any AI assistant, paste it, rename tabs, and watch it instantly draw the corresponding flowcharts, sequence diagrams, class models, or ERDs.',
+    steps: [
+      'Create and manage multiple diagram tabs',
+      'Paste/type Mermaid or C4 code directly',
+      'Instant parsing and live side-by-side rendering',
+      'Full validation and auto-caching to localStorage'
+    ],
+    stepColor: '#8b5cf6',
+    videoSrc: cadDemoVideo
+  },
+  {
+    tag: 'Free-form Sketching',
+    tagColor: '#ec4899',
+    headline: 'Draw diagrams and export to PNG, SVG, or JSON',
+    body: 'Brainstorm with sticky notes, text labels, hand-drawn shapes, arrows, and freehand lines. Save your canvas layout as a JSON file, or export it to production-ready PNG or SVG in one click.',
+    steps: [
+      'Sketch freehand paths and geometric shapes',
+      'Annotate with colorful, resizable sticky notes',
+      'Export instantly as high-fidelity PNG or vector SVG',
+      'Save diagram source layout as JSON code to load later'
+    ],
+    stepColor: '#ec4899',
+    videoSrc: drawDemoVideo
+  },
+  {
+    tag: 'Domain-Driven Design',
+    tagColor: '#3b82f6',
+    headline: 'Model bounded contexts and strategic context maps',
+    body: 'Drag and drop containers, aggregates, entities, and services on the canvas. Organise complex systems visually and keep your domain model structures synchronized.',
+    steps: [
+      'Design context boundaries and domain events',
+      'Load pre-built Strategic Shipping templates',
+      'Move, group, and connect nested domain aggregates',
+      'Persist all tactical model states in local storage'
+    ],
+    stepColor: '#3b82f6',
+    videoSrc: dddDemoVideo
+  },
+  {
+    tag: 'Visual Integrations',
+    tagColor: '#f59e0b',
+    headline: 'Build Apache Camel routes visually, export YAML',
+    body: 'Construct enterprise integration patterns (EIP) by dragging direct endpoints, choices, and loggers onto the canvas. Wire them together, then export clean Camel YAML DSL code.',
+    steps: [
+      'Drag and connect visual EIP components',
+      'Load File Archiver or REST API route templates',
+      'Auto-arrange routes with one-click auto-layout',
+      'Export production Camel YAML for Spring Boot/Quarkus'
+    ],
+    stepColor: '#f59e0b',
+    videoSrc: camelDemoVideo
+  }
 ];
 
 const SLIDE_DURATION = 7000;
@@ -499,7 +561,6 @@ function Carousel() {
   };
 
   const slide = SLIDES[idx];
-  const { Visual } = slide;
   const exiting = phase === 'out';
   const textX   = exiting ? `${dir * -52}px`  : '0px';
   const visualX = exiting ? `${dir * -24}px`  : '0px';
@@ -532,7 +593,7 @@ function Carousel() {
             </div>
           </div>
           <div className="carousel-visual" style={{ opacity, transform: `translateX(${visualX})`, transition: exiting ? 'opacity 0.28s ease, transform 0.42s ease' : 'opacity 0.38s ease 0.05s, transform 0.55s cubic-bezier(0.22,1,0.36,1) 0.05s' }}>
-            <Visual />
+            <VideoVisual src={slide.videoSrc} />
           </div>
         </div>
 
@@ -623,11 +684,11 @@ const DrawMockup = () => (
 );
 
 const WORKSPACES = [
-  { id:'ddd',     label:'Domain-Driven Design',  icon:<Boxes size={20}/>,    color:'#3b82f6', dim:'#1e3a5f', desc:'Model bounded contexts, aggregates, entities, and domain events with the full DDD toolkit.', Mockup:DddMockup },
-  { id:'diagram', label:'System Architecture',   icon:<Network size={20}/>,  color:'#10b981', dim:'#064e3b', desc:'Drag servers, databases, and cloud services onto the canvas. Auto-layout handles the rest.', Mockup:ArchMockup },
-  { id:'cad',     label:'Code as Diagram',       icon:<Code2 size={20}/>,    color:'#8b5cf6', dim:'#2e1065', desc:'Monaco editor with live Mermaid preview, 26+ diagram types, error checking, and instant export.', Mockup:CadMockup },
-  { id:'eip',     label:'Apache Camel EIP',      icon:<Workflow size={20}/>, color:'#f59e0b', dim:'#78350f', desc:'Design integration routes visually, export production Camel YAML for Spring Boot or Quarkus.', Mockup:EipMockup },
-  { id:'draw',    label:'Free-form Draw',        icon:<Pencil size={20}/>,   color:'#ec4899', dim:'#500724', desc:'Freehand pencil, shapes, and sticky notes for brainstorming and whiteboard-style sessions.', Mockup:DrawMockup },
+  { id:'ddd',     label:'Domain-Driven Design',  icon:<Boxes size={20}/>,    color:'#3b82f6', dim:'#1e3a5f', desc:'Model bounded contexts, aggregates, entities, and domain events with the full DDD toolkit.', Mockup:DddMockup, screenshot: dddScreenshot },
+  { id:'diagram', label:'System Architecture',   icon:<Network size={20}/>,  color:'#10b981', dim:'#064e3b', desc:'Drag servers, databases, and cloud services onto the canvas. Auto-layout handles the rest.', Mockup:ArchMockup, screenshot: archScreenshot },
+  { id:'cad',     label:'Code as Diagram',       icon:<Code2 size={20}/>,    color:'#8b5cf6', dim:'#2e1065', desc:'Monaco editor with live Mermaid preview, 26+ diagram types, error checking, and instant export.', Mockup:CadMockup, screenshot: cadScreenshot },
+  { id:'eip',     label:'Apache Camel EIP',      icon:<Workflow size={20}/>, color:'#f59e0b', dim:'#78350f', desc:'Design integration routes visually, export production Camel YAML for Spring Boot or Quarkus.', Mockup:EipMockup, screenshot: camelScreenshot },
+  { id:'draw',    label:'Free-form Draw',        icon:<Pencil size={20}/>,   color:'#ec4899', dim:'#500724', desc:'Freehand pencil, shapes, and sticky notes for brainstorming and whiteboard-style sessions.', Mockup:DrawMockup, screenshot: drawScreenshot },
 ];
 
 const FEATURES = [
@@ -640,6 +701,95 @@ const FEATURES = [
   { icon:<Layers size={22}/>,    accent:'#a855f7', title:'40+ Templates',              desc:'AWS Architecture, K8s, OAuth Flow, Zero Trust, C4 diagrams, ER schemas.' },
   { icon:<Shield size={22}/>,    accent:'#22c55e', title:'Local-First & Private',      desc:'Everything in your browser. Auto-saves to localStorage. Works offline.' },
 ];
+
+/* ── Video Visual Renderer ─────────────────────────────────────── */
+const VideoVisual = ({ src }) => (
+  <div style={{
+    width: '100%',
+    height: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: '#0f111a',
+    borderRadius: '12px',
+    border: '1px solid var(--border-color)',
+    overflow: 'hidden',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+    aspectRatio: '16/9'
+  }}>
+    <video
+      src={src}
+      autoPlay
+      loop
+      muted
+      playsInline
+      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+    />
+  </div>
+);
+
+/* ── Workspace Preview Gallery ────────────────────────────────── */
+function WorkspaceGallery() {
+  const [activeTab, setActiveTab] = useState('cad');
+  const tabs = [
+    { id: 'cad', label: 'Code as Diagram', img: cadScreenshot, color: '#8b5cf6', bullet: 'Write code in Monaco editor, render 26+ Mermaid & C4 diagram types, double-click tabs to rename, and auto-cache your progress notepad-style.' },
+    { id: 'diagram', label: 'System Diagrams', img: archScreenshot, color: '#10b981', bullet: 'Drag cloud servers, databases, and network elements. Draw smart arrows and use one-click auto-layout to arrange them.' },
+    { id: 'ddd', label: 'Domain Driven', img: dddScreenshot, color: '#3b82f6', bullet: 'Model bounded contexts, aggregate roots, entities, and events. Group tactical components inside container boundaries.' },
+    { id: 'eip', label: 'Camel / EIP', img: camelScreenshot, color: '#f59e0b', bullet: 'Visually construct Enterprise Integration Patterns (EIP) routes, and export production-ready Camel YAML DSL.' },
+    { id: 'draw', label: 'Freehand Draw', img: drawScreenshot, color: '#ec4899', bullet: 'Sketch wireframes and designs. Toggle sketchy Rough.js styling, drop sticky notes, and export vector SVG/PNG.' },
+  ];
+  const cur = tabs.find(t => t.id === activeTab);
+  
+  return (
+    <section className="gallery-section reveal">
+      <div className="section-header" style={{ marginBottom: '2rem', textAlign: 'center' }}>
+        <h2>Explore Workspaces</h2>
+        <p style={{ color: 'var(--text-secondary)' }}>Click through each tab to preview our professional design workspaces in high fidelity.</p>
+      </div>
+      
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center', marginBottom: '20px' }}>
+        {tabs.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setActiveTab(t.id)}
+            style={{
+              padding: '10px 20px',
+              borderRadius: '8px',
+              border: '1px solid var(--border-color)',
+              background: activeTab === t.id ? `${t.color}15` : 'transparent',
+              color: activeTab === t.id ? t.color : 'var(--text-secondary)',
+              borderColor: activeTab === t.id ? t.color : 'var(--border-color)',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      
+      <div style={{
+        background: '#0f111a',
+        borderRadius: '16px',
+        border: '1px solid var(--border-color)',
+        padding: '16px',
+        boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px'
+      }}>
+        <div style={{ borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border-color)', background: '#020205' }}>
+          <img src={cur.img} alt={cur.label} style={{ width: '100%', display: 'block', maxHeight: '550px', objectFit: 'contain' }} />
+        </div>
+        <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-primary)', lineHeight: '1.6', textAlign: 'center', fontWeight: '500' }}>
+          <span style={{ color: cur.color, fontWeight: '700' }}>{cur.label}:</span> {cur.bullet}
+        </p>
+      </div>
+    </section>
+  );
+}
 
 /* ── Landing Page ──────────────────────────────────────────────── */
 function LandingPage({ onLaunch }) {
@@ -685,11 +835,44 @@ function LandingPage({ onLaunch }) {
             <span className="stat">MIT License</span>
           </div>
         </div>
-        <div className="hero-visual">
-          <HeroCycler />
+        <div className="hero-visual" style={{ width: '100%', maxWidth: '600px', display: 'flex', alignItems: 'center' }}>
+          <div style={{
+            width: '100%',
+            background: '#0a0e1a',
+            borderRadius: '12px',
+            border: '1px solid var(--border-color)',
+            overflow: 'hidden',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', background: '#0d0d18', borderBottom: '1px solid var(--border-color)' }}>
+              <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444' }} />
+              <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#eab308' }} />
+              <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#22c55e' }} />
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginLeft: '12px', fontWeight: '500' }}>Code as Diagram Workspace</span>
+            </div>
+            <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9', overflow: 'hidden', background: '#020205' }}>
+              <video
+                src={cadDemoVideo}
+                autoPlay
+                loop
+                muted
+                playsInline
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </div>
+          </div>
           <div className="visual-glow"/>
         </div>
       </header>
+
+      <SectionDivider />
+
+      {/* Workspace Preview Gallery */}
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 2rem' }}>
+        <WorkspaceGallery />
+      </div>
 
       <SectionDivider />
 
@@ -710,7 +893,9 @@ function LandingPage({ onLaunch }) {
           {WORKSPACES.map((ws, i) => (
             <div key={ws.id} className={`workspace-card reveal ${i % 2 === 0 ? 'reveal-left' : 'reveal-right'}`}
               style={{ '--ws-color':ws.color, '--ws-dim':ws.dim, transitionDelay:`${i * 80}ms` }}>
-              <div className="ws-preview"><ws.Mockup/></div>
+              <div className="ws-preview" style={{ padding: 0, overflow: 'hidden', display: 'flex', alignItems: 'stretch' }}>
+                <img src={ws.screenshot} alt={ws.label} className="ws-screenshot" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top left', opacity: 0.72, transition: 'all 0.3s ease' }} />
+              </div>
               <div className="ws-body">
                 <div className="ws-icon" style={{ background:`${ws.color}18`, color:ws.color }}>{ws.icon}</div>
                 <h3 style={{ color:ws.color }}>{ws.label}</h3>

@@ -624,6 +624,11 @@
   padding: 8px;
 }
 
+.workspace-card:hover .ws-screenshot {
+  opacity: 1 !important;
+  transform: scale(1.06);
+}
+
 .ws-body {
   padding: 16px;
   flex: 1;
