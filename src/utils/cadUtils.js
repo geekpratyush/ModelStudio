@@ -87,7 +87,117 @@ const parseNodeToken = (tokenRaw) => {
 };
 
 // Connector matcher. Captures the link operator and an optional |pipe label|.
-const CONNECTOR = /(<?[ox]?[-.=]{2,}[ox]?>?)(?:\|([^|]*)\|)?/g;
+const CONNECTOR = /(<?[ox]?(?:-\.-|-\.->|--+|==+)[ox]?>?)(?:\|([^|]*)\|)?/g;
+
+export const sanitizeMermaidCode = (code) => {
+  if (!code) return '';
+  const lines = code.split('\n');
+  
+  return lines.map(rawLine => {
+    let commentIdx = rawLine.indexOf('%%');
+    let line = commentIdx >= 0 ? rawLine.slice(0, commentIdx) : rawLine;
+    let comment = commentIdx >= 0 ? rawLine.slice(commentIdx) : '';
+
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('---') || trimmed.startsWith('style ') || trimmed.startsWith('classDef ') || trimmed.startsWith('class ')) {
+      return rawLine;
+    }
+
+    // 1. Protect and sanitize edge pipe labels first: -->|some text (with parens)|
+    const pipes = [];
+    line = line.replace(/\|([^|\r\n]*)\|/g, (m, lbl) => {
+      const clean = lbl.trim();
+      let safe = clean;
+      if (!((clean.startsWith('"') && clean.endsWith('"')) || (clean.startsWith("'") && clean.endsWith("'")))) {
+        safe = `"${clean.replace(/"/g, "'")}"`;
+      }
+      const ph = `__MMD_PIPE_${pipes.length}__`;
+      pipes.push(`|${safe}|`);
+      return ph;
+    });
+
+    // 2. Sanitize subgraph titles: subgraph id [Label (v1)]
+    line = line.replace(/^(\s*subgraph\s+[A-Za-z0-9_.-]+\s*\[)([^"\n]+)(\]\s*)$/i, (m, p1, lbl, p3) => {
+      const clean = lbl.trim();
+      if ((clean.startsWith('"') && clean.endsWith('"')) || (clean.startsWith("'") && clean.endsWith("'"))) return m;
+      return `${p1}"${clean.replace(/"/g, "'")}"${p3}`;
+    });
+
+    // 3. Shape openers and closers
+    const shapes = [
+      { open: '([', close: '])' },
+      { open: '[[', close: ']]' },
+      { open: '[(', close: ')]' },
+      { open: '((', close: '))' },
+      { open: '{{', close: '}}' },
+      { open: '{',  close: '}' },
+      { open: '[/', close: '/]' },
+      { open: '[\\', close: '\\]' },
+      { open: '>',  close: ']' },
+      { open: '(',  close: ')' },
+      { open: '[',  close: ']' },
+    ];
+
+    let result = '';
+    let idx = 0;
+
+    while (idx < line.length) {
+      const match = line.slice(idx).match(/([A-Za-z0-9_.-]+)\s*(\(\[|\[\[|\[\(|\(\(|\{\{|\{|\[\/|\[\\|>|\(|\[)/);
+      if (!match) {
+        result += line.slice(idx);
+        break;
+      }
+
+      const matchOffset = idx + match.index;
+      const nodeId = match[1];
+      const openerStr = match[2];
+      const shape = shapes.find(s => s.open === openerStr);
+
+      if (!shape) {
+        result += line.slice(idx, matchOffset + match[0].length);
+        idx = matchOffset + match[0].length;
+        continue;
+      }
+
+      result += line.slice(idx, matchOffset);
+      const afterOpenerIdx = matchOffset + match[0].length;
+
+      const rest = line.slice(afterOpenerIdx);
+
+      const nextConnectorIdx = rest.search(/(--+|==+|-\.-|<--+|<==+|-\.\->|-->|==>|---|===|--o|--x|<-->|__MMD_PIPE_|\s+style\s+|\s+class\s+)/);
+      const searchLimit = nextConnectorIdx >= 0 ? nextConnectorIdx : rest.length;
+      const searchTarget = rest.slice(0, searchLimit);
+
+      const closerIdx = searchTarget.lastIndexOf(shape.close);
+
+      if (closerIdx !== -1) {
+        const innerText = searchTarget.slice(0, closerIdx).trim();
+
+        const isQuoted = (innerText.startsWith('"') && innerText.endsWith('"')) ||
+                         (innerText.startsWith("'") && innerText.endsWith("'"));
+
+        if (isQuoted || !innerText) {
+          result += `${nodeId}${shape.open}${innerText}${shape.close}`;
+        } else {
+          const safeInner = innerText.replace(/"/g, "'");
+          result += `${nodeId}${shape.open}"${safeInner}"${shape.close}`;
+        }
+
+        idx = afterOpenerIdx + closerIdx + shape.close.length;
+      } else {
+        result += match[0];
+        idx = afterOpenerIdx;
+      }
+    }
+
+    let finalLine = result + comment;
+    pipes.forEach((pVal, pIdx) => {
+      finalLine = finalLine.replace(`__MMD_PIPE_${pIdx}__`, pVal);
+    });
+
+    return finalLine;
+  }).join('\n');
+};
 
 // Convert  A -- text --> B   into   A -->|text| B   so the splitter sees a label.
 const normalizeInlineLabels = (stmt) =>

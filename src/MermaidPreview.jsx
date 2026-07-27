@@ -1,4 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { sanitizeMermaidCode } from './utils/cadUtils';
 
 let mermaidModule = null;
 let mermaidTheme = null;
@@ -10,14 +11,13 @@ const getMermaid = (theme) => {
     securityLevel: 'loose',
     fontFamily: "'Inter', system-ui, sans-serif",
     theme: wantTheme,
-    // Disable max-width for every diagram type so all output explicit pixel dimensions
-    flowchart:    { htmlLabels: true, useMaxWidth: false },
-    sequence:     noMaxWidth,
-    gantt:        noMaxWidth,
-    pie:          noMaxWidth,
-    er:           noMaxWidth,
-    classDiagram: noMaxWidth,
-    stateDiagram: noMaxWidth,
+    // Optimized layout parameters for tight, readable diagrams without excessive spacing
+    flowchart:    { htmlLabels: true, useMaxWidth: false, nodeSpacing: 25, rankSpacing: 30, padding: 8 },
+    sequence:     { useMaxWidth: false, diagramMarginX: 10, diagramMarginY: 10, actorMargin: 25, boxMargin: 8, boxTextMargin: 4, noteMargin: 8, messageMargin: 20 },
+    gantt:        { useMaxWidth: false, barGap: 4, barHeight: 20 },
+    er:           { useMaxWidth: false, entityPadding: 10 },
+    classDiagram: { useMaxWidth: false, padding: 8 },
+    stateDiagram: { useMaxWidth: false, padding: 8 },
     journey:      noMaxWidth,
     gitGraph:     noMaxWidth,
     sankey:       noMaxWidth,
@@ -171,7 +171,8 @@ const MermaidPreview = forwardRef(function MermaidPreview(
       try {
         const mmd = await getMermaid(theme);
         const id  = `ms-mmd-${++renderSeq}`;
-        const { svg: out } = await mmd.render(id, trimmed);
+        const sanitized = sanitizeMermaidCode(trimmed);
+        const { svg: out } = await mmd.render(id, sanitized);
         if (cancelled) return;
         const { text: clean, extractedWidth } = stripRootMaxWidth(out);
         extractedWidthRef.current = extractedWidth;

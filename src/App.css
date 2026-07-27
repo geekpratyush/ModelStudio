@@ -244,6 +244,18 @@ body {
 }
 .mmd-svg { transform-origin: 0 0; pointer-events: none; position: absolute; top: 0; left: 0; }
 .mmd-svg svg { max-width: none; display: block; }
+.mmd-svg svg .nodeLabel,
+.mmd-svg svg .label,
+.mmd-svg svg foreignObject {
+  line-height: 1.3 !important;
+}
+.mmd-svg svg foreignObject p,
+.mmd-svg svg foreignObject div,
+.mmd-svg svg foreignObject span {
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1.3 !important;
+}
 
 .mmd-empty { color: var(--text-secondary); font-size: 0.9rem; }
 .mmd-toolbar {
